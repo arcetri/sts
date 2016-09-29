@@ -1,39 +1,44 @@
+#ifndef GENERATORS_H
+#   define GENERATORS_H
+
+// #include "/sha.h"
+
+extern void lcg(struct state *state);
+extern void quadRes1(struct state *state);
+extern void quadRes2(struct state *state);
+extern void cubicRes(struct state *state);
+extern void exclusiveOR(struct state *state);
+extern void modExp(struct state *state);
+extern void bbs(struct state *state);
+extern void micali_schnorr(struct state *state);
+extern void SHA1(struct state *state);
 
 
-//#include	"/sha.h"
+/*
+ * The circular shifts.
+ */
+#   define CS1(x) ((((ULONG)x)<<1)|(((ULONG)x)>>31))
+#   define CS5(x)  ((((ULONG)x)<<5)|(((ULONG)x)>>27))
+#   define CS30(x)  ((((ULONG)x)<<30)|(((ULONG)x)>>2))
 
-extern void	lcg(struct state *state);
-extern void	quadRes1(struct state *state);
-extern void	quadRes2(struct state *state);
-extern void	cubicRes(struct state *state);
-extern void	exclusiveOR(struct state *state);
-extern void	modExp(struct state *state);
-extern void	bbs(struct state *state);
-extern void	micali_schnorr(struct state *state);
-extern void	SHA1(struct state *state);
+/*
+ * K constants
+ */
 
+#   define K0  0x5a827999L
+#   define K1  0x6ed9eba1L
+#   define K2  0x8f1bbcdcL
+#   define K3  0xca62c1d6L
 
-/* The circular shifts. */
-#define CS1(x) ((((ULONG)x)<<1)|(((ULONG)x)>>31))
-#define CS5(x)  ((((ULONG)x)<<5)|(((ULONG)x)>>27))
-#define CS30(x)  ((((ULONG)x)<<30)|(((ULONG)x)>>2))
+#   define f1(x,y,z)   ( (x & (y ^ z)) ^ z )
 
-/* K constants */
+#   define f3(x,y,z)   ( (x & ( y ^ z )) ^ (z & y) )
 
-#define K0  0x5a827999L
-#define K1  0x6ed9eba1L
-#define K2  0x8f1bbcdcL
-#define K3  0xca62c1d6L
+#   define f2(x,y,z)   ( x ^ y ^ z )	/* Rounds 20-39 */
 
-#define f1(x,y,z)   ( (x & (y ^ z)) ^ z )
+#   define  expand(x)  Wbuff[x%16] = CS1(Wbuff[(x - 3)%16 ] ^ Wbuff[(x - 8)%16 ] ^ Wbuff[(x - 14)%16] ^ Wbuff[x%16])
 
-#define f3(x,y,z)   ( (x & ( y ^ z )) ^ (z & y) )
-
-#define f2(x,y,z)   ( x ^ y ^ z )                           /* Rounds 20-39 */
-
-#define  expand(x)  Wbuff[x%16] = CS1(Wbuff[(x - 3)%16 ] ^ Wbuff[(x - 8)%16 ] ^ Wbuff[(x - 14)%16] ^ Wbuff[x%16])
-
-#define sub1Round1(count)      { \
+#   define sub1Round1(count)      { \
 	 temp = CS5(A) + f1(B, C, D) + E + Wbuff[count] + K0; \
 	 E = D; \
 	 D = C; \
@@ -42,7 +47,7 @@ extern void	SHA1(struct state *state);
 	 A = temp; \
 	 } \
 
-#define sub2Round1(count)   \
+#   define sub2Round1(count)   \
 	 { \
 	 expand(count); \
 	 temp = CS5(A) + f1(B, C, D) + E + Wbuff[count%16] + K0; \
@@ -53,7 +58,7 @@ extern void	SHA1(struct state *state);
 	 A = temp; \
 	} \
 
-#define Round2(count)     \
+#   define Round2(count)     \
 	 { \
 	 expand(count); \
 	 temp = CS5( A ) + f2( B, C, D ) + E + Wbuff[count%16] + K1;  \
@@ -64,7 +69,7 @@ extern void	SHA1(struct state *state);
 	 A = temp;  \
 	 } \
 
-#define Round3(count)    \
+#   define Round3(count)    \
 	 { \
 	 expand(count); \
 	 temp = CS5( A ) + f3( B, C, D ) + E + Wbuff[count%16] + K2; \
@@ -75,7 +80,7 @@ extern void	SHA1(struct state *state);
 	 A = temp; \
 	 }
 
-#define Round4(count)    \
+#   define Round4(count)    \
 	 { \
 	 expand(count); \
 	 temp = CS5( A ) + f2( B, C, D ) + E + Wbuff[count%16] + K3; \
@@ -85,3 +90,5 @@ extern void	SHA1(struct state *state);
 	 B = A; \
 	 A = temp; \
 	 }
+
+#endif				// GENERATORS_H

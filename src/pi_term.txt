@@ -1,0 +1,141 @@
+(*
+ * The Mathematica code to evaluate the pi terms is from the paper:
+ *
+ * K. Hamano and T. Kaneko, The Correction of the Overlapping Template Matching Test
+ * Included in NIST Randomness Test Suite, IEICE Transactions of Electronics,
+ * Communications and Computer Sciences 2007, E90-A(9), pp 1788-1792.
+ *
+ *      http://www.researchgate.net/publication/
+ *        220241122_Correction_of_Overlapping_Template_Matching_Test_Included_in_NIST_Randomness_Test_Suite
+ *
+ * We used the following Mathematica code, from Appendix B of the above paper, to compute our terms.
+ * We reordered the printing of the Tx[M]]/2^1032 // N vaues to print immiedately after the makeTn:=Module[..]
+ * and added some newlines, whitepspace and blank lines for slightly better code clarity.
+ *)
+
+(* setup *)
+T0 = Table[0,{1032}];
+T1 = Table[0,{1032}];
+T2 = Table[0,{1032}];
+T3 = Table[0,{1032}];
+T4 = Table[0,{1032}];
+M = 1032;
+f0[i_] :=
+  If[i == -1,
+     1,
+     If[i == 0,
+     	1,
+	T0[[i]]
+     ]
+ ];
+m = 9;
+T1[[m]] = 1;
+T1[[m+1]] = 2;
+
+(* pi_term[0] == 0.36409105321672786245 *)
+makeT0 :=
+  Module[
+    {},
+    For[n = 1,
+    	n <= m-1,
+	T0[[n]] = 2 f0[n-1];
+	n++;
+    ];
+    For[n = m,
+        n <= M,
+	T0[[n]] = 2 f0[n - 1] - f0[n - m - 1];
+	n++;
+    ];
+  ];
+makeT0
+T0;
+
+(* pi_term[1] == 0.18565890010624038178 *)
+makeT1 :=
+  Module[{},
+    For[n = m+2,
+        n <= M,
+	T1[[n]] = Sum[f0[j] f0[n-m-2-j],
+	{j, -1, n-m-1}];
+	n++;
+    ];
+  ];
+
+makeT1
+T1;
+
+(* pi_term[2] == 0.13938113045903269914 *)
+g2[a_,b_] :=
+  If[a > b,
+     0,
+     Sum[f0[j] T1[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT2 :=
+  Module[
+    {},
+    For[n = 2,
+        n <= M,
+	T2[[n]] = T1[[n-1]] + g2[-1, n-2 m-2];
+	n++;
+    ];
+  ];
+
+makeT2
+T2;
+
+(* pi_term[3] == 0.10057114399877811497 *)
+g3[a_,b_] :=
+  If[a > b,
+     0,
+     Sum[f0[j] T2[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT3 :=
+  Module[
+    {},
+    For[n = 3,
+        n <= M,
+	T3[[n]] = T2[[n-1]] + g3[-1, n-2 m-3];
+	n++;
+    ];
+  ];
+makeT3
+T3;
+
+(* pi_term[4] == 0.070432326346398449744 *)
+
+  If[a > b,
+     0,
+     Sum[f0[j] T3[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT4 :=
+  Module[
+    {},
+    For[n = 4,
+        n <= M,
+	T4[[n]] = T3[[n-1]] + g4[-1, n-2 m-4];
+	n++;
+    ];
+  ];
+makeT4
+T4;
+
+"In overlappingTemplateMatchings.c, pi_term[0] is: "
+N[T0[[M]]/2^1032, 20]
+"In overlappingTemplateMatchings.c, pi_term[1] is: "
+N[T1[[M]]/2^1032, 20]
+"In overlappingTemplateMatchings.c, pi_term[2] is: "
+N[T2[[M]]/2^1032, 20]
+"In overlappingTemplateMatchings.c, pi_term[3] is: "
+N[T3[[M]]/2^1032, 20]
+"In overlappingTemplateMatchings.c, pi_term[4] is: "
+N[T4[[M]]/2^1032, 20]
+
+(* pi_term[5] == 0.13986544587282249192 *)
+"In overlappingTemplateMatchings.c, pi_term[5] is: "
+N[1 - (T0[[M]]+T1[[M]]+T2[[M]]+T3[[M]]+T4[[M]])/2^1032, 20]

@@ -1,0 +1,236 @@
+/*
+ * compute runs_tables values used in longestRunOfOnes.c
+ *
+ * See SP800-22Rev1a section 3.4, page 3-3.
+ * The P(v <= m | r) function is inner_p(m, M, r).
+ * The P(v <= m) function is p(m, M).
+ *
+ * The main work of this code is to print the class / probability
+ * tables such as those foudn in SP800-22Rev1a section 3.4 pages
+ * 3-4 and 3-5.  See the runstbl(M, low_v, high_v) function below.
+ *
+ * Section 3.4 lists tables that correspond to the following calls:
+ *
+ *	runstbl(8, 1, 4)
+ *	runstbl(128, 4, 9)
+ *	runstbl(512, 6, 11)
+ *	runstbl(1000, 7, 12)
+ *	runstbl(10000, 10, 16)
+ *
+ * 	NOTE: For large values of M (such as 10000), this script takes
+ *	      a very long time to run (as in around 8 CPU days)!
+ *
+ * Tables from section 2.4.2 and 2.4.4 use only a subset of the
+ * table values listed in section 3.4:
+ *
+ *	runstbl(8, 1, 4)
+ *	runstbl(128, 4, 9)
+ *	runstbl(10000, 10, 16)
+ *
+ * 	NOTE: For large values of M (such as 10000), this script takes
+ *	      a very long time to run (as in around 8 CPU days)!
+ *
+ * To keep the number of probabilities in the tables the same, we
+ * only use the maximum K (LONGEST_RUN_CLASS_COUNT == 6).  We extend the
+ * low_v and high_v values so that they cover the original range AND so that:
+ *
+ *	high_v - low_v = LONGESTRUN_K (K == 6)
+ *	low_v > 0
+ *
+ * Therefore we use the following calls to produce the pi_term[]
+ * probability arrays:
+ *
+ *	runstbl(8, 1, 7)
+ *	runstbl(128, 4, 10)
+ *	runstbl(10000, 10, 16)
+ *
+ * 	NOTE: For large values of M (such as 10000), this script takes
+ *	      a very long time to run (as in around 8 CPU days)!
+ *
+ * Some of the above mentioned calls are used to produce the
+ * pi_term arrays of doubles found in the runs_table[] constant array
+ * found in longestRunOfOnes.c.
+ *
+ * NOTE: This is a calc script.  See:
+ *
+ *    http://www.isthe.com/chongo/tech/comp/calc/index.html
+ *
+ * By: Landon Curt Noll (share and enjoy! :)) ^oo^
+ */
+
+
+/*
+ * P(v <= m | r) function in 22Rev1a section 3.4, page 3-3
+ */
+define inner_p(m, M, r) {
+    local U;		/* sum index upper bound */
+    local j;		/* summation index */
+    local sum = 0;	/* summation of terms */
+
+    U = min(M-r+1, floor(r / (m+1)));	/* upper index bound */
+    /* sigma */
+    for (j=0; j <= U; ++j) {
+	sum += (((-1)^j) * comb(M-r+1, j) * comb(M-j*(m+1), M-r));
+    }
+    sum *= 1 / comb(M,r);	/* product in front of the sum */
+    return sum;
+}
+
+
+/*
+ * P(v <= m) function in 22Rev1a section 3.4, page 3-3
+ */
+define p(m, M) {
+    local r;		/* summation index */
+    local sum = 0;	/* summation of terms */
+
+    /* sigma */
+    for (r=0; r <= M; ++r) {
+	sum += (comb(M, r) * inner_p(m, M, r) / 2^M);
+    }
+    return sum;
+}
+
+
+/*
+ * runstbl - print class / probability tables
+ *
+ * This function can print the class / probability
+ * tables such as those foudn in SP800-22Rev1a section 3.4
+ * pages 3-4 and 3-5, given M value and class min/max.
+ *
+ * NOTE: In this file we use v when we mean the
+ *	 lower case greek letter nu
+ *
+ * The tables mentioned above are for a given M, low_v, high_v.
+ * The first entry is for v <= low_v, a class that handles
+ * all cases <= the floor for v.  The last entry is
+ * for v >= high_v, a class that handles all cases >=
+ * the ceiling for v.  Inbetween are the indivdual
+ * class values.
+ *
+ * Given the above table structure, we print for the class
+ * floor (v <= low_v), individual class (low_v < v < high_v),
+ * or for the class ceiling (v >= high_v) the corresponding
+ * probabilities.  The class (floor, individual class, ceiling)
+ * is the V_class[] element and the probability is the pi_term[]
+ * element.
+ *
+ * given:
+ *	M	length of each substring
+ *	low_v	starting class
+ *	high_v	ending class
+ */
+define runstbl(M, low_v, high_v)
+{
+    local err;		/* error message */
+    local v;		/* class */
+    local stderr;	/* standard error file output */
+    local prob;		/* probility for <= class */
+    local prev_prob;	/* previous probility */
+    local sum_prob;	/* probility for all classes to far */
+    local old_tilde;	/* old config("tilde") to restore on return */
+    local old_display;	/* old display() to restore on return */
+    local old_epsilon;	/* old epsilon() to restore on return */
+
+    /*
+     * firewall
+     */
+    stderr = files(2);
+    if (low_v > high_v) {
+	fprintf(stderr, "low_v: %d must be < high_v: %d\n", low_v, high_v);
+	quit "fatal error";
+    }
+    if (low_v < 1) {
+	fprintf(stderr, "low_v: %d must be >= 1", low_v);
+	quit "fatal error";
+    }
+
+    /*
+     * print header
+     */
+    print;
+    print "// K =", high_v-low_v: ", M =", M: ", min_class =", low_v: ", max_class =", high_v;
+
+    /*
+     * configure calcuations
+     */
+    old_tilde = config("tilde", 0);	/* disable printing ~ for apriximation */
+    old_display = display(20);		/* print up to 20 decimal digits */
+    old_epsilon = epsilon(1e-40);	/* precision of at least 1e-40 */
+
+    /*
+     * initialize for entry
+     */
+    print;
+    print "# calculating class:", 0, "now:", time(), ctime():;
+    print "# calculating class:", 0, "cpu time: ", runtime();
+    prob = p(0, M);
+    sum_prob = prob;
+
+    /*
+     * accumulate probabilities for previous classes
+     */
+    for (v = 1; v < low_v; ++v) {
+	print;
+	print "# calculating class:", v, "now:", time(), ctime():;
+	print "# calculating class:", v, "cpu time: ", runtime();
+	prev_prob = prob;
+	prob = p(v, M);
+	sum_prob += (prob - prev_prob);
+    }
+
+    /*
+     * print the v <= probability
+     */
+    print;
+    print "# calculating class:", v, "now:", time(), ctime():;
+    print "# calculating class:", v, "cpu time: ", runtime();
+    prev_prob = prob;
+    prob = p(v, M);
+    sum_prob += (prob - prev_prob);
+    print;
+    print sum_prob: ",	// pi_term[": v-low_v: "], v <=", low_v;
+    ++v;
+
+    /*
+     * print probabilies for classes < high_v
+     */
+    while (v < high_v) {
+
+    	/* get new probabilies for classes <= v */
+	print;
+	print "# calculting class:", v, "now:", time(), ctime():;
+	print "# calculting class:", v, "cpu time: ", runtime();
+	prev_prob = prob;
+	prob = p(v, M);
+	sum_prob += (prob - prev_prob);
+
+	/* print probility for just this class */
+	print;
+	print prob - prev_prob: ",	// pi_term[": v-low_v: "], v ==", v;
+
+	/* prep for next class */
+	++v;
+    }
+
+    /*
+     * case: class high_v is a >= class
+     */
+    print;
+    print "# final class:", v, "now:", time(), ctime():;
+    print "# final class:", v, "cpu time: ", runtime();
+    print;
+    print 1-sum_prob: ",	// pi_term[": v-low_v: "], v >=", high_v;
+
+    /*
+     * restore calcuation configration
+     */
+    print;
+    print "# end: now:", time(), ctime():;
+    print "# end: cpu time: ", runtime();
+    config("tilde", old_tilde),;
+    display(old_display),;
+    epsilon(old_epsilon),;
+    return;
+}

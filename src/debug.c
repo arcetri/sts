@@ -6,8 +6,11 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+#include "debug.h"
 #include "externs.h"
 
+
+#ifndef DEBUG_LINT
 
 /*
  * msg - print a generic message
@@ -223,7 +226,7 @@ warnp(char const *name, char const *fmt, ...)
  * err - issue a fatal error message and exit
  *
  * given:
- *      exitcode        value to exit with, <0 ==> do not exit
+ *      exitcode        value to exit with
  *      name            name of function issuing the warning
  *      fmt             format of the warning
  *      ...             optional format args
@@ -293,7 +296,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
  * errp - issue a fatal error message, errno string and exit
  *
  * given:
- *      exitcode        value to exit with, <0 ==> do not exit
+ *      exitcode        value to exit with
  *      name            name of function issuing the warning
  *      fmt             format of the warning
  *      ...             optional format args
@@ -432,7 +435,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
 	} else {
 		fprintf(stderr, "usage: %s %s\n", program, usage);
 	}
-	fprintf(stderr, "%s\n", version);
+	fprintf(stderr, "\nversion: %s\n", version);
 
 	/*
 	 * clean up stdarg stuff
@@ -519,7 +522,7 @@ usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, .
 	} else {
 		fprintf(stderr, "usage: %s %s\n", program, usage);
 	}
-	fprintf(stderr, "%s\n", version);
+	fprintf(stderr, "\nversion: %s\n", version);
 
 	/*
 	 * clean up stdarg stuff
@@ -531,3 +534,5 @@ usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, .
 	 */
 	exit(exitcode);
 }
+
+#endif				// DEBUG_LINT

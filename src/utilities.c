@@ -27,12 +27,15 @@
 #include "utilities.h"
 #include "generators.h"
 #include "stat_fncs.h"
+#include "debug.h"
+#include "defs.h"
 
 
 /*
  * forward static function declarations
  */
 static void readBinaryDigitsInASCIIFormat(struct state *state);
+static void getTimestamp(char *buf, size_t len);
 
 
 /*
@@ -79,7 +82,7 @@ getNumber(FILE * input, FILE * output)
 			errp(4, __FUNCTION__, "line is still NULL after getline call");
 		}
 		if (linelen < 0) {
-			errp(4, __FUNCTION__, "getline retuned: %d", linelen);
+			errp(4, __FUNCTION__, "getline retuned: %ld", linelen);
 		}
 		// firewall
 		if (line[linelen] != '\0') {
@@ -93,6 +96,76 @@ getNumber(FILE * input, FILE * output)
 		number = strtol(line, NULL, 0);
 		if (errno != 0) {
 			fprintf(output, "\n\nerror in parsing string to integer, please try again: ");
+			fflush(output);
+		}
+	} while (errno != 0);
+
+	/*
+	 * cleanup and report success
+	 */
+	free(line);
+	return number;
+}
+
+
+/*
+ * getDouble - get a floating point double from a stream
+ *
+ * given:
+ *      input           FILE stream to read from
+ *      output          where to write error messages
+ *
+ * returns:
+ *      parsed double form a line read from the stream
+ *
+ * This function does not return on read errors.  Entering a non-numeric line
+ * results an error message on output and another read from input.
+ */
+
+double
+getDouble(FILE * input, FILE * output)
+{
+	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
+	size_t buflen = 0;	// ignored when line == NULL
+	ssize_t linelen;	// length of line read from stream
+	double number;		// value to return
+
+	/*
+	 * firewall
+	 */
+	if (input == NULL) {
+		err(1, __FUNCTION__, "input arg is NULL");
+	}
+	if (output == NULL) {
+		err(1, __FUNCTION__, "output arg is NULL");
+	}
+
+	/*
+	 * keep after the user until they learn to type correctly :-)
+	 */
+	do {
+		/*
+		 * read the line
+		 */
+		linelen = getline(&line, &buflen, input);
+		if (line == NULL) {
+			errp(4, __FUNCTION__, "line is still NULL after getline call");
+		}
+		if (linelen < 0) {
+			errp(4, __FUNCTION__, "getline retuned: %ld", linelen);
+		}
+		// firewall
+		if (line[linelen] != '\0') {
+			err(4, __FUNCTION__, "getline did not return a NUL terminated string");
+		}
+
+		/*
+		 * attempt to convert to a number
+		 */
+		errno = 0;
+		number = strtod(line, NULL);
+		if (errno != 0) {
+			fprintf(output, "\n\nerror in parsing string to floating point value, please try again: ");
 			fflush(output);
 		}
 	} while (errno != 0);
@@ -140,7 +213,7 @@ getNumberOrDie(FILE * stream)
 		errp(4, __FUNCTION__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(4, __FUNCTION__, "getline retuned: %d", linelen);
+		errp(4, __FUNCTION__, "getline retuned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
 		err(4, __FUNCTION__, "getline did not return a NUL terminated string");
@@ -197,7 +270,7 @@ getString(FILE * stream)
 		errp(4, __FUNCTION__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(4, __FUNCTION__, "getline retuned: %d", linelen);
+		errp(4, __FUNCTION__, "getline retuned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
 		err(4, __FUNCTION__, "getline did not return a NUL terminated string");
@@ -317,6 +390,174 @@ checkReadPermissions(char *path)
 
 
 /*
+ * openTruncate - check truncate and write permissions of a file
+ *
+ * given:
+ *      filename         // the filename to check for truncate and write permissions
+ *
+ * retuen
+ *      non-NULL --> open FILE descritor of a truncted file
+ *      NULL --> path was not a file, or could not be created, or was not writable
+ *
+ * Check the write permissions of a path for the current user group and return
+ * whether the file may be truncated and written.
+ *
+ * If the file existed before this call and is wriable, the file will be truncated to zero length.
+ * If the file did not exist before this call and could be created, the file will be created.
+ */
+FILE *
+openTruncate(char *filename)
+{
+	FILE *stream;		// tunrcated flle or NULL
+
+	// firewall
+	if (filename == NULL) {
+		warn(__FUNCTION__, "filename arg was NULL");
+		return NULL;
+	}
+	// attempt to truncate file
+	errno = 0;		// paranoia
+	stream = fopen(filename, "w");
+	if (stream == NULL) {
+		warnp(__FUNCTION__, "could not create/open for writing/truncation: %s", filename);
+		return NULL;
+	}
+	dbg(DBG_MED, "created/opened for writing/truncation: %s", filename);
+	return stream;
+}
+
+
+/*
+ * filePathName - malloc a file pathname given a two parts of the path
+ *
+ * given:
+ *      head            // leading part part of file pathname to form
+ *      tail            // trailing part of file pathname to form
+ *
+ * returns:
+ *      Malloced string of head/tail.
+ *
+ * This function does not return on error.
+ */
+char *
+filePathName(char *head, char *tail)
+{
+	char *fullpath;		// dir/file
+	size_t len;		// length of fullpath
+	int snprintf_ret;	// snprintf return value
+
+	/*
+	 * firewall
+	 */
+	if (head == NULL) {
+		err(1, __FUNCTION__, "head arg is NULL");
+	}
+	if (tail == NULL) {
+		err(1, __FUNCTION__, "tail arg is NULL");
+	}
+
+	/*
+	 * allocate full path including subdir
+	 */
+	len = strlen(head) + 1 + strlen(tail) + 1;
+	fullpath = malloc(len + 1);	// +1 for later paranoia
+	if (fullpath == NULL) {
+		errp(1, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for fullpath", len + 1, sizeof(fullpath[0]));
+	}
+
+	/*
+	 * form full path
+	 */
+	errno = 0;		// paranoia
+	snprintf_ret = snprintf(fullpath, len, "%s/%s", head, tail);
+	fullpath[len] = '\0';	// paranoia
+	if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
+		errp(10, __FUNCTION__, "snprintf failed for %ld bytes for %s/%s, returned: %d", len, head, tail, snprintf_ret);
+	}
+
+	/*
+	 * return malloced path
+	 */
+	return fullpath;
+}
+
+/*
+ * datatxt_fmt - allocate a format string for data*.txt filenames
+ *
+ * given:
+ *      partitionCount          - number of partitions, must be > 0
+ *
+ * returns:
+ *      malloced format of the form %0*d.txt
+ *
+ * This function does not return in error
+ */
+char *
+data_filename_format(int partitionCount)
+{
+	char *buf;		// allocated buffer
+	int digits;		// decimal digits contained in partitionCount
+	int len;		// length of the format
+	int snprintf_ret;	// snprintf return value
+
+	/*
+	 * firewall
+	 */
+	if (partitionCount < 1) {
+		err(10, __FUNCTION__, "partitionCount arg: %d must be >= 1", partitionCount);
+	}
+
+	/*
+	 * determine the lenth of the allocated buffer
+	 */
+	if (partitionCount < 2) {
+		digits = 0;	// no partitions, just use data.txt
+	} else {
+		for (digits = MAX_DATA_DIGITS; digits > 0; --digits) {
+			if (pow(10.0, digits) < (double) partitionCount) {
+				break;
+			}
+		}
+	}
+	if (digits < 1) {
+		len = strlen("data.txt") + 1;	// data.txt: + 1 for NUL
+	} else if (digits < 10) {
+		len = strlen("data%0") + 1 + strlen("d.txt") + 1;	// data%0[0-9]d.txt: + 1 for NUL
+	} else {
+		len = strlen("data%0") + 2 + strlen("d.txt") + 1;	// data%0[0-9][0-9]d.txt: + 1 for NUL
+	}
+
+	/*
+	 * allocate the format
+	 */
+	buf = malloc(len + 1);	// + 1 for paranoia
+	if (buf == NULL) {
+		errp(10, __FUNCTION__, "cannot malloc of %d elements of %ld bytes each for data%%0*d.txt", len + 1, sizeof(buf[0]));
+	}
+
+	/*
+	 * form the format
+	 */
+	if (digits < 1) {
+		strcpy(buf, "data.txt");
+	} else {
+		errno = 0;	// paranoia
+		snprintf_ret = snprintf(buf, len, "data%%0%dd.txt", digits);
+		if (snprintf_ret <= 0 || snprintf_ret >= len || errno != 0) {
+			errp(10, __FUNCTION__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d",
+			     len, digits, snprintf_ret);
+		}
+		buf[len] = '\0';	// paranoia
+	}
+
+	/*
+	 * return allocated buffer
+	 */
+	return buf;
+}
+
+
+/*
  * makePath - create directories along a path
  *
  * given:
@@ -367,7 +608,7 @@ makePath(char *dir)
 	len = strlen(dir);
 	tmp = malloc(len + 1);	// +1 for paranoia below
 	if (tmp == NULL) {
-		errp(10, __FUNCTION__, "unable to allocate a string of length %d", len + 1);
+		errp(10, __FUNCTION__, "unable to allocate a string of length %lu", len + 1);
 	}
 	tmp[len] = '\0';	// paranoia
 	// copy directory path into tmp, converting multiple /'s into a single /
@@ -520,7 +761,7 @@ precheckPath(struct state *state, char *dir)
  *      subdir          // check subdir under state->workDir
  *
  * returns:
- * 	Malloced path to the given subdir
+ *      Malloced path to the given subdir
  *
  * This utility function is used by test initialization functions to ensure
  * that subdir under the working directory (state->workDir) exists and is
@@ -532,7 +773,6 @@ char *
 precheckSubdir(struct state *state, char *subdir)
 {
 	char *fullpath;		// workDir/subdir
-	size_t len;		// length of fullpath
 
 	/*
 	 * firewall
@@ -548,19 +788,9 @@ precheckSubdir(struct state *state, char *subdir)
 	}
 
 	/*
-	 * allocate full path including subdir
-	 */
-	len = strlen(state->workDir) + 1 + strlen(subdir) + 1;
-	fullpath = malloc(len + 1);	// +1 for later paranoia
-	if (fullpath == NULL) {
-		errp(1, __FUNCTION__, "cannot malloc %d octets for fullpath", len+1);
-	}
-
-	/*
 	 * form full path
 	 */
-	snprintf(fullpath, len, "%s/%s", state->workDir, subdir);
-	fullpath[len] = '\0';	// paranoia
+	fullpath = filePathName(state->workDir, subdir);
 	dbg(DBG_VHIGH, "will verify that subdir exists and is writable: %s", fullpath);
 
 	/*
@@ -588,7 +818,6 @@ precheckSubdir(struct state *state, char *subdir)
  *
  * This function does not return when given NULL args or on a parse error.
  */
-
 long int
 str2longint(bool * success_p, char *string)
 {
@@ -670,7 +899,7 @@ str2longint_or_die(char *string)
  * generatorOptions - determine generation options
  *
  * given:
- * 	state		// pointer to run state
+ *      state           // pointer to run state
  *
  * In classic (non-batch) mode we prompt the user for a generator number.  In the
  * case of generator 0 (read from a file) we also ask for the filename and verify
@@ -684,30 +913,40 @@ str2longint_or_die(char *string)
 void
 generatorOptions(struct state *state)
 {
-	int generator;		// generator number
+	long int generator;	// generator number
 	bool success;		// if we read a valid file format
 	char *src;		// potential src of random file data
 	char *line;		// random file data line
 
 	/*
-	 * batch mode, nothing to do here other than to verify, for -g 0, randdata is readable
+	 * case: write to file (-m w)
 	 */
-	if (state->batchmode == true) {
-
-		if (state->generator == 0) {
-
-			// verify the input file is readable
-			if (checkReadPermissions(state->randomDataPath) == false) {
-				err(10, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
-			}
-
-			// open the input file for reading
-			state->streamFile = fopen(state->randomDataPath, "r");
-			if (state->streamFile == NULL) {
-				errp(10, __FUNCTION__, "unable to open data file to reading: %s", state->randomDataPath);
-			}
+	if (state->runMode == MODE_WRITE_ONLY) {
+		// open the input file for writing
+		state->streamFile = fopen(state->randomDataPath, "w");
+		if (state->streamFile == NULL) {
+			errp(10, __FUNCTION__, "unable to open data file to writing: %s", state->randomDataPath);
 		}
 
+		/*
+		 * case: read from file
+		 */
+	} else if (state->generator == GENERATOR_FROM_FILE) {
+		// verify the input file is readable
+		if (checkReadPermissions(state->randomDataPath) == false) {
+			err(10, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
+		}
+		// open the input file for reading
+		state->streamFile = fopen(state->randomDataPath, "r");
+		if (state->streamFile == NULL) {
+			errp(10, __FUNCTION__, "unable to open data file to reading: %s", state->randomDataPath);
+		}
+	}
+
+	/*
+	 * batch mode, nothing to do here
+	 */
+	if (state->batchmode == true) {
 		// nothing else to do but return the generator number
 		return;
 	}
@@ -722,12 +961,16 @@ generatorOptions(struct state *state)
 			// use the generator number passed in on the command line
 			generator = state->generator;
 
-		// -g was not used, prompt for generator
+			// -g was not used, prompt for generator
 		} else {
 			// prompt
 			printf("           G E N E R A T O R    S E L E C T I O N \n");
 			printf("           ______________________________________\n\n");
-			printf("    [0] Input File                 [1] Linear Congruential\n");
+			if (state->runMode == MODE_WRITE_ONLY) {
+				printf("                                   [1] Linear Congruential\n");
+			} else {
+				printf("    [0] Input File                 [1] Linear Congruential\n");
+			}
 			printf("    [2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
 			printf("    [4] Cubic Congruential         [5] XOR\n");
 			printf("    [6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
@@ -742,11 +985,52 @@ generatorOptions(struct state *state)
 			// help if they gave us a wrong nunber
 			if (generator < 0 || generator > NUMOFGENERATORS) {
 				printf("\ngenerator number must be from 0 to %d inclusive, try again\n\n", NUMOFGENERATORS);
+				fflush(stdout);
 			}
 		}
 
+		// cannot use read from file when in -m w runMode
+		if (state->runMode == MODE_WRITE_ONLY && generator == GENERATOR_FROM_FILE) {
+			printf("\nbecause -m w (write-only) was given, generator 0 (read from file) cannot be used, try again\n\n");
+			fflush(stdout);
+			continue;
+		}
+		// for non-zero generator and -m w runMode, ask for the filename
+		if (state->runMode == MODE_WRITE_ONLY && generator != GENERATOR_FROM_FILE) {
+
+			// if no -f randdata, ask for the filename
+			if (state->randomDataFlag == false) {
+
+				printf("\t\tOutput generator file: ");
+				fflush(stdout);
+
+				// read filename
+				src = getString(stdin);
+				putchar('\n');
+
+				// open the file for writing/truncation
+				state->streamFile = openTruncate(src);
+				if (state->streamFile == NULL) {
+					printf("\ncould not create/open for writing/truncation: %s, try again\n\n", src);
+					fflush(stdout);
+					free(src);
+					continue;
+				}
+				// set the randomData filename
+				state->randomDataPath = src;
+
+				// we have -f randdata, open randdata for writing/truncation
+			} else {
+				state->streamFile = openTruncate(state->randomDataPath);
+				if (state->streamFile == NULL) {
+					printf("\ncould not create/open for writing/truncation: %s, try again\n\n", src);
+					fflush(stdout);
+					continue;
+				}
+			}
+		}
 		// for generator 0 (read from a file) and no -f randdata, ask for the filename
-		if (generator == 0 && state->randomDataPath == false) {
+		if (generator == GENERATOR_FROM_FILE && state->randomDataFlag == false) {
 
 			// prompt
 			printf("\t\tUser Prescribed Input File: ");
@@ -756,29 +1040,29 @@ generatorOptions(struct state *state)
 			src = getString(stdin);
 			putchar('\n');
 
-			// set the randomData filename
-			state->randomDataPath = src;
-
 			// sanity check to see if we can read the file
 			if (checkReadPermissions(src) != true) {
 				printf("\nfile: %s does not exist or is not readable, try again\n\n", src);
-				free(state->randomDataPath);
+				fflush(stdout);
+				free(src);
 				continue;
 			}
+			// set the randomData filename
+			state->randomDataPath = src;
 		}
-
 		// for generator 0 (read from a file), open the file
-		if (generator == 0) {
+		if (generator == GENERATOR_FROM_FILE) {
 			// open the input file for reading
 			state->streamFile = fopen(state->randomDataPath, "r");
 			if (state->streamFile == NULL) {
 				printf("\nunable to open %s of reading, try again\n\n", state->randomDataPath);
-				if (state->randomDataPath == false) {
+				fflush(stdout);
+				if (state->randomDataFlag == false) {
 					free(state->randomDataPath);
+					state->randomDataPath = NULL;
 				}
 				continue;
 			}
-
 			// promot for input format if -F was NOT used
 			if (state->dataFormatFlag == false) {
 
@@ -813,8 +1097,8 @@ generatorOptions(struct state *state)
 						break;
 					default:
 						printf("\ninput must be %d of %c, %d or %c\n\n",
-						       0, (char) FORMAT_ASCII_01,
-						       1, (char) FORMAT_RAW_BINARY);
+						       0, (char) FORMAT_ASCII_01, 1, (char) FORMAT_RAW_BINARY);
+						fflush(stdout);
 						break;
 					}
 				} while (success != true);
@@ -823,11 +1107,10 @@ generatorOptions(struct state *state)
 		}
 
 	} while (generator < 0 || generator > NUMOFGENERATORS);
-	putchar('\n');
 
 	// set the generator option
-	dbg(DBG_LOW, "will use generator %s[%d]", state->generatorDir[generator], generator);
-	state->generator = generator;
+	dbg(DBG_LOW, "will use generator %s[%ld]", state->generatorDir[generator], generator);
+	state->generator = (enum gen) generator;
 	return;
 }
 
@@ -835,21 +1118,19 @@ generatorOptions(struct state *state)
 void
 chooseTests(struct state *state)
 {
-	int i;
-	int run_all;
+	long int run_all;
 	char *run_test;
 	bool success;		// if parse in the input line was sucessful
+	int i;
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
-
 	// If -t was used, tests are already chosen, just return
 	if (state->testVectorFlag == true) {
 		return;
 	}
-
 	// prompt
 	printf("                S T A T I S T I C A L   T E S T S\n");
 	printf("                _________________________________\n\n");
@@ -905,10 +1186,12 @@ chooseTests(struct state *state)
 				case '\0':
 					success = false;	// must prompt again
 					printf("\nYou must enter a 0 or 1 for all %d tests\n\n", NUMOFTESTS);
+					fflush(stdout);
 					break;
 				default:
 					success = false;	// must prompt again
 					printf("\nUnexpcted character for test %d, enter only 0 or 1 for each test\n", i);
+					fflush(stdout);
 					break;
 				}
 			}
@@ -921,183 +1204,349 @@ chooseTests(struct state *state)
 void
 fixParameters(struct state *state)
 {
-	int counter;
 	int testid;
 
 	/*
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * Check to see if any parameterized tests are selected
+	 * prompt for parameters
+	 *
+	 * We skip prompting any parameter that is only associated with a non-selected test
 	 */
-	if ((state->testVector[TEST_BLOCK_FREQUENCY] == false) && (state->testVector[TEST_NONPERIODIC] == false) &&
-	    (state->testVector[TEST_OVERLAPPING] == false) && (state->testVector[TEST_APEN] == false) &&
-	    (state->testVector[TEST_SERIAL] == false) && (state->testVector[TEST_LINEARCOMPLEXITY] == false))
-		return;
-
 	do {
-		counter = 1;
-		// prompt
+		/*
+		 * prompt
+		 */
 		printf("        P a r a m e t e r   A d j u s t m e n t s\n");
 		printf("        -----------------------------------------\n");
-		if (state->testVector[TEST_BLOCK_FREQUENCY] == true)
-			printf("    [%d] Block Frequency Test - block length(M):         %ld\n", counter++,
-			       state->tp.blockFrequencyBlockLength);
-		if (state->testVector[TEST_NONPERIODIC] == true)
-			printf("    [%d] NonOverlapping Template Test - block length(m): %ld\n", counter++,
-			       state->tp.nonOverlappingTemplateBlockLength);
-		if (state->testVector[TEST_OVERLAPPING] == true)
-			printf("    [%d] Overlapping Template Test - block length(m):    %ld\n", counter++,
-			       state->tp.overlappingTemplateBlockLength);
-		if (state->testVector[TEST_APEN] == true)
-			printf("    [%d] Approximate Entropy Test - block length(m):     %ld\n", counter++,
-			       state->tp.approximateEntropyBlockLength);
-		if (state->testVector[TEST_SERIAL] == true)
-			printf("    [%d] Serial Test - block length(m):                  %ld\n", counter++,
-			       state->tp.serialBlockLength);
-		if (state->testVector[TEST_LINEARCOMPLEXITY] == true)
-			printf("    [%d] Linear Complexity Test - block length(M):       %ld\n", counter++,
-			       state->tp.linearComplexitySequenceLength);
+		if (state->testVector[TEST_BLOCK_FREQUENCY] == true) {
+			printf("    [%d] Block Frequency Test - block length(M):         %ld\n",
+			       PARAM_blockFrequencyBlockLength, state->tp.blockFrequencyBlockLength);
+		}
+		if (state->testVector[TEST_NONPERIODIC] == true) {
+			printf("    [%d] NonOverlapping Template Test - block length(m): %ld\n",
+			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateBlockLength);
+		}
+		if (state->testVector[TEST_OVERLAPPING] == true) {
+			printf("    [%d] Overlapping Template Test - block length(m):    %ld\n",
+			       PARAM_overlappingTemplateBlockLength, state->tp.overlappingTemplateBlockLength);
+		}
+		if (state->testVector[TEST_APEN] == true) {
+			printf("    [%d] Approximate Entropy Test - block length(m):     %ld\n",
+			       PARAM_approximateEntropyBlockLength, state->tp.approximateEntropyBlockLength);
+		}
+		if (state->testVector[TEST_SERIAL] == true) {
+			printf("    [%d] Serial Test - block length(m):                  %ld\n",
+			       PARAM_serialBlockLength, state->tp.serialBlockLength);
+		}
+		if (state->testVector[TEST_LINEARCOMPLEXITY] == true) {
+			printf("    [%d] Linear Complexity Test - block length(M):       %ld\n",
+			       PARAM_linearComplexitySequenceLength, state->tp.linearComplexitySequenceLength);
+		}
+		printf("    [%d] bitstream interations:				%ld\n",
+		       PARAM_numOfBitStreams, state->tp.numOfBitStreams);
+		printf("    [%d] Uniformity bins:				%ld\n",
+		       PARAM_uniformity_bins, state->tp.uniformity_bins);
+		printf("    [%d] Length of a single bit stream:			%ld\n", PARAM_n, state->tp.n);
+		printf("    [%d] Uniformity Cutoff Level:			%f\n",
+		       PARAM_uniformity_level, state->tp.uniformity_level);
+		printf("    [%d] Alpha - confidence level:       		%f\n", PARAM_alpha, state->tp.alpha);
 		putchar('\n');
-		printf("   Select Test (0 to continue): ");
+		printf("   Select Test (%d to continue): ", PARAM_continue);
 		fflush(stdout);
 
 		// read number
 		testid = getNumber(stdin, stdout);
 		putchar('\n');
 
-		counter = 0;
-		if (state->testVector[TEST_BLOCK_FREQUENCY] == true) {
-			counter++;
-			if (counter == testid) {
+		/*
+		 * prompt for value according to testid
+		 */
+		switch (testid) {
+
+		case PARAM_continue:
+			break;	// stop prompting
+
+		case PARAM_blockFrequencyBlockLength:
+			do {
 				// prompt
-				printf("   Enter Block Frequency Test block length: ");
+				printf("   Enter Block Frequency Test block length (try: %d): ", DEFAULT_BITCOUNT);
 				fflush(stdout);
 
 				// read number
 				state->tp.blockFrequencyBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
-		}
-		if (state->testVector[TEST_NONPERIODIC] == true) {
-			counter++;
-			if (counter == testid) {
+
+				// error range check
+				if (state->tp.blockFrequencyBlockLength <= 0) {
+					printf("    Block Frequency Test block length %ld must be > 0, try again\n\n",
+					       state->tp.blockFrequencyBlockLength);
+				}
+			} while (state->tp.blockFrequencyBlockLength <= 0);
+			break;
+
+		case PARAM_nonOverlappingTemplateBlockLength:
+			do {
 				// prompt
-				printf("   Enter NonOverlapping Template Test block Length: ");
+				printf("   Enter NonOverlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);
 				fflush(stdout);
 
 				// read number
 				state->tp.nonOverlappingTemplateBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
-		}
-		if (state->testVector[TEST_OVERLAPPING] == true) {
-			counter++;
-			if (counter == testid) {
+
+				// error range check
+				if (state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN) {
+					printf("    NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					       state->tp.nonOverlappingTemplateBlockLength, MINTEMPLEN);
+				}
+				if (state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN) {
+					printf("    NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					       state->tp.nonOverlappingTemplateBlockLength, MAXTEMPLEN);
+				}
+			} while (state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN ||
+				 state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN);
+			break;
+
+		case PARAM_overlappingTemplateBlockLength:
+			do {
 				// prompt
-				printf("   Enter Overlapping Template Test block Length: ");
+				printf("   Enter Overlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);
 				fflush(stdout);
 
 				// read number
 				state->tp.overlappingTemplateBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
-		}
-		if (state->testVector[TEST_APEN] == true) {
-			counter++;
-			if (counter == testid) {
+
+				// error range check
+				if (state->tp.overlappingTemplateBlockLength < MINTEMPLEN) {
+					printf("    Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					       state->tp.overlappingTemplateBlockLength, MINTEMPLEN);
+				}
+				if (state->tp.overlappingTemplateBlockLength > MAXTEMPLEN) {
+					printf("    Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					       state->tp.overlappingTemplateBlockLength, MAXTEMPLEN);
+				}
+			} while (state->tp.overlappingTemplateBlockLength < MINTEMPLEN ||
+				 state->tp.overlappingTemplateBlockLength > MAXTEMPLEN);
+			break;
+
+		case PARAM_approximateEntropyBlockLength:
+			do {
 				// prompt
-				printf("   Enter Approximate Entropy Test block Length: ");
+				printf("   Enter Approximate Entropy Test block Length (try: %d): ", DEFAULT_APEN);
 				fflush(stdout);
 
 				// read number
 				state->tp.approximateEntropyBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
-		}
-		if (state->testVector[TEST_SERIAL] == true) {
-			counter++;
-			if (counter == testid) {
+
+				// error range check
+				if (state->tp.approximateEntropyBlockLength <= 0) {
+					printf("    Approximate Entropy Test block Length %ld must be > 0, try again\n\n",
+					       state->tp.approximateEntropyBlockLength);
+				}
+			} while (state->tp.approximateEntropyBlockLength <= 0);
+			break;
+
+		case PARAM_serialBlockLength:
+			do {
 				// prompt
-				printf("   Enter Serial Test block Length: ");
+				printf("   Enter Serial Test block Length (try: %d): ", DEFAULT_SERIAL);
 				fflush(stdout);
 
 				// read number
 				state->tp.serialBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
-		}
-		if (state->testVector[TEST_LINEARCOMPLEXITY] == true) {
-			counter++;
-			if (counter == testid) {
+
+				// error range check
+				if (state->tp.serialBlockLength <= 0) {
+					printf("    Serial Test block Length %ld must be > 0, try again\n\n",
+					       state->tp.serialBlockLength);
+				}
+			} while (state->tp.serialBlockLength <= 0);
+			break;
+
+		case PARAM_linearComplexitySequenceLength:
+			do {
 				// prompt
-				printf("   Enter Linear Complexity Test block Length: ");
+				printf("   Enter Linear Complexity Test block Length (try: %d): ", DEFAULT_LINEARCOMPLEXITY);
 				fflush(stdout);
 
 				// read number
 				state->tp.linearComplexitySequenceLength = getNumber(stdin, stdout);
 				putchar('\n');
-				continue;
-			}
+
+				// error range check
+				if (state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) {
+					printf("    linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
+					       state->tp.linearComplexitySequenceLength, MIN_LINEARCOMPLEXITY);
+				} else if (state->tp.linearComplexitySequenceLength > MAX_LINEARCOMPLEXITY + 1) {
+					printf("    linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
+					       state->tp.linearComplexitySequenceLength, MAX_LINEARCOMPLEXITY);
+				}
+			} while ((state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) ||
+				 (state->tp.linearComplexitySequenceLength > MAX_LINEARCOMPLEXITY + 1));
+			break;
+
+		case PARAM_numOfBitStreams:
+			do {
+				// prompt
+				printf("   Enter the number bitstream interations (try: %d): ", DEFAULT_UNIFORMITY_BINS);
+				fflush(stdout);
+
+				// read number
+				state->tp.numOfBitStreams = getNumber(stdin, stdout);
+				putchar('\n');
+
+				// error range check
+				if (state->tp.numOfBitStreams <= 0) {
+					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
+					       state->tp.numOfBitStreams);
+				}
+			} while (state->tp.numOfBitStreams <= 0);
+			break;
+
+		case PARAM_uniformity_bins:
+			do {
+				// prompt
+				printf("   Enter the number of uniformity bins (try: %d): ", DEFAULT_UNIFORMITY_BINS);
+				fflush(stdout);
+
+				// read number
+				state->tp.uniformity_bins = getNumber(stdin, stdout);
+				putchar('\n');
+
+				// error range check
+				if (state->tp.uniformity_bins <= 0) {
+					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
+					       state->tp.uniformity_bins);
+				}
+			} while (state->tp.uniformity_bins <= 0);
+			break;
+
+		case PARAM_n:
+			do {
+				// prompt
+				printf("   Enter the length of a single bit stream (try: %d): ", DEFAULT_BITCOUNT);
+				fflush(stdout);
+
+				// read number
+				state->tp.n = getNumber(stdin, stdout);
+				putchar('\n');
+
+				// error range check
+				if (state->tp.n < MIN_BITCOUNT) {
+					printf("    Length of a single bit stream %ld must be >= %d, try again\n\n",
+					       state->tp.n, MIN_BITCOUNT);
+				} else if (state->tp.n > MAX_BITCOUNT) {
+					printf("    Length of a single bit stream %ld must be <= %d, try again\n\n",
+					       state->tp.n, MAX_BITCOUNT);
+				}
+			} while ((state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT));
+			break;
+
+		case PARAM_uniformity_level:
+			do {
+				// prompt
+				printf("   Enter Uniformity Cutoff Level (try: %f): ", DEFAULT_UNIFORMITY_LEVEL);
+				fflush(stdout);
+
+				// read number
+				state->tp.uniformity_level = getDouble(stdin, stdout);
+				putchar('\n');
+
+				// error range check
+				if (state->tp.uniformity_level <= 0.0) {
+					printf("    Uniformity Cutoff Level must be > 0.0: %f, try again\n\n",
+					       state->tp.uniformity_level);
+				} else if (state->tp.uniformity_level > 0.1) {
+					printf("    Uniformity Cutoff Level must be <= 0.1: %f, try again\n\n",
+					       state->tp.uniformity_level);
+				}
+			} while (state->tp.uniformity_level <= 0.0 || state->tp.uniformity_level > 0.1);
+			break;
+
+			// prompt is for any test
+		case PARAM_alpha:
+			do {
+				// prompt
+				printf("   Enter Alpha Confidence Level (try: %f): ", DEFAULT_ALPHA);
+				fflush(stdout);
+
+				// read number
+				state->tp.alpha = getDouble(stdin, stdout);
+				putchar('\n');
+
+				// error range check
+				if (state->tp.alpha <= 0.0) {
+					printf("    Alpha must be > 0.0: %f, try again\n\n", state->tp.alpha);
+				} else if (state->tp.alpha > 0.1) {
+					printf("    Alpha must be <= 0.1: %f, try again\n\n", state->tp.alpha);
+				}
+			} while (state->tp.alpha <= 0.0 || state->tp.alpha > 0.1);
+			break;
+
+		default:
+			printf("   parameter number must be between 0 and %d, try again\n", MAX_PARAM);
+			fflush(stdout);
+			break;
 		}
-	} while (testid != 0);
+	} while (testid != PARAM_continue);
+	return;
 }
 
 
 void
 fileBasedBitStreams(struct state *state)
 {
-	int seekError;
-	long int byteCount;		// byte count for a number of consecutive bits, rounded up
+	long int byteCount;	// byte count for a number of consecutive bits, rounded up
+	int seekError;		// error during fseek()
+	int io_ret;		// I/O return status
 
 	/*
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(10, __FUNCTION__, "streamFile is NULL");
+		err(10, __FUNCTION__, "streamFile arg is NULL");
 	}
 
 	/*
-	 * parse a set of ASCII '0' and '1' characters
+	 * case: parse a set of ASCII '0' and '1' characters
 	 */
 	if (state->dataFormat == FORMAT_ASCII_01) {
 
 		// set file pointer jobnum chunks into file
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
-			     state->jobnum, state->tp.n, state->tp.numOfBitStreams,
-			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams),
-			     state->randomDataPath);
-		seekError = fseek(state->streamFile,
-				  (state->jobnum * state->tp.n * state->tp.numOfBitStreams),
-				  SEEK_SET);
+		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
+		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
+		seekError = fseek(state->streamFile, (state->jobnum * state->tp.n * state->tp.numOfBitStreams), SEEK_SET);
 		if (seekError != 0) {
 			errp(1, __FUNCTION__, "could not seek %ld into file: %s",
-					      (state->jobnum * state->tp.n * state->tp.numOfBitStreams),
-					      state->randomDataPath);
+			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		}
-
 		// parse data
 		readBinaryDigitsInASCIIFormat(state);
 
 		// close file
-		fclose(state->streamFile);
+		errno = 0;	// paranoia
+		io_ret = fclose(state->streamFile);
+		if (io_ret != 0) {
+			errp(10, __FUNCTION__, "error closing: %s", state->randomDataPath);
+		}
 		state->streamFile = NULL;
 
-	/*
-	 * parse raw 8-bit binary octets
-	 */
+		/*
+		 * case: parse raw 8-bit binary bytes
+		 */
 	} else if (state->dataFormat == FORMAT_RAW_BINARY) {
 
 		/*
@@ -1108,29 +1557,29 @@ fileBasedBitStreams(struct state *state)
 		 * not increase the byte only.  We only increase by one in
 		 * the case of a final partial bytw.
 		 */
-		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams)+7)/8;
+		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8;
 
 		// set file pointer jobnum chunks into file
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
-			     state->jobnum, state->tp.n, state->tp.numOfBitStreams,
-			     byteCount, state->randomDataPath);
-		seekError = fseek(state->streamFile,
-				  ((state->jobnum * state->tp.n * state->tp.numOfBitStreams)+7)/8,
-				  SEEK_SET);
+		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
+		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
 		if (seekError != 0) {
 			err(1, __FUNCTION__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
 		}
-
 		// parse data
 		readHexDigitsInBinaryFormat(state);
 
 		// close file
-		fclose(state->streamFile);
+		errno = 0;	// paranoia
+		io_ret = fclose(state->streamFile);
+		if (io_ret != 0) {
+			errp(10, __FUNCTION__, "error closing: %s", state->randomDataPath);
+		}
 		state->streamFile = NULL;
 
-	/*
-	 * should not get here
-	 */
+		/*
+		 * case: should not get here
+		 */
 	} else {
 		err(1, __FUNCTION__, "Input file format selection is invalid");
 	}
@@ -1141,33 +1590,41 @@ fileBasedBitStreams(struct state *state)
 static void
 readBinaryDigitsInASCIIFormat(struct state *state)
 {
-	int i;
-	int j;
-	int num_0s;
-	int num_1s;
-	int bitsRead;
-	int bit;
+	long int i;
+	long int j;
+	long int num_0s;
+	long int num_1s;
+	long int bitsRead;
+	long int bit;
+	int io_ret;		// I/O return status
 
-	// firewall
+	/*
+	 * firewall
+	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(10, __FUNCTION__, "streamFile is NULL");
+		err(10, __FUNCTION__, "streamFile arg is NULL");
 	}
 
-	if ((epsilon = (BitSequence *) calloc(state->tp.n, sizeof(BitSequence))) == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc BitSequence of %d octets", state->tp.n * sizeof(BitSequence));
-	}
+	/*
+	 * intertate reading bitstream sized binary digits in ASCII
+	 */
+	dbg(DBG_LOW, "start of interate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
+
+		/*
+		 * read ocetets from the bitstread and count 0 and 1 bits
+		 */
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
 		for (j = 0; j < state->tp.n; j++) {
-			if (fscanf(state->streamFile, "%1d", &bit) == EOF) {
-				warn(__FUNCTION__, "Insufficient data in file %s: %d bits were read",
-						   state->randomDataPath, bitsRead);
-				free(epsilon);
+			io_ret = fscanf(state->streamFile, "%ld", &bit);
+			if (io_ret == EOF) {
+				warn(__FUNCTION__, "Insufficient data in file %s: %ld bits were read",
+				     state->randomDataPath, bitsRead);
 				return;
 			} else {
 				bitsRead++;
@@ -1176,67 +1633,152 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 				} else {
 					num_1s++;
 				}
-				epsilon[j] = bit;
+				state->epsilon[j] = bit;
 			}
 		}
-		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s);
+
+		/*
+		 * write stats to freq.txt
+		 */
+		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+		if (io_ret <= 0) {
+			errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(10, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+		}
+
+		/*
+		 * perform stastical tests for this interation
+		 */
 		nist_test_suite(state);
 	}
-	free(epsilon);
+
+	dbg(DBG_LOW, "end of interate phase");
+	return;
 }
 
+
+/*
+ * readHexDigitsInBinaryFormat - read bits from the streamFile and convert them into epsilon bit array
+ *
+ * given:
+ *      state           // pointer to run state
+ *
+ * Given the open steam streamFile, form file state->randomDataPath, convert them into 'bits'
+ * found in the epsilon bit array.
+ */
 void
 readHexDigitsInBinaryFormat(struct state *state)
 {
-	int i;
-	int done;
-	int num_0s;
-	int num_1s;
-	int bitsRead;
-	BYTE buffer[4];
+	long int num_0s;	// count of 0 bits processed
+	long int num_1s;	// count of 1 bits processed
+	long int bitsRead;	// number of bits to read and process
+	bool done;		// true ==> we have converted enough data
+	BYTE byte;		// single bite
+	int io_ret;		// I/O return status
+	long int i;
 
-	// firewall
+	/*
+	 * firewall
+	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(10, __FUNCTION__, "streamFile is NULL");
+		err(10, __FUNCTION__, "streamFile arg is NULL");
 	}
 
-	if ((epsilon = (BitSequence *) calloc(state->tp.n, sizeof(BitSequence))) == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc BitSequence of %d octets", state->tp.n * sizeof(BitSequence));
-	}
-
+	/*
+	 * intertate reading bitstream in octets
+	 */
+	dbg(DBG_LOW, "start of interate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
+
+		/*
+		 * read ocetets from the bitstread and count 0 and 1 bits
+		 */
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
 		done = 0;
 		do {
-			if (fread(buffer, sizeof(unsigned char), 4, state->streamFile) != 4) {
-				errp(10, __FUNCTION__, "read error or insufficient data in file");
+			/*
+			 * read the next binary octet
+			 */
+			io_ret = fgetc(state->streamFile);
+			if (io_ret < 0) {
+				errp(10, __FUNCTION__, "read error in stream file: %s", state->randomDataPath);
 			}
-			done = convertToBits(buffer, 32, state->tp.n, &num_0s, &num_1s, &bitsRead);
-		} while (!done);
-		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s);
+			byte = (BYTE) io_ret;
 
+			/*
+			 * add bits to the epsilon bit stream
+			 */
+			done = convertToBits(state, &byte, BITS_N_BYTE, state->tp.n, &num_0s, &num_1s, &bitsRead);
+		} while (done == false);
+
+		/*
+		 * write stats to freq.txt
+		 */
+		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+		if (io_ret <= 0) {
+			errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(10, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+		}
+
+		/*
+		 * perform stastical tests for this interation
+		 */
 		nist_test_suite(state);
 
 	}
-	free(epsilon);
+	dbg(DBG_LOW, "end of interate phase");
+	return;
 }
 
 
-int
-convertToBits(BYTE * x, int xBitLength, int bitsNeeded, int *num_0s, int *num_1s, int *bitsRead)
+/*
+ * convertToBits - convert binary bytes into the end of an epsilon bit array
+ *
+ * given:
+ *      state           // pointer to run state
+ *      x               // pointer to an array (even just 1) binary bytes
+ *      xBitLength      // number of bits to convert
+ *      bitsNeeded      // total number of bits we want to convert this run
+ *      num_0s          // pointer to number of 0 bits converted so far
+ *      num_1s          // pointer to number of 1 bits converted so far
+ *      bitsRead        // pointer to number of bits converted so far
+ *
+ * returns:
+ *      true ==> we have converted enough bits
+ *      false ==> we have NOT converted enough bits, yet
+ */
+bool
+convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bitsNeeded, long int *num_0s, long int *num_1s,
+	      long int *bitsRead)
 {
-	int i;
-	int j;
-	int count;
-	int bit;
+	long int i;
+	long int j;
+	long int count;
+	long int bit;
 	BYTE mask;
-	int zeros;
-	int ones;
+	long int zeros;
+	long int ones;
+
+	/*
+	 * firewall
+	 */
+	if (state == NULL) {
+		err(1, __FUNCTION__, "state arg is NULL");
+	}
+	if (state->epsilon == NULL) {
+		err(10, __FUNCTION__, "state->epsilon is NULL");
+	}
 
 	count = 0;
 	zeros = ones = 0;
@@ -1253,155 +1795,268 @@ convertToBits(BYTE * x, int xBitLength, int bitsNeeded, int *num_0s, int *num_1s
 				zeros++;
 			}
 			mask >>= 1;
-			epsilon[*bitsRead] = bit;
+			state->epsilon[*bitsRead] = bit;
 			(*bitsRead)++;
 			if (*bitsRead == bitsNeeded) {
-				return 1;
+				return true;
 			}
 			if (++count == xBitLength) {
-				return 0;
+				return false;
 			}
 		}
 	}
 
-	return 0;
-}
-
-
-void
-openOutputStreams(struct state *state)
-{
-	int i;
-	int numOfBitStreams;
-	int numOfOpenFiles = 0;
-	char freqfn[200];
-	char summaryfn[200];
-	char statsDir[200];
-	char resultsDir[200];
-
-	// firewall
-	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
-	}
-	// create the path if required
-	if (state->workDirFlag == true) {
-		makePath(state->workDir);
-	}
-
-	sprintf(freqfn, "%s/freq.txt", state->workDir);
-	dbg(DBG_HIGH, "in %s, generator %s[%d] uses freq.txt file: %s", 
-		      __FUNCTION__, state->generatorDir[state->generator], state->generator, freqfn);
-	if ((freqfp = fopen(freqfn, "w")) == NULL) {
-		errp(10, __FUNCTION__, "Could not open freq file: %s", freqfn);
-	}
-	sprintf(summaryfn, "%s/finalAnalysisReport.txt", state->workDir);
-	dbg(DBG_HIGH, "in %s, generator %s[%d] uses finalAnalysisReport.txt.txt file: %s", 
-		      __FUNCTION__, state->generatorDir[state->generator], state->generator, summaryfn);
-	if ((summary = fopen(summaryfn, "w")) == NULL) {
-		errp(10, __FUNCTION__, "Could not open stats file: %s", summaryfn);
-	}
-
-	for (i = 1; i <= NUMOFTESTS; i++) {
-		if (state->testVector[i] == true) {
-			sprintf(statsDir, "%s/stats.txt", state->subDir[i]);
-			dbg(DBG_HIGH, "in %s, generator %s[%d] test %s[%d] uses stats.txt file: %s", 
-				      __FUNCTION__, state->generatorDir[state->generator], state->generator, 
-				      state->testNames[i], i, statsDir);
-			sprintf(resultsDir, "%s/results.txt", state->subDir[i]);
-			dbg(DBG_HIGH, "in %s, generator %s[%d] test %s[%d] uses results.txt file: %s", 
-				      __FUNCTION__, state->generatorDir[state->generator], state->generator, 
-				      state->testNames[i], i, resultsDir);
-			if ((stats[i] = fopen(statsDir, "w")) == NULL) {	/* STATISTICS LOG */
-				errp(10, __FUNCTION__, "unable to open stats.txt file %s for test: %s", statsDir, state->testNames[i]);
-			} else {
-				numOfOpenFiles++;
-			}
-			if ((results[i] = fopen(resultsDir, "w")) == NULL) {	/* P_VALUES LOG */
-				errp(10, __FUNCTION__, "unable to open results.txt file %s for test: %s", resultsDir, state->testNames[i]);
-			} else {
-				numOfOpenFiles++;
-			}
-		}
-	}
-
-	// do not perform any interation if batchmode is enabled or -i was given
-	if (state->batchmode == false && state->iterationFlag == false) {
-		// prompt
-		printf("   How many bitstreams? ");
-		fflush(stdout);
-
-		// read number
-		numOfBitStreams = getNumber(stdin, stdout);
-		putchar('\n');
-	}
+	return false;
 }
 
 
 void
 invokeTestSuite(struct state *state)
 {
-	// firewall
+	int io_ret;		// I/O return status
+
+	/*
+	 * firewall
+	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 
-	fprintf(freqfp, "________________________________________________________________________________\n\n");
-	if (state->generator == 0) {
-		fprintf(freqfp, "\t\tFILE = %s\t\tALPHA = %6.4f\n", state->randomDataPath, ALPHA);
+	/*
+	 * case: prep for writing to the datafile
+	 */
+	if (state->runMode == MODE_WRITE_ONLY) {
+
+		/*
+		 * allocate the write buffer
+		 */
+		switch (state->dataFormat) {
+		case FORMAT_RAW_BINARY:
+			// compression 8:1
+			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
+			if (state->tmpepsilon == NULL) {
+				errp(10, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
+				     (state->tp.n / BITS_N_BYTE) + 1, sizeof(BitSequence));
+			}
+			state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
+			break;
+
+		case FORMAT_ASCII_01:
+			state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
+			if (state->tmpepsilon == NULL) {
+				errp(10, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
+				     state->tp.n + 1, sizeof(BitSequence));
+			}
+			state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
+			break;
+
+		default:
+			err(10, __FUNCTION__, "Invalid format");
+			break;
+		}
+
+
+		/*
+		 * case: prep for reading from a file or from a generator
+		 */
 	} else {
-		fprintf(freqfp, "\t\tFILE = %s\t\tALPHA = %6.4f\n", state->generatorDir[state->generator], ALPHA);
+		/*
+		 * announce test
+		 */
+		io_ret = fprintf(state->freqFile,
+				 "________________________________________________________________________________\n\n");
+		if (io_ret <= 0) {
+			errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+		}
+		if (state->generator == 0) {
+			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+					 state->randomDataPath, state->tp.alpha);
+			if (io_ret <= 0) {
+				errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+			}
+		} else {
+			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+					 state->generatorDir[state->generator], state->tp.alpha);
+			if (io_ret <= 0) {
+				errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+			}
+		}
+		io_ret = fprintf(state->freqFile,
+				 "________________________________________________________________________________\n\n");
+		if (io_ret <= 0) {
+			errp(10, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(10, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+		}
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "     Statistical Testing In Progress.........");
+		} else {
+			printf("     Statistical Testing In Progress.........\n\n");
+			fflush(stdout);
+		}
 	}
-	fprintf(freqfp, "________________________________________________________________________________\n\n");
-	if (state->batchmode == true) {
-		dbg(DBG_LOW, "     Statistical Testing In Progress.........");
-	} else {
-		printf("     Statistical Testing In Progress.........\n\n");
-	}
+
+	/*
+	 * test data from a file or from an internal generator
+	 */
 	switch (state->generator) {
-	case 0:
+	case GENERATOR_FROM_FILE:
 		fileBasedBitStreams(state);
 		break;
-	case 1:
+	case GENERATOR_LCG:
 		lcg(state);
 		break;
-	case 2:
+	case GENERATOR_QCG1:
 		quadRes1(state);
 		break;
-	case 3:
+	case GENERATOR_QCG2:
 		quadRes2(state);
 		break;
-	case 4:
+	case GENERATOR_CCG:
 		cubicRes(state);
 		break;
-	case 5:
+	case GENERATOR_XOR:
 		exclusiveOR(state);
 		break;
-	case 6:
+	case GENERATOR_MODEXP:
 		modExp(state);
 		break;
-	case 7:
+	case GENERATOR_BBS:
 		bbs(state);
 		break;
-	case 8:
+	case GENERATOR_MS:
 		micali_schnorr(state);
 		break;
-	case 9:
+	case GENERATOR_SHA1:
 		SHA1(state);
 		break;
 
-	/*
-	 * INTRODUCE NEW PSEUDO RANDOM NUMBER GENERATORS HERE
-	 */
+		/*
+		 * INTRODUCE NEW PSEUDO RANDOM NUMBER GENERATORS HERE
+		 */
 
 	default:
 		err(10, __FUNCTION__, "Error in invokeTestSuite!");
 		break;
 	}
-	if (state->batchmode == true) {
-		dbg(DBG_LOW, "     Statistical Testing Complete!!!!!!!!!!!!");
-	} else {
-		printf("     Statistical Testing Complete!!!!!!!!!!!!\n");
+
+	/*
+	 * -m w: only write generated data to -f randata
+	 *
+	 * Data already written, nothing else do to.
+	 */
+	if (state->runMode == MODE_WRITE_ONLY) {
+
+		/*
+		 * announce end if writes
+		 */
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "     Exiting, completed writes to %s", state->randomDataPath);
+		} else {
+			printf("     Exiting completed writes to %s\n", state->randomDataPath);
+			fflush(stdout);
+		}
+		destroy(state);
+		exit(0);
+
+		/*
+		 * -m i: iterate only, write state to -s statePath
+		 *
+		 * State already written, nothing else do to.
+		 */
+	} else if (state->runMode == MODE_ITERATE_ONLY) {
+
+		/*
+		 * announce end of interation only
+		 */
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "     Exiting, state written to %s", state->statePath);
+		} else {
+			printf("     Exiting, state written to %s\n", state->statePath);
+			fflush(stdout);
+		}
+		destroy(state);
+		exit(0);
+
+		/*
+		 * -m b: iterate and then assess
+		 *
+		 * Iterations complete, move on to assess
+		 */
+	} else if (state->runMode == MODE_ITERATE_AND_ASSESS) {
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "     Statistical Testing Complete!!!!!!!!!!!!");
+		} else {
+			printf("     Statistical Testing Complete!!!!!!!!!!!!\n");
+			fflush(stdout);
+		}
+
+
 	}
+
+	/*
+	 * -m a: assess only, read state from *.state files under -r stateDir and asses results
+	 * -m b: iterate and then assess
+	 */
+	if (state->batchmode == true) {
+		dbg(DBG_LOW, "     About to start assessment");
+	} else {
+		printf("     About to start assessment\n");
+		fflush(stdout);
+	}
+}
+
+
+/*
+ * getTimestamp - get the time and write it as a string into a buffer
+ *
+ * given:
+ *      buf             // fixed length buffer
+ *      len             // length of the buffer in bytes
+ *
+ * Determine the time as of "now" and format it as follows:
+ *
+ *      yyyy-mm-dd hh:mm:ss
+ *
+ * This function does not retun on error.
+ */
+static void
+getTimestamp(char *buf, size_t len)
+{
+	time_t seconds;		// seconds since the epoch
+	struct tm *loc_ret;	// return value form localtime_r()
+	struct tm now;		// the time now
+	size_t time_len;	// length of string produced by strftime() or 0
+
+	// firewall
+	if (buf == NULL) {
+		err(10, __FUNCTION__, "bug arg is NULL");
+	}
+	if (len <= 0) {
+		err(10, __FUNCTION__, "len must be > 0: %lu", len);
+	}
+
+	/*
+	 * determine the time for now
+	 */
+	errno = 0;		// paranoia
+	seconds = time(NULL);
+	if (seconds < 0) {
+		errp(10, __FUNCTION__, "time returned < 0: %ld", seconds);
+	}
+	loc_ret = localtime_r(&seconds, &now);
+	if (loc_ret == NULL) {
+		errp(10, __FUNCTION__, "localtime_r returned NULL");
+	}
+	errno = 0;		// paranoia
+	time_len = strftime(buf, len - 1, "%F %T", &now);
+	if (time_len == 0) {
+		errp(10, __FUNCTION__, "strftime failed");
+	}
+	buf[len] = '\0';	// paranoia
+	return;
 }
 
 
@@ -1409,64 +2064,167 @@ invokeTestSuite(struct state *state)
  * nist_test_suite - run an interation for all enabled tests
  *
  * given:
- * 	state		// run state and which tests are enabled
+ *      state           // run state and which tests are enabled
  */
 void
 nist_test_suite(struct state *state)
 {
-	time_t seconds;		// seconds since the epoch
-	struct tm *loc_ret;	// return value form localtime_r()
-	struct tm now;		// the time now
-	size_t time_len;	// length of string produced by strftime() or 0
-	char buf[BUFSIZ+1];	// time string buffer
-	int i;
+	char buf[BUFSIZ + 1];	// time string buffer
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state is NULL");
+		err(10, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * perform 1 interation on all enabled tests
+	 * if you "like to watch", report the very beginning
 	 */
-	for (i = 1; i <= NUMOFTESTS; ++i) {
+	if (state->reportCycle > 0 && state->curIteration == 0) {
+		getTimestamp(buf, BUFSIZ);
+		msg("starting first iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+	}
 
-		// call if enabled
-		if (state->testVector[i] == true) {
-			// interate for a given test
-			test[i].iterate(state);
+	/*
+	 * perform interation on all enabled tests
+	 */
+	interate(state);
+
+	/*
+	 * count the interation and report process if requested
+	 */
+	++state->curIteration;
+	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
+				       (state->curIteration == state->tp.numOfBitStreams))) {
+		getTimestamp(buf, BUFSIZ);
+		if (state->curIteration == state->tp.numOfBitStreams) {
+			msg("completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+		} else {
+			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
+	}
+	return;
+}
+
+
+/*
+ * write_sequence - write the epsilon stream to a randomDataPath
+ *
+ * given:
+ *      state           // run state to write epsilon to randomDataPath
+ */
+void
+write_sequence(struct state *state)
+{
+	char buf[BUFSIZ + 1];	// time string buffer
+	int io_ret;		// I/O return status
+	int count;
+	long int i;
+	int j;
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state arg was NULL");
+	}
+	if (state->tmpepsilon == NULL) {
+		err(10, __FUNCTION__, "state->tmpepsilon is NULL");
+	}
+	if (state->streamFile == NULL) {
+		err(10, __FUNCTION__, "state->streamFile is NULL");
+	}
+
+	/*
+	 * write contents of epsilon
+	 */
+	switch (state->dataFormat) {
+	case FORMAT_RAW_BINARY:
+
+		/*
+		 * store output as binary bits
+		 */
+		for (i = 0, j = 0, count = 0, state->tmpepsilon[0] = 0; i < state->tp.n; i++) {
+
+			// store bit in current output byte
+			if (state->epsilon[i] == 1) {
+				state->tmpepsilon[j] |= (1 << count);
+			} else if (state->epsilon[i] != 0) {
+				err(10, __FUNCTION__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+			}
+			++count;
+
+			// when an output byte is complete
+			if (count >= BITS_N_BYTE) {
+				// prep for next byte
+				count = 0;
+				if (j >= (state->tp.n / BITS_N_BYTE)) {
+					break;
+				}
+				++j;
+				state->tmpepsilon[j] = 0;
+			}
+		}
+
+		/*
+		 * write output buffer
+		 */
+		errno = 0;	// paranoia
+		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), j, state->streamFile);
+		if (io_ret < j) {
+			errp(10, __FUNCTION__, "write of %d elements of %ld bytes to %s failed",
+			     j, sizeof(BitSequence), state->randomDataPath);
+		}
+		errno = 0;	// paranoia
+		io_ret = fflush(state->streamFile);
+		if (io_ret == EOF) {
+			errp(10, __FUNCTION__, "flush of %s failed", state->randomDataPath);
+		}
+		break;
+
+	case FORMAT_ASCII_01:
+
+		/*
+		 * store output as ASCII string of numbers
+		 */
+		for (i = 0; i < state->tp.n; i++) {
+			if (state->epsilon[i] == 0) {
+				state->tmpepsilon[i] = '0';
+			} else if (state->epsilon[i] == 1) {
+				state->tmpepsilon[i] = '1';
+			} else {
+				err(10, __FUNCTION__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+			}
+		}
+
+		/*
+		 * write file as ASCII string of numbers
+		 */
+		errno = 0;	// paranoia
+		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), state->tp.n, state->streamFile);
+		if (io_ret < state->tp.n) {
+			errp(10, __FUNCTION__, "write of %ld elements of %ld bytes to %s failed",
+			     state->tp.n, sizeof(BitSequence), state->randomDataPath);
+		}
+		io_ret = fflush(state->streamFile);
+		if (io_ret == EOF) {
+			errp(10, __FUNCTION__, "flush of %s failed", state->randomDataPath);
+		}
+		break;
+
+	default:
+		err(10, __FUNCTION__, "Invalid format");
+		break;
 	}
 
 	/*
 	 * count the interation and report process if requested
 	 */
 	++state->curIteration;
-	if (state->reportCycle > 0 && (state->curIteration % state->reportCycle) == 0) {
-
-		/*
-		 * determine the time for now
-		 */
-		errno = 0;	// paranoia
-		seconds = time(NULL);
-		if (seconds < 0) {
-			errp(10, __FUNCTION__, "time returned < 0: %ld", seconds);
+	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
+				       (state->curIteration == state->tp.numOfBitStreams))) {
+		getTimestamp(buf, BUFSIZ);
+		if (state->curIteration == state->tp.numOfBitStreams) {
+			msg("completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+		} else {
+			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
-		loc_ret = localtime_r(&seconds, &now);
-		if (loc_ret == NULL) {
-			errp(10, __FUNCTION__, "localtime_r returned NULL");
-		}
-		errno = 0;	// paranoia
-		time_len = strftime(buf, BUFSIZ, "%F %T", &now);
-		if (time_len == 0) {
-			errp(10, __FUNCTION__, "strftime failed");
-		}
-		buf[BUFSIZ] = '\0';	// paranoia
-		
-		/*
-		 * we are at a multiple of state->reportCycle interations, tell the user
-		 */
-		msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 	}
-	return;
 }

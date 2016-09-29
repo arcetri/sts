@@ -1,0 +1,296 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[      6553,        286]
+NotebookOptionsPosition[      5340,        245]
+NotebookOutlinePosition[      5696,        261]
+CellTagsIndexPosition[      5653,        258]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+(*
+ * The Mathematica code to evaluate the pi terms is from the paper:
+ *
+ * K. Hamano and T. Kaneko, The Correction of the Overlapping Template \
+Matching Test
+ * Included in NIST Randomness Test Suite, IEICE Transactions of Electronics,
+ * Communications and Computer Sciences 2007, E90-A(9), pp 1788-1792.
+ *
+ *      http://www.researchgate.net/publication/
+ *        \
+220241122_Correction_of_Overlapping_Template_Matching_Test_Included_in_NIST_\
+Randomness_Test_Suite
+ *
+ * We used the following Mathematica code, from Appendix B of the above \
+paper, to compute our terms.
+ * We reordered the printing of the Tx[M]]/2^1032 // N vaues to print \
+immiedately after the makeTn:=Module[..]
+ * and added some newlines, whitepspace and blank lines for slightly better \
+code clarity.
+ *)\
+\>", "Input"],
+
+Cell["\<\
+(* setup *)
+T0 = Table[0,{1032}];
+T1 = Table[0,{1032}];
+T2 = Table[0,{1032}];
+T3 = Table[0,{1032}];
+T4 = Table[0,{1032}];
+M = 1032;
+f0[i_] :=
+  If[i == -1,
+     1,
+     If[i == 0,
+     \t1,
+\tT0[[i]]
+     ]
+ ];
+m = 9;
+T1[[m]] = 1;
+T1[[m+1]] = 2;\
+\>", "Input"],
+
+Cell["\<\
+(* pi_term[0] == 0.36409105321672786245 *)
+makeT0 :=
+  Module[
+    {},
+    For[n = 1,
+    \tn <= m-1,
+\tT0[[n]] = 2 f0[n-1];
+\tn++;
+    ];
+    For[n = m,
+        n <= M,
+\tT0[[n]] = 2 f0[n - 1] - f0[n - m - 1];
+\tn++;
+    ];
+  ];
+makeT0
+T0;\
+\>", "Input"],
+
+Cell["\<\
+(* pi_term[1] == 0.18565890010624038178 *)
+makeT1 :=
+  Module[{},
+    For[n = m+2,
+        n <= M,
+\tT1[[n]] = Sum[f0[j] f0[n-m-2-j],
+\t{j, -1, n-m-1}];
+\tn++;
+    ];
+  ];\
+\>", "Input"],
+
+Cell["\<\
+makeT1
+T1;\
+\>", "Input"],
+
+Cell["\<\
+(* pi_term[2] == 0.13938113045903269914 *)
+g2[a_,b_] :=
+  If[a > b,
+     0,
+     Sum[f0[j] T1[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT2 :=
+  Module[
+    {},
+    For[n = 2,
+        n <= M,
+\tT2[[n]] = T1[[n-1]] + g2[-1, n-2 m-2];
+\tn++;
+    ];
+  ];\
+\>", "Input"],
+
+Cell["\<\
+makeT2
+T2;\
+\>", "Input"],
+
+Cell["\<\
+(* pi_term[3] == 0.10057114399877811497 *)
+g3[a_,b_] :=
+  If[a > b,
+     0,
+     Sum[f0[j] T2[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT3 :=
+  Module[
+    {},
+    For[n = 3,
+        n <= M,
+\tT3[[n]] = T2[[n-1]] + g3[-1, n-2 m-3];
+\tn++;
+    ];
+  ];
+makeT3
+T3;\
+\>", "Input"],
+
+Cell["(* pi_term[4] == 0.070432326346398449744 *)", "Input"],
+
+Cell["\<\
+  If[a > b,
+     0,
+     Sum[f0[j] T3[[n-m-2-j]],
+         {j,a,b}
+     ]
+  ];
+makeT4 :=
+  Module[
+    {},
+    For[n = 4,
+        n <= M,
+\tT4[[n]] = T3[[n-1]] + g4[-1, n-2 m-4];
+\tn++;
+    ];
+  ];
+makeT4
+T4;\
+\>", "Input"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+\"In overlappingTemplateMatchings.c, pi_term[0] is: \"
+N[T0[[M]]/2^1032, 20]
+\"In overlappingTemplateMatchings.c, pi_term[1] is: \"
+N[T1[[M]]/2^1032, 20]
+\"In overlappingTemplateMatchings.c, pi_term[2] is: \"
+N[T2[[M]]/2^1032, 20]
+\"In overlappingTemplateMatchings.c, pi_term[3] is: \"
+N[T3[[M]]/2^1032, 20]
+\"In overlappingTemplateMatchings.c, pi_term[4] is: \"
+N[T4[[M]]/2^1032, 20]\
+\>", "Input"],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[0] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.640969137100808*^9}],
+
+Cell[BoxData["0.364091053216727862449332299396815768890007195813483684123`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137101551*^9}],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[1] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.640969137102435*^9}],
+
+Cell[BoxData["0.185658900106240381783114119668638549921246126784380222795`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137103302*^9}],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[2] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.640969137104126*^9}],
+
+Cell[BoxData["0.139381130459032699136291530198213280399632789592310793169`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137104884*^9}],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[3] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.64096913710572*^9}],
+
+Cell[BoxData["0.100571143998778114970668463850106469150500126693241840103`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137106469*^9}],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[4] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.640969137107223*^9}],
+
+Cell[BoxData["0.070432326346398449743681991947500696335359227073612560841`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137107931*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+(* pi_term[5] == 0.13986544587282249192 *)
+\"In overlappingTemplateMatchings.c, pi_term[5] is: \"
+N[1 - (T0[[M]]+T1[[M]]+T2[[M]]+T3[[M]]+T4[[M]])/2^1032, 20]
+\
+\>", "Input"],
+
+Cell[BoxData["\<\"In overlappingTemplateMatchings.c, pi_term[5] is: \"\>"], \
+"Output",
+ CellChangeTimes->{3.640969137134337*^9}],
+
+Cell[BoxData["0.139865445872822491916911594938725235303379771634664028138`20.\
+"], "Output",
+ CellChangeTimes->{3.640969137135016*^9}]
+}, Open  ]]
+},
+WindowSize->{740, 755},
+WindowMargins->{{20, Automatic}, {Automatic, 44}},
+FrontEndVersion->"9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (January 25, \
+2013)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[557, 20, 812, 21, 224, "Input"],
+Cell[1372, 43, 270, 19, 284, "Input"],
+Cell[1645, 64, 265, 18, 269, "Input"],
+Cell[1913, 84, 196, 11, 164, "Input"],
+Cell[2112, 97, 35, 3, 44, "Input"],
+Cell[2150, 102, 278, 18, 269, "Input"],
+Cell[2431, 122, 35, 3, 44, "Input"],
+Cell[2469, 127, 289, 20, 299, "Input"],
+Cell[2761, 149, 60, 0, 29, "Input"],
+Cell[2824, 151, 233, 18, 269, "Input"],
+Cell[CellGroupData[{
+Cell[3082, 173, 409, 11, 164, "Input"],
+Cell[3494, 186, 129, 2, 28, "Output"],
+Cell[3626, 190, 134, 2, 28, "Output"],
+Cell[3763, 194, 129, 2, 28, "Output"],
+Cell[3895, 198, 134, 2, 28, "Output"],
+Cell[4032, 202, 129, 2, 28, "Output"],
+Cell[4164, 206, 134, 2, 28, "Output"],
+Cell[4301, 210, 128, 2, 28, "Output"],
+Cell[4432, 214, 134, 2, 28, "Output"],
+Cell[4569, 218, 129, 2, 28, "Output"],
+Cell[4701, 222, 134, 2, 28, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4872, 229, 183, 5, 74, "Input"],
+Cell[5058, 236, 129, 2, 28, "Output"],
+Cell[5190, 240, 134, 2, 62, "Output"]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
+

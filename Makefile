@@ -4,7 +4,6 @@
 # sts - Stastical Test Suite
 
 SHELL= /bin/bash
-RM= rm
 MAKE= make
 
 # the version we build and install
@@ -35,6 +34,27 @@ tags:
 	cd ${SRC}; $(MAKE) $@
 
 ctags:
+	cd ${SRC}; $(MAKE) $@
+
+picky:
+	cd ${SRC}; $(MAKE) $@
+
+indent:
+	cd ${SRC}; $(MAKE) $@
+
+valgrind:
+	cd ${SRC}; $(MAKE) $@
+
+valgrindeach:
+	cd ${SRC}; $(MAKE) $@
+
+minivalgrind:
+	cd ${SRC}; $(MAKE) $@
+
+osxtest:
+	cd ${SRC}; $(MAKE) $@
+
+mimiosxtest:
 	cd ${SRC}; $(MAKE) $@
 
 rebuild:
