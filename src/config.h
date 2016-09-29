@@ -15,6 +15,22 @@ extern "C" {
  * AUTO DEFINES (DON'T TOUCH!)
  */
 
+#if __STDC_VERSION__ >= 199901L
+
+#include <stdint.h>
+
+typedef uint8_t *CSTRTD;  // C strings are usually unsigned octets
+typedef uint8_t *BSTRTD;  // so called sts bit strings are 1 bit per octet
+typedef uint8_t BYTE;	  // byte as in unsigned 8 bit (octet)
+typedef uint32_t UINT;	  // force int to be 32 bit unsigned values
+typedef uint16_t USHORT;  // force shorts to be 16 bit unsigned values
+typedef uint32_t ULONG;	  // sts assumes long is a 32 bit unsigned value
+typedef uint16_t DIGIT;	  // sts prefers to store digits in 16 bit unsigned values
+typedef uint32_t DBLWORD; // sts assumes this is a 32 bit unsigned value
+typedef uint64_t WORD64;  // 64 bit unsigned value
+
+#else // old compiler
+
 #ifndef	CSTRTD
 typedef char *CSTRTD;
 #endif
@@ -42,7 +58,32 @@ typedef ULONG DBLWORD;  /* 32-bit word */
 #endif
 
 #ifndef	WORD64
-typedef ULONG WORD64[2];  /* 64-bit word */
+typedef unsigned long long WORD64;  /* 64-bit word */
+#endif
+
+#endif // __STDC_VERSION__ >= 199901L
+
+/*
+ * Compiler independent Bool definitions
+ */
+#if !defined(__bool_true_false_are_defined) || __bool_true_false_are_defined==0
+# undef bool
+# undef true
+# undef false
+# if defined(__cplusplus)
+#  define bool bool
+#  define true true
+#  define false false
+# else
+#  if __STDC_VERSION__ >= 199901L
+#    define bool _Bool
+#  else
+#    define bool unsigned char
+#  endif
+#  define true 1
+#  define false 0
+# endif
+# define __bool_true_false_are_defined 1
 #endif
 
 #endif /* _CONFIG_H_ */

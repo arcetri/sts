@@ -1,17 +1,16 @@
 
 
-//#include	"../include/sha.h"
+//#include	"/sha.h"
 
-void	lcg();
-double	lcg_rand(int, double, double*, int);
-void	quadRes1();
-void	quadRes2();
-void	cubicRes();
-void	exclusiveOR();
-void	modExp();
-void	bbs();
-void	micali_schnorr();
-void	SHA1();
+extern void	lcg(struct state *state);
+extern void	quadRes1(struct state *state);
+extern void	quadRes2(struct state *state);
+extern void	cubicRes(struct state *state);
+extern void	exclusiveOR(struct state *state);
+extern void	modExp(struct state *state);
+extern void	bbs(struct state *state);
+extern void	micali_schnorr(struct state *state);
+extern void	SHA1(struct state *state);
 
 
 /* The circular shifts. */

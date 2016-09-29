@@ -7,7 +7,7 @@
  * and discrete function package.
  */
 
-#include	"../include/genutils.h"
+#include "genutils.h"
 
 #define	MAXPLEN		384
 
@@ -24,7 +24,7 @@
 **  y      Address of array y            *
 **  l      Length both x and y in bytes  *
 **                                       *
-******************************************/ 
+******************************************/
 int greater(BYTE *x, BYTE *y, int l)
 {
 	int		i;
@@ -55,7 +55,7 @@ int greater(BYTE *x, BYTE *y, int l)
 **  y      Address of array y            *
 **  l      Length both x and y in bytes  *
 **                                       *
-******************************************/ 
+******************************************/
 int less(BYTE *x, BYTE *y, int l)
 {
 	int		i;
@@ -79,15 +79,15 @@ int less(BYTE *x, BYTE *y, int l)
 /*****************************************
 ** bshl - shifts array left              *
 **                  by one bit.          *
-**                                       *	
+**                                       *
 ** x = x * 2                             *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  x      Address of array x            *
 **  l      Length array x in bytes       *
 **                                       *
-******************************************/ 
+******************************************/
 BYTE bshl(BYTE *x, int l)
 {
 	BYTE	*p;
@@ -120,16 +120,16 @@ BYTE bshl(BYTE *x, int l)
 /*****************************************
 ** bshr - shifts array right             *
 **                   by one bit.         *
-**                                       *	
+**                                       *
 ** x = x / 2                             *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  x      Address of array x            *
-**  l      Length array x in bytes       *	
+**  l      Length array x in bytes       *
 **                                       *
 ******************************************/
-void bshr(BYTE *x, int l)	
+void bshr(BYTE *x, int l)
 {
 	BYTE	*p;
 	int		c1,c2;
@@ -159,7 +159,7 @@ void bshr(BYTE *x, int l)
 **                                       *
 ** A = B * C                             *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  A      Address of the result         *
 **  B      Address of the multiplier     *
@@ -210,7 +210,7 @@ void ModMult(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM)
 **                                       *
 ** A = b * C                             *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  A      Address of the result         *
 **  b      Scalar (1 BYTE)               *
@@ -256,8 +256,8 @@ void Square(BYTE *A, BYTE *B, int L)
 ** ModExp - Modular Exponentiation       *
 **                                       *
 ** A = B ** C (MOD M)                    *
-**                                       *	
-** Parameters:                           *	
+**                                       *
+** Parameters:                           *
 **                                       *
 **  A      Address of result             *
 **  B      Address of mantissa           *
@@ -309,7 +309,7 @@ void ModExp(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM)
 			memcpy(A, A+LM+(LM+LB)-LM, LM);  /* A = lower LM bytes of temp */
 			memset(A+LM, 0x00, 2*LM);
 		}
- 
+
 		wmask >>= 1;
 		if ( !wmask ) {
 			wmask = 0x80;
@@ -339,7 +339,7 @@ int DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem)
 
 	tx = x;
 	tn = n;
-	
+
 	/* point to the MSD of n  */
 	for ( i=0, lgth_n=lenn; i<lenn; i++, lgth_n-- ) {
 		if ( *tn )
@@ -348,7 +348,7 @@ int DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem)
 	}
 	if ( !lgth_n )
 		return 0;
-	
+
 	/* point to the MSD of x  */
 	for ( i=0, lgth_x=lenx; i<lenx; i++, lgth_x-- ) {
 		if ( *tx )
@@ -363,7 +363,7 @@ int DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem)
 	else
 		lenq = lgth_x - lgth_n + 1;
 	memset(quot, 0x00, lenq);
-	
+
 	/* Loop while x > n,  WATCH OUT if lgth_x == lgth_n */
 	while ( (lgth_x > lgth_n) || ((lgth_x == lgth_n) && !less(tx, tn, lgth_n)) ) {
 		shift = 1;
@@ -424,7 +424,7 @@ int DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem)
 			quot[lenq - (lgth_x - lgth_n) - 1] = bmult[0];
 		else
 			quot[lenq - (lgth_x - lgth_n)] = bmult[0];
-		
+
 		ttx = tx;
 		t_len = lgth_x;
 		for ( i=0, lgth_x=t_len; i<t_len; i++, lgth_x-- ) {
@@ -442,7 +442,7 @@ int DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem)
 }
 
 
-/* 
+/*
  * Mod - Computes an integer modulo another integer
  *
  * x = x (mod n)
@@ -460,7 +460,7 @@ void Mod(BYTE *x, int lenx, BYTE *n, int lenn)
 	}
 }
 
-/* 
+/*
  * Div - Computes the integer division of two numbers
  *
  * x = x / n
@@ -486,7 +486,7 @@ void Div(BYTE *x, int lenx, BYTE *n, int lenn)
 ** A = A - B                             *
 **                                       *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  A      Address of subtrahend integer *
 **  B      Address of subtractor integer *
@@ -516,7 +516,7 @@ void sub(BYTE *A, int LA, BYTE *B, int LB)
 ** A = -A                                *
 **                                       *
 **                                       *
-** Parameters:                           *	
+** Parameters:                           *
 **                                       *
 **  A      Address of integer to negate  *
 **  L      Length of A in bytes          *
@@ -645,22 +645,22 @@ void
 ahtopb (char *ascii_hex, BYTE *p_binary, int bin_len)
 {
 	BYTE    nibble;
-	int     i; 
-	
+	int     i;
+
 	for ( i=0; i<bin_len; i++ ) {
         nibble = ascii_hex[i * 2];
 	    if ( nibble > 'F' )
-	        nibble -= 0x20;   
+	        nibble -= 0x20;
 	    if ( nibble > '9' )
-	        nibble -= 7;      
-	    nibble -= '0';   
+	        nibble -= 7;
+	    nibble -= '0';
 	    p_binary[i] = nibble << 4;
-		
+
 	    nibble = ascii_hex[i * 2 + 1];
 	    if ( nibble > 'F' )
 			nibble -= 0x20;
         if ( nibble > '9' )
-            nibble -= 7;   
+            nibble -= 7;
         nibble -= '0';
 		p_binary[i] += nibble;
 	}

@@ -25,24 +25,24 @@ typedef struct _MP_struct {
 /*
  * Function Declarations
  */
-int		greater(BYTE *x, BYTE *y, int l);
-int		less(BYTE *x, BYTE *y, int l);
-BYTE	bshl(BYTE *x, int l);
-void	bshr(BYTE *x, int l);
-int		Mult(BYTE *A, BYTE *B, int LB, BYTE *C, int LC);
-void	ModSqr(BYTE *A, BYTE *B, int LB, BYTE *M, int LM);
-void	ModMult(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM);
-void	smult(BYTE *A, BYTE b, BYTE *C, int L);
-void	Square(BYTE *A, BYTE *B, int L);
-void	ModExp(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM);
-int		DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem);
-void	Mod(BYTE *x, int lenx, BYTE *n, int lenn);
-void	Div(BYTE *x, int lenx, BYTE *n, int lenn);
-void	sub(BYTE *A, int LA, BYTE *B, int LB);
-int		negate(BYTE *A, int L);
-BYTE	add(BYTE *A, int LA, BYTE *B, int LB);
-void	prettyprintBstr(char *S, BYTE *A, int L);
-void	byteReverse(ULONG *buffer, int byteCount);
-void	ahtopb (char *ascii_hex, BYTE *p_binary, int bin_len);
+extern int		greater(BYTE *x, BYTE *y, int l);
+extern int		less(BYTE *x, BYTE *y, int l);
+extern BYTE	bshl(BYTE *x, int l);
+extern void	bshr(BYTE *x, int l);
+extern int		Mult(BYTE *A, BYTE *B, int LB, BYTE *C, int LC);
+extern void	ModSqr(BYTE *A, BYTE *B, int LB, BYTE *M, int LM);
+extern void	ModMult(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM);
+extern void	smult(BYTE *A, BYTE b, BYTE *C, int L);
+extern void	Square(BYTE *A, BYTE *B, int L);
+extern void	ModExp(BYTE *A, BYTE *B, int LB, BYTE *C, int LC, BYTE *M, int LM);
+extern int		DivMod(BYTE *x, int lenx, BYTE *n, int lenn, BYTE *quot, BYTE *rem);
+extern void	Mod(BYTE *x, int lenx, BYTE *n, int lenn);
+extern void	Div(BYTE *x, int lenx, BYTE *n, int lenn);
+extern void	sub(BYTE *A, int LA, BYTE *B, int LB);
+extern int		negate(BYTE *A, int L);
+extern BYTE	add(BYTE *A, int LA, BYTE *B, int LB);
+extern void	prettyprintBstr(char *S, BYTE *A, int L);
+extern void	byteReverse(ULONG *buffer, int byteCount);
+extern void	ahtopb (char *ascii_hex, BYTE *p_binary, int bin_len);
 
 #endif  /* _GENUTILS_H_ */

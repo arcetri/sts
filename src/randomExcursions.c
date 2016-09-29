@@ -1,17 +1,66 @@
+/*****************************************************************************
+                     R A N D O M   E X C U R S I O N S   T E S T
+ *****************************************************************************/
+
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../include/externs.h"
-#include "../include/cephes.h"  
+#include "externs.h"
+#include "cephes.h"  
+#include "utilities.h"
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-                     R A N D O M  E X C U R S I O N S  T E S T
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+static const enum test test_num = TEST_RND_EXCURSION;	// this test number
+
+
+/*
+ * RandomExcursions_init - initalize the Random Excursions test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
 void
-RandomExcursions(int n)
+RandomExcursions_init(struct state *state)
 {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+
+	/*
+	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 */
+	if (state->resultstxtFlag == true) {
+		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
+		dbg(DBG_HIGH, "test %s[%d] will use subdir: %s", state->testNames[test_num], test_num, state->subDir[test_num]);
+	}
+	return;
+}
+
+
+/*
+ * RandomExcursions_iterate - interate one bit stream for Random Excursions test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
+void
+RandomExcursions_iterate(struct state *state)
+{
+	int n;		// Length of a single bit stream
 	int		b, i, j, k, J, x;
 	int		cycleStart, cycleStop, *cycle = NULL, *S_k = NULL;
 	int		stateX[8] = { -4, -3, -2, -1, 1, 2, 3, 4 };
@@ -22,6 +71,16 @@ RandomExcursions(int n)
 						 {0.7500000000, 0.06250000000, 0.04687500000, 0.03515625000, 0.02636718750, 0.0791015625},
 						 {0.8333333333, 0.02777777778, 0.02314814815, 0.01929012346, 0.01607510288, 0.0803755143},
 						 {0.8750000000, 0.01562500000, 0.01367187500, 0.01196289063, 0.01046752930, 0.0732727051} };
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+	n = state->tp.n;
 	
 	if ( ((S_k = (int *)calloc(n, sizeof(int))) == NULL) ||
 		 ((cycle = (int *)calloc(MAX(1000, n/100), sizeof(int))) == NULL) ) {
@@ -52,25 +111,25 @@ RandomExcursions(int n)
 		J++;
 	cycle[J] = n;
 
-	fprintf(stats[TEST_RND_EXCURSION], "\t\t\t  RANDOM EXCURSIONS TEST\n");
-	fprintf(stats[TEST_RND_EXCURSION], "\t\t--------------------------------------------\n");
-	fprintf(stats[TEST_RND_EXCURSION], "\t\tCOMPUTATIONAL INFORMATION:\n");
-	fprintf(stats[TEST_RND_EXCURSION], "\t\t--------------------------------------------\n");
-	fprintf(stats[TEST_RND_EXCURSION], "\t\t(a) Number Of Cycles (J) = %04d\n", J);
-	fprintf(stats[TEST_RND_EXCURSION], "\t\t(b) Sequence Length (n)  = %d\n", n);
+	fprintf(stats[test_num], "\t\t\t  RANDOM EXCURSIONS TEST\n");
+	fprintf(stats[test_num], "\t\t--------------------------------------------\n");
+	fprintf(stats[test_num], "\t\tCOMPUTATIONAL INFORMATION:\n");
+	fprintf(stats[test_num], "\t\t--------------------------------------------\n");
+	fprintf(stats[test_num], "\t\t(a) Number Of Cycles (J) = %04d\n", J);
+	fprintf(stats[test_num], "\t\t(b) Sequence Length (n)  = %d\n", n);
 
 	constraint = MAX(0.005*pow(n, 0.5), 500);
 	if (J < constraint) {
-		fprintf(stats[TEST_RND_EXCURSION], "\t\t---------------------------------------------\n");
-		fprintf(stats[TEST_RND_EXCURSION], "\t\tWARNING:  TEST NOT APPLICABLE.  THERE ARE AN\n");
-		fprintf(stats[TEST_RND_EXCURSION], "\t\t\t  INSUFFICIENT NUMBER OF CYCLES.\n");
-		fprintf(stats[TEST_RND_EXCURSION], "\t\t---------------------------------------------\n");
+		fprintf(stats[test_num], "\t\t---------------------------------------------\n");
+		fprintf(stats[test_num], "\t\tWARNING:  TEST NOT APPLICABLE.  THERE ARE AN\n");
+		fprintf(stats[test_num], "\t\t\t  INSUFFICIENT NUMBER OF CYCLES.\n");
+		fprintf(stats[test_num], "\t\t---------------------------------------------\n");
 		for(i = 0; i < 8; i++)
-			fprintf(results[TEST_RND_EXCURSION], "%f\n", 0.0);
+			fprintf(results[test_num], "%f\n", 0.0);
 	}
 	else {
-		fprintf(stats[TEST_RND_EXCURSION], "\t\t(c) Rejection Constraint = %f\n", constraint);
-		fprintf(stats[TEST_RND_EXCURSION], "\t\t-------------------------------------------\n");
+		fprintf(stats[test_num], "\t\t(c) Rejection Constraint = %f\n", constraint);
+		fprintf(stats[test_num], "\t\t-------------------------------------------\n");
 
 		cycleStart = 0;
 		cycleStop  = cycle[1];
@@ -109,14 +168,14 @@ RandomExcursions(int n)
 			p_value = cephes_igamc(2.5, sum/2.0);
 			
 			if ( isNegative(p_value) || isGreaterThanOne(p_value) )
-				fprintf(stats[TEST_RND_EXCURSION], "WARNING:  P_VALUE IS OUT OF RANGE.\n");
+				fprintf(stats[test_num], "WARNING:  P_VALUE IS OUT OF RANGE.\n");
 
-			fprintf(stats[TEST_RND_EXCURSION], "%s\t\tx = %2d chi^2 = %9.6f p_value = %f\n",
+			fprintf(stats[test_num], "%s\t\tx = %2d chi^2 = %9.6f p_value = %f\n",
 					p_value < ALPHA ? "FAILURE" : "SUCCESS", x, sum, p_value);
-			fprintf(results[TEST_RND_EXCURSION], "%f\n", p_value); fflush(results[TEST_RND_EXCURSION]);
+			fprintf(results[test_num], "%f\n", p_value); fflush(results[test_num]);
 		}
 	} 
-	fprintf(stats[TEST_RND_EXCURSION], "\n"); fflush(stats[TEST_RND_EXCURSION]);
+	fprintf(stats[test_num], "\n"); fflush(stats[test_num]);
 	free(S_k);
 	free(cycle);
 }

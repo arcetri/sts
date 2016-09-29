@@ -1,19 +1,78 @@
+/*****************************************************************************
+                              R U N S   T E S T 
+ *****************************************************************************/
+
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../include/externs.h"
-#include "../include/cephes.h"
+#include "externs.h"
+#include "cephes.h"
+#include "utilities.h"
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-                              R U N S  T E S T 
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+static const enum test test_num = TEST_RUNS;	// this test number
+
+
+/*
+ * Runs_init - initalize the Runs test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
 void
-Runs(int n)
+Runs_init(struct state *state)
 {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+
+	/*
+	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 */
+	if (state->resultstxtFlag == true) {
+		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
+		dbg(DBG_HIGH, "test %s[%d] will use subdir: %s", state->testNames[test_num], test_num, state->subDir[test_num]);
+	}
+	return;
+}
+
+
+/*
+ * Runs_iterate - interate one bit stream for Runs test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
+void
+Runs_iterate(struct state *state)
+{
+	int n;		// Length of a single bit stream
 	int		S, k;
 	double	pi, V, erfc_arg, p_value;
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+	n = state->tp.n;
 
 	S = 0;
 	for ( k=0; k<n; k++ )

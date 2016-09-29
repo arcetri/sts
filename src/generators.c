@@ -3,12 +3,12 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "../include/externs.h"
-#include "../include/utilities.h"
-#include "../include/generators.h"
-#include "../include/genutils.h"
+#include "externs.h"
+#include "utilities.h"
+#include "generators.h"
+#include "genutils.h"
 
-double
+static double
 lcg_rand(int N, double SEED, double* DUNIF, int NDIM)
 {
 	int    i;
@@ -42,27 +42,32 @@ lcg_rand(int N, double SEED, double* DUNIF, int NDIM)
 }
 
 void
-lcg()
+lcg(struct state *state)
 {
 	double	*DUNIF, SEED;
 	int		i, counter;
 	unsigned bit;
 	int		num_0s, num_1s, v, bitsRead;
 
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+
 	SEED = 23482349.0;
-	if ( ((epsilon = (BitSequence *) calloc(tp.n, sizeof(BitSequence))) == NULL) ||
-	     ((DUNIF = (double*)calloc(tp.n, sizeof(double))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *) calloc(state->tp.n, sizeof(BitSequence))) == NULL) ||
+	     ((DUNIF = (double*)calloc(state->tp.n, sizeof(double))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
 	counter = 1;
  
-	for ( v=0; v<tp.numOfBitStreams; v++ ) {
+	for ( v=0; v<state->tp.numOfBitStreams; v++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
-		SEED = lcg_rand(tp.n, SEED, DUNIF, tp.n);
-		for ( i=0; i<tp.n; i++ ) {
+		SEED = lcg_rand(state->tp.n, SEED, DUNIF, state->tp.n);
+		for ( i=0; i<state->tp.n; i++ ) {
 			if ( DUNIF[i] < 0.5 ) {
 				bit = 0;
 				num_0s++;
@@ -75,7 +80,7 @@ lcg()
 			epsilon[i] = bit;
 		}
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 		}
 	free(DUNIF);
 	free(epsilon);
@@ -83,12 +88,17 @@ lcg()
 
 
 void
-quadRes1()
+quadRes1(struct state *state)
 {
 	int		k, num_0s, num_1s, bitsRead, done;
 	BYTE	p[64], g[64], x[128];
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
 	
-	if ( ((epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *)calloc(state->tp.n, sizeof(BitSequence))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -98,7 +108,7 @@ quadRes1()
 	num_1s = 0;
 	done = 0;
 	bitsRead = 0;
-	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+	for ( k=0; k<state->tp.numOfBitStreams; k++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		done = 0;
@@ -107,10 +117,10 @@ quadRes1()
 			memset(x, 0x00, 128);
 			ModMult(x, g, 64, g, 64, p,64);
 			memcpy(g, x+64, 64);
-			done = convertToBits(g, 512, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while ( !done );
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 
@@ -118,13 +128,18 @@ quadRes1()
 }
 
 void
-quadRes2()
+quadRes2(struct state *state)
 {
 	BYTE	g[64], x[129], t1[65];
 	BYTE	One[1], Two, Three[1];
 	int		k, num_0s, num_1s, bitsRead, done;
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
 	
-	if ( ((epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *)calloc(state->tp.n, sizeof(BitSequence))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -134,7 +149,7 @@ quadRes2()
 
 	ahtopb("7844506a9456c564b8b8538e0cc15aff46c95e69600f084f0657c2401b3c244734b62ea9bb95be4923b9b7e84eeaf1a224894ef0328d44bc3eb3e983644da3f5", g, 64);
 	
-	for( k=0; k<tp.numOfBitStreams; k++ ) {
+	for( k=0; k<state->tp.numOfBitStreams; k++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		done = 0;
@@ -147,10 +162,10 @@ quadRes2()
 			Mult(x, t1, 65, g, 64);		/* x(2x+3) */
 			add(x, 129, One, 1);		/* x(2x+3)+1 */
 			memcpy(g, x+65, 64);
-			done = convertToBits(g, 512, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while ( !done) ;
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 
@@ -158,19 +173,24 @@ quadRes2()
 }
 
 void
-cubicRes()
+cubicRes(struct state *state)
 {
 	BYTE	g[64], tmp[128], x[192];
 	int		k, num_0s, num_1s, bitsRead, done;
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
 	
-	if ( ((epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *)calloc(state->tp.n, sizeof(BitSequence))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
 	
 	ahtopb("7844506a9456c564b8b8538e0cc15aff46c95e69600f084f0657c2401b3c244734b62ea9bb95be4923b9b7e84eeaf1a224894ef0328d44bc3eb3e983644da3f5", g, 64);
 
-	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+	for ( k=0; k<state->tp.numOfBitStreams; k++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
@@ -181,10 +201,10 @@ cubicRes()
 			Mult(tmp, g, 64, g, 64);
 			Mult(x, tmp, 128, g, 64); // Don't need to mod by 2^512, just take low 64 bytes
 			memcpy(g, x+128, 64);
-			done = convertToBits(g, 512, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while ( !done );
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 
@@ -192,12 +212,17 @@ cubicRes()
 }
 
 void
-exclusiveOR()
+exclusiveOR(struct state *state)
 {
 	int		i, num_0s, num_1s, bitsRead;
 	BYTE	bit_sequence[127];
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
 	
-	if ( ((epsilon = (BitSequence *)calloc(tp.n,sizeof(BitSequence))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *)calloc(state->tp.n,sizeof(BitSequence))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -207,7 +232,7 @@ exclusiveOR()
 	num_1s = 0;
 	bitsRead = 0;
 	for (i=0; i<127; i++ ) {
-		if ( bit_sequence[i]  ) {
+		if ( bit_sequence[i] == '1' ) {
 			epsilon[bitsRead] = 1;
 			num_1s++;
 		}
@@ -217,7 +242,7 @@ exclusiveOR()
 		}
 		bitsRead++;
 	}
-	for ( i=127; i<tp.n*tp.numOfBitStreams; i++ ) {
+	for ( i=127; i<state->tp.n*state->tp.numOfBitStreams; i++ ) {
 		if ( bit_sequence[(i-1)%127] != bit_sequence[(i-127)%127] ) {
 			bit_sequence[i%127] = 1;
 			epsilon[bitsRead] = 1;
@@ -229,9 +254,9 @@ exclusiveOR()
 			num_0s++;
 		}
 		bitsRead++;
-		if ( bitsRead == tp.n ) {
+		if ( bitsRead == state->tp.n ) {
 			fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-			nist_test_suite();
+			nist_test_suite(state);
 			num_0s = 0;
 			num_1s = 0;
 			bitsRead = 0;
@@ -244,12 +269,17 @@ exclusiveOR()
 
 
 void
-modExp()
+modExp(struct state *state)
 {
 	int		k, num_0s, num_1s, bitsRead, done;
 	BYTE	p[64], g[64], x[192], y[20];
 
-	if ( (epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+
+	if ( (epsilon = (BitSequence *)calloc(state->tp.n, sizeof(BitSequence))) == NULL ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -257,7 +287,7 @@ modExp()
 	ahtopb("987b6a6bf2c56a97291c445409920032499f9ee7ad128301b5d0254aa1a9633fdbd378d40149f1e23a13849f3d45992f5c4c6b7104099bc301f6005f9d8115e1", p, 64);
 	ahtopb("3844506a9456c564b8b8538e0cc15aff46c95e69600f084f0657c2401b3c244734b62ea9bb95be4923b9b7e84eeaf1a224894ef0328d44bc3eb3e983644da3f5", g, 64);
 
-	for ( k=0; k<tp.numOfBitStreams; k++ ) {
+	for ( k=0; k<state->tp.numOfBitStreams; k++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
@@ -265,11 +295,11 @@ modExp()
 		do {
 			memset(x, 0x00, 128);
 			ModExp(x, g, 64, y, 20, p, 64);	      /* NOTE:  g must be less than p */
-			done = convertToBits(x, 512, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(x, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			memcpy(y, x+44, 20);
 			} while ( !done );
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 
@@ -277,13 +307,18 @@ modExp()
 }
 
 void
-bbs()
+bbs(struct state *state)
 {
 	int		i, v, bitsRead;
 	BYTE	p[64], q[64], n[128], s[64], x[256];
 	int		num_0s, num_1s;
 
-	if ( (epsilon = (BitSequence*)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+
+	if ( (epsilon = (BitSequence*)calloc(state->tp.n, sizeof(BitSequence))) == NULL ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -296,11 +331,11 @@ bbs()
 	memset(x, 0x00, 256);
 	ModSqr(x, s, 64, n, 128);
  
-	for ( v=0; v<tp.numOfBitStreams; v++ ) {
+	for ( v=0; v<state->tp.numOfBitStreams; v++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
-		for ( i=0; i<tp.n; i++ ) {
+		for ( i=0; i<state->tp.n; i++ ) {
 			ModSqr(x, x, 128, n, 128);
 			memcpy(x, x+128, 128);
 			if ( (x[127] & 0x01) == 0 ) {
@@ -317,7 +352,7 @@ bbs()
 		}
 
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 }
@@ -326,13 +361,18 @@ bbs()
 // The exponent, e, is set to 11
 // This results in k = 837 and r = 187
 void
-micali_schnorr()
+micali_schnorr(struct state *state)
 {
 	long	i, j;
 	int		k=837, num_0s, num_1s, bitsRead, done;
 	BYTE	p[64], q[64], n[128], e[1], X[128], Y[384], Tail[105];
 
-	if ( (epsilon = (BitSequence *)calloc(tp.n, sizeof(BitSequence))) == NULL ) {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+
+	if ( (epsilon = (BitSequence *)calloc(state->tp.n, sizeof(BitSequence))) == NULL ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -344,7 +384,7 @@ micali_schnorr()
 	memset(X, 0x00, 128);
 	ahtopb("237c5f791c2cfe47bfb16d2d54a0d60665b20904ec822a6", X+104, 24);
 
-	for ( i=0; i<tp.numOfBitStreams; i++ ) {
+	for ( i=0; i<state->tp.numOfBitStreams; i++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
@@ -353,7 +393,7 @@ micali_schnorr()
 			memcpy(Tail, Y+23, 105);
 			for ( j=0; j<3; j++ )
 				bshl(Tail, 105);
-			done = convertToBits(Tail, k, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(Tail, k, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			memset(X, 0x00, 128);
 			memcpy(X+104, Y, 24);
 			for ( j=0; j<5; j++ )
@@ -361,7 +401,7 @@ micali_schnorr()
 		} while ( !done );
 
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 }
@@ -369,7 +409,7 @@ micali_schnorr()
 //  Uses 160 bit Xkey and no XSeed (b=160)
 //  This is the generic form of the generator found on the last page of the Change Notice for FIPS 186-2
 void
-SHA1()
+SHA1(struct state *state)
 {
 	ULONG	A, B, C, D, E, temp, Wbuff[16];
 	BYTE	Xkey[20], G[20], M[64];
@@ -377,8 +417,13 @@ SHA1()
 	int		i, num_0s, num_1s, bitsRead;
 	int		done;
 	ULONG	tx[5] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
 	
-	if ( ((epsilon = (BitSequence *) calloc(tp.n,sizeof(BitSequence))) == NULL) ) {
+	if ( ((epsilon = (BitSequence *) calloc(state->tp.n,sizeof(BitSequence))) == NULL) ) {
 		printf("Insufficient memory available.\n");
 		exit(1);
 	}
@@ -389,7 +434,7 @@ SHA1()
 //	ahtopb("5AE8B9207250257D0A0C87C0DACEF78E17D1EF9D", Xkey, 20);
 //	ahtopb("D99CB53DD5FA9BC1D0176F5DF8D9110FD16EE21F", Xkey, 20);
 	
-	for ( i=0; i<tp.numOfBitStreams; i++ ) {
+	for ( i=0; i<state->tp.numOfBitStreams; i++ ) {
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
@@ -445,12 +490,12 @@ SHA1()
 #endif
 			// End: SHA Steps A-E
 
-			done = convertToBits(G, 160, tp.n, &num_0s, &num_1s, &bitsRead);
+			done = convertToBits(G, 160, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			add(Xkey, 20, G, 20);
 			add(Xkey, 20, One, 1);
 		} while ( !done );
 		fprintf(freqfp, "\t\tBITSREAD = %d 0s = %d 1s = %d\n", bitsRead, num_0s, num_1s); fflush(freqfp);
-		nist_test_suite();
+		nist_test_suite(state);
 	}
 	free(epsilon);
 }

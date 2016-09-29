@@ -1,11 +1,12 @@
+/*****************************************************************************
+ R A N K   A L G O R I T H M   R O U T I N E S
+ *****************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "../include/externs.h"
-#include "../include/matrix.h"
+#include "externs.h"
+#include "matrix.h"
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-R A N K  A L G O R I T H M  R O U T I N E S
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define	MATRIX_FORWARD_ELIMINATION	0
 #define	MATRIX_BACKWARD_ELIMINATION	1

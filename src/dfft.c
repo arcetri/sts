@@ -55,6 +55,8 @@ arbitrary length vectors that need not be powers of two in
 length. */
 
 #include <math.h>
+#include "dfft.h"
+
 #define STIN static
 
 static void drfti1(int n, double *wa, int *ifac)

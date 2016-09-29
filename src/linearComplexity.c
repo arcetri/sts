@@ -1,18 +1,87 @@
+/*****************************************************************************
+                   L I N E A R   C O M P L E X I T Y   T E S T
+ *****************************************************************************/
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../include/externs.h"
-#include "../include/cephes.h"  
+#include "externs.h"
+#include "cephes.h"  
+#include "utilities.h"
 
+
+static const enum test test_num = TEST_LINEARCOMPLEXITY;	// this test number
+
+
+/*
+ * LinearComplexity_init - initalize the Linear Complexity test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
 void
-LinearComplexity(int M, int n)
+LinearComplexity_init(struct state *state)
 {
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+
+	/*
+	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 */
+	if (state->resultstxtFlag == true) {
+		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
+		dbg(DBG_HIGH, "test %s[%d] will use subdir: %s", state->testNames[test_num], test_num, state->subDir[test_num]);
+	}
+	return;
+}
+
+
+/*
+ * LinearComplexity_iterate - interate one bit stream for Linear Complexity test
+ *
+ * given:
+ * 	state		// run state to test under
+ *
+ * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ *
+ * NOTE: The initialize function must be called first.
+ */
+void
+LinearComplexity_iterate(struct state *state)
+{
+	int M;		// Linear Complexity Test - block length
+	int n;		// Length of a single bit stream
 	int       i, ii, j, d, N, L, m, N_, parity, sign, K = 6;
 	double    p_value, T_, mean, nu[7], chi2;
 	double    pi[7] = { 0.01047, 0.03125, 0.12500, 0.50000, 0.25000, 0.06250, 0.020833 };
 	BitSequence  *T = NULL, *P = NULL, *B_ = NULL, *C = NULL;
-	
+
+	// firewall
+	if (state == NULL) {
+		err(10, __FUNCTION__, "state is NULL");
+	}
+	if (state->testVector[test_num] != true) {
+		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		return;
+	}
+
+	/*
+	 * collect parameters from state
+	 */
+	M = state->tp.linearComplexitySequenceLength;
+	n = state->tp.n;
+
 	N = (int)floor(n/M);
 	if ( ((B_ = (BitSequence *) calloc(M, sizeof(BitSequence))) == NULL) ||
 		 ((C  = (BitSequence *) calloc(M, sizeof(BitSequence))) == NULL) ||
@@ -31,17 +100,17 @@ LinearComplexity(int M, int n)
 	}
 
 
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "-----------------------------------------------------\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "\tL I N E A R  C O M P L E X I T Y\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "-----------------------------------------------------\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "\tM (substring length)     = %d\n", M);
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "\tN (number of substrings) = %d\n", N);
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "-----------------------------------------------------\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "        F R E Q U E N C Y                            \n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "-----------------------------------------------------\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "  C0   C1   C2   C3   C4   C5   C6    CHI2    P-value\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "-----------------------------------------------------\n");
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "\tNote: %d bits were discarded!\n", n%M);
+	fprintf(stats[test_num], "-----------------------------------------------------\n");
+	fprintf(stats[test_num], "\tL I N E A R  C O M P L E X I T Y\n");
+	fprintf(stats[test_num], "-----------------------------------------------------\n");
+	fprintf(stats[test_num], "\tM (substring length)     = %d\n", M);
+	fprintf(stats[test_num], "\tN (number of substrings) = %d\n", N);
+	fprintf(stats[test_num], "-----------------------------------------------------\n");
+	fprintf(stats[test_num], "        F R E Q U E N C Y                            \n");
+	fprintf(stats[test_num], "-----------------------------------------------------\n");
+	fprintf(stats[test_num], "  C0   C1   C2   C3   C4   C5   C6    CHI2    P-value\n");
+	fprintf(stats[test_num], "-----------------------------------------------------\n");
+	fprintf(stats[test_num], "\tNote: %d bits were discarded!\n", n%M);
 
 	for ( i=0; i<K+1; i++ )
 		nu[i] = 0.00;
@@ -112,13 +181,13 @@ LinearComplexity(int M, int n)
 	}
 	chi2 = 0.00;
 	for ( i=0; i<K+1; i++ ) 
-		fprintf(stats[TEST_LINEARCOMPLEXITY], "%4d ", (int)nu[i]);
+		fprintf(stats[test_num], "%4d ", (int)nu[i]);
 	for ( i=0; i<K+1; i++ )
 		chi2 += pow(nu[i]-N*pi[i], 2) / (N*pi[i]);
 	p_value = cephes_igamc(K/2.0, chi2/2.0);
 
-	fprintf(stats[TEST_LINEARCOMPLEXITY], "%9.6f%9.6f\n", chi2, p_value); fflush(stats[TEST_LINEARCOMPLEXITY]);
-	fprintf(results[TEST_LINEARCOMPLEXITY], "%f\n", p_value); fflush(results[TEST_LINEARCOMPLEXITY]);
+	fprintf(stats[test_num], "%9.6f%9.6f\n", chi2, p_value); fflush(stats[test_num]);
+	fprintf(results[test_num], "%f\n", p_value); fflush(results[test_num]);
 
 	free(B_);
 	free(P);
