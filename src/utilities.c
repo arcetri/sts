@@ -1994,9 +1994,9 @@ invokeTestSuite(struct state *state)
 		 * announce end of interation only
 		 */
 		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Exiting, state written to %s", state->statePath);
+			dbg(DBG_LOW, "     Exiting interate only");
 		} else {
-			printf("     Exiting, state written to %s\n", state->statePath);
+			printf("     Exiting interate only\n");
 			fflush(stdout);
 		}
 		destroy(state);

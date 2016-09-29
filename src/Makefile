@@ -42,13 +42,13 @@ DIFF= diff
 # how to compile
 #
 LIBS= -lm
-#OPT=
-OPT= -O3
+OPT=
+#OPT= -O3
 #DEBUG=
 DEBUG= -g3
 #CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${OPT} ${DEBUG}
-#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${OPT} ${DEBUG}
-CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${OPT} ${DEBUG}
+CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${OPT} ${DEBUG}
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${OPT} ${DEBUG}
 
 # locations
 #

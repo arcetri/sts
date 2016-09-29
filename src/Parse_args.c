@@ -67,17 +67,6 @@ static struct state const defaultstate = {
 	false,				// no -I reportCycle was given
 	0,				// do not report on interation progress
 
-	// statePathFlag & statePath
-	false,				// no -s statePath was given
-	"__none__",			// no state file to write into
-
-	// processStateDirFlag & stateDir
-	false,				// no -p stateDir was given
-	".",				// default stateDir
-
-	// recursive
-	false,				// no -r was given
-
 	// runModeFlag & runMode
 	false,				// no -m mode was given
 	MODE_ITERATE_AND_ASSESS,	// no -m mode, iterate and assess
@@ -368,9 +357,6 @@ static const char * const usage =
 "    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
 "\n"
-"    -s statePath     write state into statePath.state (def: don't)\n"
-"    -r stateDir      process *.state files under stateDir (def: don't)\n"
-"    -R               recursive search stateDir (def: no recurse)\n"
 "    -m mode          w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
 "                     i --> iterate only (not currently implemented)\n"
 "                     a --> assess only (not currently implemented)\n"
@@ -428,7 +414,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:" "P:pi:I:O" "w:cnf:F:j:" "s:r:Rm:" "h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bt:g:" "P:pi:I:O" "w:cnf:F:j:" "m:" "h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -631,21 +617,6 @@ Parse_args(struct state *state, int argc, char *argv[])
 			if (state->jobnum < 0) {
 				usage_err(usage, 1, __FUNCTION__, "-j jobnum: %lu must be greater than 0", state->jobnum);
 			}
-			break;
-
-		case 's':	// -s statePath (write state into statePath.state)
-			state->statePathFlag = true;
-			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
-			break;
-
-		case 'r':	// -r stateDir (process *.state under stateDir)
-			state->processStateDirFlag = true;
-			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
-			break;
-
-		case 'R':	// -R (recursive search stateDir)
-			state->recursive = true;
-			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
 			break;
 
 		case 'm':	// -m mode (w-->write only. i-->iterate only, a-->assess only, b-->interate & assess)
@@ -920,14 +891,10 @@ print_option_summary(struct state *state, char *where)
 
 			case MODE_ITERATE_ONLY:
 				dbg(DBG_LOW, "\tWill iterate only (no assessment)");
-				dbg(DBG_LOW, "\t    Interation state saved in: %s", state->statePath);
 				break;
 
 			case MODE_ASSESS_ONLY:
 				dbg(DBG_LOW, "\tWill assess only (skip interation)");
-				dbg(DBG_LOW,
-				    "\t    State files read %s from under: %s",
-				    (state->recursive ? "recursively" : "directly"), state->stateDir);
 				break;
 
 			case MODE_ITERATE_AND_ASSESS:
@@ -1074,27 +1041,6 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -O was given, backward compatible output is not important");
 	}
-	if (state->statePathFlag == true) {
-		dbg(DBG_MED, "\t-s statePath was given");
-		dbg(DBG_MED, "\t    statePath: -s %s", state->statePath);
-	} else {
-		dbg(DBG_MED, "\tno -s statePath was given");
-		dbg(DBG_MED, "\t    no statePath will be used");
-	}
-	if (state->processStateDirFlag == true) {
-		dbg(DBG_MED, "\t-r stateDir was given");
-		dbg(DBG_MED, "\t    stateDir: -r %s", state->stateDir);
-	} else {
-		dbg(DBG_MED, "\tno -r stateDir was given");
-		dbg(DBG_MED, "\t    no stateDir will be searched for *.state files");
-	}
-	if (state->recursive == true) {
-		dbg(DBG_MED, "\t-R was given");
-		dbg(DBG_MED, "\t    recursive state file search");
-	} else {
-		dbg(DBG_MED, "\tno -R was given");
-		dbg(DBG_MED, "\t    only 1st level state files will be read");
-	}
 	if (state->runModeFlag == true) {
 		dbg(DBG_MED, "\t-m node was given");
 	} else {
@@ -1120,11 +1066,10 @@ print_option_summary(struct state *state, char *where)
 		}
 		break;
 	case MODE_ITERATE_ONLY:
-		dbg(DBG_MED, "\t    -m i: iterate only, write state to -s statePath: %s and exit", state->statePath);
+		dbg(DBG_MED, "\t    -m i: iterate only and exit");
 		break;
 	case MODE_ASSESS_ONLY:
-		dbg(DBG_MED, "\t    -m a: assess only, read state from *.state files %s under -r stateDir: %s and assess results",
-		    (state->recursive ? "recursively" : "directly"), state->stateDir);
+		dbg(DBG_MED, "\t    -m a: assess only and exit");
 		break;
 	case MODE_ITERATE_AND_ASSESS:
 		dbg(DBG_MED, "\t    -m b: iterate and then assess, no *.state files written");

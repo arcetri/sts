@@ -391,15 +391,6 @@ struct state {
 	bool reportCycleFlag;		// if -I reportCycle was given
 	long int reportCycle;		// -I reportCycle: Report after completion of reportCycle iterations
 					// 		   (def: 0: do not report)
-
-	bool statePathFlag;		// if -s statePath was given
-	char *statePath;		// write state into statePath.state (def: don't)
-
-	bool processStateDirFlag;	// if -p stateDir was given
-	char *stateDir;			// -p stateDir: process state files in stateDir (def: under .)
-
-	bool recursive;			// -r: true -> perform a recursive search of stateDir
-
 	bool runModeFlag;		// if -m mode was given
 	enum run_mode runMode;		// -m mode: whether gather state files, process state files or both
 

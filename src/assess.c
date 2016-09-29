@@ -243,9 +243,9 @@
  *         cases we need to do a better job of applying them.  On multiple cases we need to extend
  *         the original idea.
  *
- *      B) Multi-threaded code
+ *      B) Speed up results through parallel processing
  *
- *         We want to take advantage of multi-code parallel processing to decrease execution time.
+ *         We want to take advantage of multi-core parallel processing to decrease execution time.
  *         We want to be able to run separate iterations on multiple hosts in parallel.  Much of the
  *         motivation behind changes such as "(5) Eliminate we much as possible, the use of global variables"
  *         and "(1) Allow to test to be executed without human intervention" was to make it possible for
@@ -381,7 +381,7 @@
 #include "debug.h"
 
 // sts_version-edit_number
-const char *const version = "sts-2.1.2.3.cisco";
+const char *const version = "sts-2.1.2.4.cisco";
 
 // our name
 char *program = "assess";
