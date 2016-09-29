@@ -2,6 +2,25 @@
 		     R A N D O M   E X C U R S I O N S   T E S T
  *****************************************************************************/
 
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 150 thru 159
+
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -78,7 +97,7 @@ RandomExcursions_init(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(150, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
@@ -86,11 +105,11 @@ RandomExcursions_init(struct state *state)
 		return;
 	}
 	if (state->cSetup != true) {
-		err(10, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
+		err(150, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
 		    __FUNCTION__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
+		err(150, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
 
@@ -104,13 +123,13 @@ RandomExcursions_init(struct state *state)
 	 */
 	state->rnd_excursion_S_k = malloc(n * sizeof(state->rnd_excursion_S_k[0]));
 	if (state->rnd_excursion_S_k == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_S_k",
+		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_S_k",
 		     n, sizeof(long int));
 	}
 	state->rnd_excursion_cycle_len = MAX(1000, n / 100);
 	state->rnd_excursion_cycle = malloc(state->rnd_excursion_cycle_len * sizeof(state->rnd_excursion_cycle[0]));
 	if (state->rnd_excursion_cycle == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_cycle",
+		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_cycle",
 		     state->rnd_excursion_cycle_len, sizeof(long int));
 	}
 
@@ -127,7 +146,7 @@ RandomExcursions_init(struct state *state)
 	 */
 	state->excursion_stateX = malloc(EXCURSION_TEST_CNT * sizeof(state->excursion_stateX[0]));
 	if (state->excursion_stateX == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->excursion_stateX",
+		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->excursion_stateX",
 		     (long int) EXCURSION_TEST_CNT, sizeof(long int));
 	}
 	for (i = 1; i <= MAX_EXCURSION; ++i) {
@@ -200,33 +219,33 @@ RandomExcursions_iterate(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(151, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
-		err(10, __FUNCTION__, "state->epsilon is NULL");
+		err(151, __FUNCTION__, "state->epsilon is NULL");
 	}
 	if (state->excursion_stateX == NULL) {
-		err(10, __FUNCTION__, "state->excursion_stateX is NULL");
+		err(151, __FUNCTION__, "state->excursion_stateX is NULL");
 	}
 	if (state->rnd_excursion_S_k == NULL) {
-		err(10, __FUNCTION__, "state->rnd_excursion_S_k is NULL");
+		err(151, __FUNCTION__, "state->rnd_excursion_S_k is NULL");
 	}
 	if (state->rnd_excursion_cycle_len <= 0) {
-		err(10, __FUNCTION__, "state->rnd_excursion_cycle_len: %ld mst be > 0", state->rnd_excursion_cycle_len);
+		err(151, __FUNCTION__, "state->rnd_excursion_cycle_len: %ld mst be > 0", state->rnd_excursion_cycle_len);
 	}
 	if (state->rnd_excursion_cycle == NULL) {
-		err(10, __FUNCTION__, "state->rnd_excursion_cycle is NULL");
+		err(151, __FUNCTION__, "state->rnd_excursion_cycle is NULL");
 	}
 	if (state->cSetup != true) {
-		err(10, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
+		err(151, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
 		    __FUNCTION__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
+		err(151, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
@@ -266,7 +285,7 @@ RandomExcursions_iterate(struct state *state)
 		}
 		// firewall - NOTE: The cycle[j + 1] far below requires us to check against a -1 of the rnd_excursion_cycle_len
 		if (stat.J >= (state->rnd_excursion_cycle_len - 1)) {
-			err(10, __FUNCTION__, "J: %ld >= (state->rnd_excursion_cycle_len: %ld - 1)",
+			err(151, __FUNCTION__, "J: %ld >= (state->rnd_excursion_cycle_len: %ld - 1)",
 			    stat.J, state->rnd_excursion_cycle_len - 1);
 		}
 		cycle[stat.J] = n;
@@ -305,19 +324,19 @@ RandomExcursions_iterate(struct state *state)
 			memset(stat.counter, 0, sizeof(stat.counter));
 			// firewall
 			if (cycleStart < 0) {
-				err(10, __FUNCTION__, "cycleStart: %ld < 0", cycleStart);
+				err(151, __FUNCTION__, "cycleStart: %ld < 0", cycleStart);
 			}
 			// firewall
 			if (cycleStart > n) {
-				err(10, __FUNCTION__, "cycleStart: %ld > n: %ld", cycleStart, n);
+				err(151, __FUNCTION__, "cycleStart: %ld > n: %ld", cycleStart, n);
 			}
 			// firewall
 			if (cycleStop < 0) {
-				err(10, __FUNCTION__, "cycleStop: %ld < 0", cycleStop);
+				err(151, __FUNCTION__, "cycleStop: %ld < 0", cycleStop);
 			}
 			// firewall
 			if (cycleStop > n) {
-				err(10, __FUNCTION__, "cycleStop: %ld > n: %ld", cycleStop, n);
+				err(151, __FUNCTION__, "cycleStop: %ld > n: %ld", cycleStop, n);
 			}
 			for (i = cycleStart; i < cycleStop; i++) {
 				/*
@@ -344,11 +363,11 @@ RandomExcursions_iterate(struct state *state)
 					count_index = S_k[i] + b;
 					// firewall
 					if (count_index < 0) {
-						err(10, __FUNCTION__, "count_index: %ld < 0", count_index);
+						err(151, __FUNCTION__, "count_index: %ld < 0", count_index);
 					}
 					// firewall
 					if (count_index >= state->rnd_excursion_cycle_len) {
-						err(10, __FUNCTION__, "count_index: %ld >= state->count_index: %ld",
+						err(151, __FUNCTION__, "count_index: %ld >= state->count_index: %ld",
 						    count_index, state->rnd_excursion_cycle_len);
 					}
 					stat.counter[count_index]++;
@@ -383,7 +402,7 @@ RandomExcursions_iterate(struct state *state)
 			labs_x = labs(x);
 			// firewall
 			if (labs_x >= EXCURSION_CLASSES) {
-				err(10, __FUNCTION__, "labs(%ld): %ld >= EXCURSION_CLASSES: %d", x, labs_x, EXCURSION_CLASSES);
+				err(151, __FUNCTION__, "labs(%ld): %ld >= EXCURSION_CLASSES: %d", x, labs_x, EXCURSION_CLASSES);
 			}
 			sum = 0.0;
 			for (k = 0; k < EXCURSION_FREEDOM; k++) {
@@ -511,16 +530,16 @@ RandomExcursions_print_stat(FILE * stream, struct state *state, struct RandomExc
 	 * firewall
 	 */
 	if (stream == NULL) {
-		err(10, __FUNCTION__, "stream arg is NULL");
+		err(152, __FUNCTION__, "stream arg is NULL");
 	}
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(152, __FUNCTION__, "state arg is NULL");
 	}
 	if (stat == NULL) {
-		err(10, __FUNCTION__, "stat arg is NULL");
+		err(152, __FUNCTION__, "stat arg is NULL");
 	}
 	if (state->cSetup != true) {
-		err(10, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
+		err(152, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
 		    __FUNCTION__, state->testNames[test_num], test_num);
 	}
 
@@ -698,22 +717,22 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 	 * firewall
 	 */
 	if (stream == NULL) {
-		err(10, __FUNCTION__, "stream arg is NULL");
+		err(153, __FUNCTION__, "stream arg is NULL");
 	}
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(153, __FUNCTION__, "state arg is NULL");
 	}
 	if (stat == NULL) {
-		err(10, __FUNCTION__, "stat arg is NULL");
+		err(153, __FUNCTION__, "stat arg is NULL");
 	}
 	if (state->excursion_stateX == NULL) {
-		err(10, __FUNCTION__, "state->excursion_stateX is NULL");
+		err(153, __FUNCTION__, "state->excursion_stateX is NULL");
 	}
 	if (p < 0) {
-		err(10, __FUNCTION__, "p arg: %ld must be > 0", p);
+		err(153, __FUNCTION__, "p arg: %ld must be > 0", p);
 	}
 	if (p >= EXCURSION_TEST_CNT) {
-		err(10, __FUNCTION__, "p arg: %ld must be < %d", p, EXCURSION_TEST_CNT);
+		err(153, __FUNCTION__, "p arg: %ld must be < %d", p, EXCURSION_TEST_CNT);
 	}
 
 	/*
@@ -723,7 +742,7 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 		return true;
 	}
 	if (p_value == NON_P_VALUE && stat->excursion_success[p] == true) {
-		err(10, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->excursion_success[%ld] == true", p);
+		err(153, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->excursion_success[%ld] == true", p);
 	}
 
 	/*
@@ -801,7 +820,7 @@ RandomExcursions_print_p_value(FILE * stream, double p_value)
 	 * firewall
 	 */
 	if (stream == NULL) {
-		err(10, __FUNCTION__, "stream arg is NULL");
+		err(154, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
@@ -860,7 +879,7 @@ RandomExcursions_print(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(155, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
@@ -872,22 +891,22 @@ RandomExcursions_print(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(10, __FUNCTION__,
+		err(155, __FUNCTION__,
 		    "print driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(10, __FUNCTION__,
+		err(155, __FUNCTION__,
 		    "print driver interface for %s[%d] called with p_val count: %ld != %ld*%d=%ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->datatxt_fmt[test_num] == NULL) {
-		err(10, __FUNCTION__, "format for data0*.txt filename is NULL");
+		err(155, __FUNCTION__, "format for data0*.txt filename is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(155, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -921,7 +940,7 @@ RandomExcursions_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = RandomExcursions_print_stat(stats, state, stat, i);
 		if (ok == false) {
-			errp(10, __FUNCTION__, "error in writing to %s", stats_txt);
+			errp(155, __FUNCTION__, "error in writing to %s", stats_txt);
 		}
 
 		/*
@@ -940,7 +959,7 @@ RandomExcursions_print(struct state *state)
 			errno = 0;	// paranoia
 			ok = RandomExcursions_print_stat2(stats, state, stat, p, p_value);
 			if (ok == false) {
-				errp(10, __FUNCTION__, "error in writing to %s", stats_txt);
+				errp(155, __FUNCTION__, "error in writing to %s", stats_txt);
 			}
 
 			/*
@@ -949,7 +968,7 @@ RandomExcursions_print(struct state *state)
 			errno = 0;	// paranoia
 			ok = RandomExcursions_print_p_value(results, p_value);
 			if (ok == false) {
-				errp(10, __FUNCTION__, "error in writing to %s", results_txt);
+				errp(155, __FUNCTION__, "error in writing to %s", results_txt);
 			}
 		}
 	}
@@ -960,12 +979,12 @@ RandomExcursions_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", stats_txt);
+		errp(155, __FUNCTION__, "error flushing to: %s", stats_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(stats);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error closing: %s", stats_txt);
+		errp(155, __FUNCTION__, "error closing: %s", stats_txt);
 	}
 	free(stats_txt);
 	stats_txt = NULL;
@@ -976,12 +995,12 @@ RandomExcursions_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", results_txt);
+		errp(155, __FUNCTION__, "error flushing to: %s", results_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(results);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error closing: %s", results_txt);
+		errp(155, __FUNCTION__, "error closing: %s", results_txt);
 	}
 	free(results_txt);
 	results_txt = NULL;
@@ -1003,7 +1022,7 @@ RandomExcursions_print(struct state *state)
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(10, __FUNCTION__,
+				errp(155, __FUNCTION__,
 				     "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ, j + 1, snprintf_ret);
 			}
 
@@ -1031,7 +1050,7 @@ RandomExcursions_print(struct state *state)
 					errno = 0;	// paranoia
 					ok = RandomExcursions_print_p_value(data, p_value);
 					if (ok == false) {
-						errp(10, __FUNCTION__, "error in writing to %s", data_txt);
+						errp(155, __FUNCTION__, "error in writing to %s", data_txt);
 					}
 
 				}
@@ -1043,12 +1062,12 @@ RandomExcursions_print(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
 			if (io_ret != 0) {
-				errp(10, __FUNCTION__, "error flushing to: %s", data_txt);
+				errp(155, __FUNCTION__, "error flushing to: %s", data_txt);
 			}
 			errno = 0;	// paranoia
 			io_ret = fclose(data);
 			if (io_ret != 0) {
-				errp(10, __FUNCTION__, "error closing: %s", data_txt);
+				errp(155, __FUNCTION__, "error closing: %s", data_txt);
 			}
 			free(data_txt);
 			data_txt = NULL;
@@ -1092,10 +1111,10 @@ RandomExcursions_metric_print(struct state *state, long int sampleCount, long in
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(156, __FUNCTION__, "state arg is NULL");
 	}
 	if (freqPerBin == NULL) {
-		err(10, __FUNCTION__, "freqPerBin arg is NULL");
+		err(156, __FUNCTION__, "freqPerBin arg is NULL");
 	}
 
 	/*
@@ -1181,7 +1200,7 @@ RandomExcursions_metric_print(struct state *state, long int sampleCount, long in
 	errno = 0;		// paranoia
 	io_ret = fflush(state->finalRept);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+		errp(156, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
 	return;
 }
@@ -1211,7 +1230,7 @@ RandomExcursions_metrics(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(157, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
@@ -1219,18 +1238,18 @@ RandomExcursions_metrics(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(10, __FUNCTION__,
+		err(157, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(10, __FUNCTION__,
+		err(157, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->driver_state[test_num] != DRIVER_PRINT) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
+		err(157, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
 	}
 
@@ -1239,7 +1258,7 @@ RandomExcursions_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
+		errp(157, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
 		     state->tp.uniformity_bins, sizeof(long int));
 	}
 
@@ -1356,7 +1375,7 @@ RandomExcursions_destroy(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(158, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __FUNCTION__);

@@ -1,5 +1,24 @@
-// Parse_args.c
-// Parse command line arguments for batch automation of assess.c
+// debug.c
+
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: none
+// NOTE: Other code calls err() and errp() with various exit codes that may result in zero or non-zero exits
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -235,7 +254,7 @@ warnp(char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      err(1, __FUNCTION__, "bad foobar: %s", message);
+ *      err(99, __FUNCTION__, "bad foobar: %s", message);
  */
 void
 err(int exitcode, char const *name, char const *fmt, ...)
@@ -306,7 +325,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      errp(1, __FUNCTION__, "I/O failure: %s", message);
+ *      errp(99, __FUNCTION__, "I/O failure: %s", message);
  */
 void
 errp(int exitcode, char const *name, char const *fmt, ...)
@@ -381,7 +400,7 @@ errp(int exitcode, char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      usage_err(usage, 1, __FUNCTION__, "bad foobar: %s", message);
+ *      usage_err(usage, 99, __FUNCTION__, "bad foobar: %s", message);
  */
 void
 usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ...)
@@ -465,7 +484,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
  *
  * Example:
  *
- *      usage_errp(usage, 1, __FUNCTION__, "bad foobar: %s", message);
+ *      usage_errp(usage, 99, __FUNCTION__, "bad foobar: %s", message);
  */
 void
 usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, ...)

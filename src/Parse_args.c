@@ -1,6 +1,26 @@
 // Parse_args.c
 // Parse command line arguments for batch automation of assess.c
 
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 0 thru 4
+// NOTE: 5-9 is used in assess.c
+
 #define _BSD_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -352,9 +372,9 @@ static const char * const usage =
 "    -r stateDir      process *.state files under stateDir (def: don't)\n"
 "    -R               recursive search stateDir (def: no recurse)\n"
 "    -m mode          w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
-"                     i --> iterate only, write state to -s statePath and exit\n"
-"                     a --> assess only, read state from *.state files under -r stateDir and assess results\n"
-"                     b --> iterate and then assess, no *.state files written (default: b)\n"
+"                     i --> iterate only (not currently implemented)\n"
+"                     a --> assess only (not currently implemented)\n"
+"                     b --> iterate and then assess (default: b)\n"
 "\n"
 "    -h               print this message and exit\n"
 "\n"
@@ -407,6 +427,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 * parse the command line
 	 */
 	opterr = 0;
+	brkt = NULL;
 	while ((option = getopt(argc, argv, "v:bt:g:" "P:pi:I:O" "w:cnf:F:j:" "s:r:Rm:" "h")) != -1) {
 		switch (option) {
 
@@ -432,7 +453,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 				// determine test number
 				testnum = str2longint(&success, phrase);
 				if (success == false) {
-					usage_errp(usage, 2, __FUNCTION__,
+					usage_errp(usage, 1, __FUNCTION__,
 						   "-t test1[,test2].. must only have " "comma separated integers: %s", phrase);
 				}
 				// 0 is special case, enable all tests
@@ -441,7 +462,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 						state->testVector[i] = true;
 					}
 				} else if (testnum < 0 || testnum > NUMOFTESTS) {
-					usage_err(usage, 2, __FUNCTION__, "-t test: %lu must be in the range [0-%d]",
+					usage_err(usage, 1, __FUNCTION__, "-t test: %lu must be in the range [0-%d]",
 						  testnum, NUMOFTESTS);
 				} else {
 					state->testVector[testnum] = true;
@@ -455,10 +476,10 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->generatorFlag = true;
 			i = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, 3, __FUNCTION__, "-g generator must be numeric: %s", optarg);
+				usage_errp(usage, 1, __FUNCTION__, "-g generator must be numeric: %s", optarg);
 			}
 			if (i < 0 || i > GENERATOR_COUNT) {
-				usage_err(usage, 3, __FUNCTION__, "-g generator: %ld must be [0-%d]", i, GENERATOR_COUNT);
+				usage_err(usage, 1, __FUNCTION__, "-g generator: %ld must be [0-%d]", i, GENERATOR_COUNT);
 			}
 			state->generator = (enum gen) i;
 			break;
@@ -470,15 +491,15 @@ Parse_args(struct state *state, int argc, char *argv[])
 				// parse parameter number
 				scan_cnt = sscanf(phrase, "%ld=", &num);
 				if (scan_cnt == EOF) {
-					usage_errp(usage, 3, __FUNCTION__,
+					usage_errp(usage, 1, __FUNCTION__,
 						   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
 				} else if (scan_cnt != 2) {
-					usage_err(usage, 3, __FUNCTION__,
+					usage_err(usage, 1, __FUNCTION__,
 						  "-P num=value[,num=value].. "
 						  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
 				}
 				if (num < MIN_PARAM || num > MAX_PARAM) {
-					usage_err(usage, 3, __FUNCTION__,
+					usage_err(usage, 1, __FUNCTION__,
 						  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]",
 						  num, MAX_PARAM);
 				}
@@ -488,15 +509,15 @@ Parse_args(struct state *state, int argc, char *argv[])
 					// parse parameter number as an integer
 					scan_cnt = sscanf(phrase, "%ld=%ld", &num, &value);
 					if (scan_cnt == EOF) {
-						usage_errp(usage, 3, __FUNCTION__,
+						usage_errp(usage, 1, __FUNCTION__,
 							   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
-						usage_err(usage, 3, __FUNCTION__,
+						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
 							  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
-						usage_err(usage, 3, __FUNCTION__,
+						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
 							  "num: %lu must be in the range [1-%d]", num, MAX_PARAM);
 					}
@@ -506,15 +527,15 @@ Parse_args(struct state *state, int argc, char *argv[])
 					// parse parameter number as an floating point number
 					scan_cnt = sscanf(phrase, "%ld=%lf", &num, &d_value);
 					if (scan_cnt == EOF) {
-						usage_errp(usage, 3, __FUNCTION__,
+						usage_errp(usage, 1, __FUNCTION__,
 							   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
-						usage_err(usage, 3, __FUNCTION__,
+						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
 							  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
-						usage_err(usage, 3, __FUNCTION__,
+						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
 							  "num: %lu must be in the range [1-%d]", num, MAX_PARAM);
 					}
@@ -531,10 +552,10 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->iterationFlag = true;
 			state->tp.numOfBitStreams = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, 9, __FUNCTION__, "error in parsing -i iterations: %s", optarg);
+				usage_errp(usage, 1, __FUNCTION__, "error in parsing -i iterations: %s", optarg);
 			}
 			if (state->tp.numOfBitStreams < 1) {
-				usage_err(usage, 4, __FUNCTION__, "iterations (number of bit streams): %lu can't be less than 1",
+				usage_err(usage, 1, __FUNCTION__, "iterations (number of bit streams): %lu can't be less than 1",
 					  state->tp.numOfBitStreams);
 			}
 			break;
@@ -543,10 +564,10 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->reportCycleFlag = true;
 			state->reportCycle = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, 9, __FUNCTION__, "error in parsing -I reportCycle: %s", optarg);
+				usage_errp(usage, 1, __FUNCTION__, "error in parsing -I reportCycle: %s", optarg);
 			}
 			if (state->reportCycle < 0) {
-				usage_err(usage, 9, __FUNCTION__, "-I reportCycle: %lu must be >= 0", state->reportCycle);
+				usage_err(usage, 1, __FUNCTION__, "-I reportCycle: %lu must be >= 0", state->reportCycle);
 			}
 			break;
 
@@ -559,7 +580,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->workDirFlag = true;
 			state->workDir = strdup(optarg);
 			if (state->workDir == NULL) {
-				errp(5, __FUNCTION__, "strdup of %lu bytes for -w workDir failed", strlen(optarg));
+				errp(1, __FUNCTION__, "strdup of %lu bytes for -w workDir failed", strlen(optarg));
 			}
 			break;
 
@@ -586,10 +607,10 @@ Parse_args(struct state *state, int argc, char *argv[])
 			case FORMAT_RAW_BINARY:
 				break;
 			default:
-				err(6, __FUNCTION__, "-F format: %s must be r or a", optarg);
+				err(1, __FUNCTION__, "-F format: %s must be r or a", optarg);
 			}
 			if (optarg[1] != '\0') {
-				err(6, __FUNCTION__, "-F format: %s must be a single character: r or a", optarg);
+				err(1, __FUNCTION__, "-F format: %s must be a single character: r or a", optarg);
 			}
 			break;
 
@@ -597,7 +618,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->randomDataFlag = true;
 			state->randomDataPath = strdup(optarg);
 			if (state->randomDataPath == NULL) {
-				errp(7, __FUNCTION__, "strdup of %lu bytes for -f randdata failed", strlen(optarg));
+				errp(1, __FUNCTION__, "strdup of %lu bytes for -f randdata failed", strlen(optarg));
 			}
 			break;
 
@@ -605,32 +626,32 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->jobnumFlag = true;
 			state->jobnum = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, 9, __FUNCTION__, "error in parsing -j jobnum: %s", optarg);
+				usage_errp(usage, 1, __FUNCTION__, "error in parsing -j jobnum: %s", optarg);
 			}
 			if (state->jobnum < 0) {
-				usage_err(usage, 9, __FUNCTION__, "-j jobnum: %lu must be greater than 0", state->jobnum);
+				usage_err(usage, 1, __FUNCTION__, "-j jobnum: %lu must be greater than 0", state->jobnum);
 			}
 			break;
 
 		case 's':	// -s statePath (write state into statePath.state)
 			state->statePathFlag = true;
-			usage_err(usage, 10, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
+			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
 			break;
 
 		case 'r':	// -r stateDir (process *.state under stateDir)
 			state->processStateDirFlag = true;
-			usage_err(usage, 10, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
+			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
 			break;
 
 		case 'R':	// -R (recursive search stateDir)
 			state->recursive = true;
-			usage_err(usage, 10, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
+			usage_err(usage, 1, __FUNCTION__, "option: -%c not yet implemented, sorry!", (char) optopt);
 			break;
 
 		case 'm':	// -m mode (w-->write only. i-->iterate only, a-->assess only, b-->interate & assess)
 			state->runModeFlag = true;
 			if (optarg[0] == '\0' || optarg[1] != '\0') {
-				usage_err(usage, 10, __FUNCTION__, "-m mode must be a single character: %s", optarg);
+				usage_err(usage, 1, __FUNCTION__, "-m mode must be a single character: %s", optarg);
 			}
 			switch (optarg[0]) {
 			case MODE_WRITE_ONLY:
@@ -639,13 +660,13 @@ Parse_args(struct state *state, int argc, char *argv[])
 				break;
 			case MODE_ASSESS_ONLY:
 			case MODE_ITERATE_ONLY:
-				usage_err(usage, 10, __FUNCTION__, "-m %c not yet implemented, sorry!", (char) optarg[0]);
+				usage_err(usage, 1, __FUNCTION__, "-m %c not yet implemented, sorry!", (char) optarg[0]);
 				break;
 			case MODE_ITERATE_AND_ASSESS:
 				state->runMode = MODE_ITERATE_AND_ASSESS;
 				break;
 			default:
-				usage_err(usage, 10, __FUNCTION__, "-m mode must be one of w, i, a, or b: %c", (char) optarg[0]);
+				usage_err(usage, 1, __FUNCTION__, "-m mode must be one of w, i, a, or b: %c", (char) optarg[0]);
 				break;
 			}
 			break;
@@ -659,30 +680,30 @@ Parse_args(struct state *state, int argc, char *argv[])
 		case '?':
 		default:
 			if (option == '?') {
-				usage_errp(usage, 14, __FUNCTION__, "getopt returned an error");
+				usage_errp(usage, 1, __FUNCTION__, "getopt returned an error");
 			} else {
-				usage_err(usage, 14, __FUNCTION__, "unknown option: -%c", (char) optopt);
+				usage_err(usage, 1, __FUNCTION__, "unknown option: -%c", (char) optopt);
 			}
 			break;
 		}
 	}
 	if (optind >= argc) {
-		usage_err(usage, 15, __FUNCTION__, "missing required bitcount argumnt");
+		usage_err(usage, 1, __FUNCTION__, "missing required bitcount argumnt");
 	}
 	if (optind != argc - 1) {
-		usage_err(usage, 15, __FUNCTION__, "unexpected arguments");
+		usage_err(usage, 1, __FUNCTION__, "unexpected arguments");
 	}
 	state->tp.n = str2longint(&success, argv[optind]);
 	if (success == false) {
-		usage_errp(usage, 15, __FUNCTION__, "bitcount(n) must be a number: %s", argv[optind]);
+		usage_errp(usage, 1, __FUNCTION__, "bitcount(n) must be a number: %s", argv[optind]);
 	}
 	if ((state->tp.n % 8) != 0) {
-		usage_err(usage, 16, __FUNCTION__, "bitcount(n): %ld must be a multiple of 8", state->tp.n);
+		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must be a multiple of 8", state->tp.n);
 	}
 	if (state->tp.n < MIN_BITCOUNT) {
-		usage_err(usage, 16, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, MIN_BITCOUNT);
+		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, MIN_BITCOUNT);
 	} else if (state->tp.n > MAX_BITCOUNT) {
-		usage_err(usage, 16, __FUNCTION__, "bitcount(n): %ld must <= %d", state->tp.n, MAX_BITCOUNT);
+		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must <= %d", state->tp.n, MAX_BITCOUNT);
 	}
 
 	/*
@@ -707,24 +728,24 @@ Parse_args(struct state *state, int argc, char *argv[])
 	if (state->batchmode == true) {
 		if (state->generatorFlag == true) {
 			if (state->generator == 0 && state->randomDataFlag == false) {
-				usage_err(usage, 16, __FUNCTION__, "-f randdata required when using -b and -g 0");
+				usage_err(usage, 1, __FUNCTION__, "-f randdata required when using -b and -g 0");
 			}
 		} else {
 			if (state->randomDataFlag == false) {
-				usage_err(usage, 16, __FUNCTION__, "-f randdata required when using -b and no -g generator given");
+				usage_err(usage, 1, __FUNCTION__, "-f randdata required when using -b and no -g generator given");
 			}
 		}
 	}
 	if (state->generator == 0) {
 		if (state->runMode == MODE_WRITE_ONLY) {
-			usage_err(usage, 16, __FUNCTION__, "when -m w the -g generator must be non-zero");
+			usage_err(usage, 1, __FUNCTION__, "when -m w the -g generator must be non-zero");
 		}
 	} else {
 		if (state->randomDataFlag == true && state->runMode != MODE_WRITE_ONLY) {
-			usage_err(usage, 16, __FUNCTION__, "-f randdata may only be used with -g 0 (read from file) or -m w");
+			usage_err(usage, 1, __FUNCTION__, "-f randdata may only be used with -g 0 (read from file) or -m w");
 		}
 		if (state->jobnumFlag == true) {
-			usage_err(usage, 16, __FUNCTION__, "-j jobnum may only be used with -g 0 (read from file)");
+			usage_err(usage, 1, __FUNCTION__, "-j jobnum may only be used with -g 0 (read from file)");
 		}
 	}
 
@@ -753,7 +774,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 		}
 	}
 	if (test_cnt == 0 && state->batchmode == true) {
-		err(17, __FUNCTION__, "no tests enabled");
+		err(1, __FUNCTION__, "no tests enabled");
 	}
 
 	/*
@@ -767,7 +788,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 		if (state->batchmode == true) {
 			state->workDir = strdup(state->generatorDir[state->generator]);
 			if (state->workDir == NULL) {
-				errp(18, __FUNCTION__, "strdup of %s failed", state->generatorDir[state->generator]);
+				errp(1, __FUNCTION__, "strdup of %s failed", state->generatorDir[state->generator]);
 			}
 
 			/*
@@ -777,14 +798,14 @@ Parse_args(struct state *state, int argc, char *argv[])
 			j = strlen("experiments/") + strlen(state->generatorDir[state->generator]) + 1;	// string + NUL
 			state->workDir = malloc(j + 1);	// +1 for later paranoia
 			if (state->workDir == NULL) {
-				errp(18, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for experiments/%s",
+				errp(1, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for experiments/%s",
 				     j + 1, sizeof(state->workDir[0]), state->generatorDir[state->generator]);
 			}
 			errno = 0;	// paranoia
 			snprintf_ret = snprintf(state->workDir, j, "experiments/%s", state->generatorDir[state->generator]);
 			state->workDir[j] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret > j || errno != 0) {
-				errp(18, __FUNCTION__,
+				errp(1, __FUNCTION__,
 				     "snprintf failed for %ld bytes for experiments/%s, returned: %d",
 				     j, state->generatorDir[state->generator], snprintf_ret);
 			}
@@ -806,7 +827,7 @@ change_params(struct state *state, long int parameter, long int value, double d_
 {
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(2, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
@@ -847,7 +868,7 @@ change_params(struct state *state, long int parameter, long int value, double d_
 		state->tp.alpha = d_value;
 		break;
 	default:
-		err(18, __FUNCTION__, "invalid parameter option: %ld", parameter);
+		err(2, __FUNCTION__, "invalid parameter option: %ld", parameter);
 		break;
 	}
 	return;
@@ -861,16 +882,17 @@ print_option_summary(struct state *state, char *where)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(3, __FUNCTION__, "state arg is NULL");
 	}
 	if (where == NULL) {
-		err(10, __FUNCTION__, "where arg is NULL");
+		err(3, __FUNCTION__, "where arg is NULL");
 	}
 
 	/*
 	 * report on high level state
 	 */
 	dbg(DBG_LOW, "High level state for: %s", where);
+	dbg(DBG_LOW, "\tsts version: %s", version);
 	dbg(DBG_LOW, "\tdebuglevel = %ld", debuglevel);
 	if (state->batchmode == true) {
 		dbg(DBG_LOW, "\tRunning in (non-interactive) batch mode");

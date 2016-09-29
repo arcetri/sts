@@ -1,6 +1,23 @@
-// alloc.c
-//
-// dynamic array of things allocator
+// alloc.c - dynamic array of things allocator
+
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 60 thru 69
 
 #define _BSD_SOURCE
 #include <stdio.h>
@@ -40,13 +57,13 @@ zero_chunk(size_t elm_size, long int chunk, void *data)
 	 * firewall - sanity check args
 	 */
 	if (elm_size <= 0) {
-		err(50, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
+		err(60, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
 	}
 	if (chunk <= 0) {
-		err(50, __FUNCTION__, "chunk must be > 0: %ld", chunk);
+		err(60, __FUNCTION__, "chunk must be > 0: %ld", chunk);
 	}
 	if (data == NULL) {
-		err(50, __FUNCTION__, "data arg is NULL");
+		err(60, __FUNCTION__, "data arg is NULL");
 	}
 
 	/*
@@ -84,26 +101,26 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	 * firewall - sanity check args
 	 */
 	if (array == NULL) {
-		err(51, __FUNCTION__, "array arg is NULL");
+		err(61, __FUNCTION__, "array arg is NULL");
 	}
 	if (new_chunks <= 0) {
-		err(51, __FUNCTION__, "chunks arg must be > 0: %d", new_chunks);
+		err(61, __FUNCTION__, "chunks arg must be > 0: %d", new_chunks);
 	}
 
 	/*
 	 * firewall - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(51, __FUNCTION__, "data for dynamic array is NULL");
+		err(61, __FUNCTION__, "data for dynamic array is NULL");
 	}
 	if (array->elm_size <= 0) {
-		err(51, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(61, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(51, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(61, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(51, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(61, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	/*
@@ -113,19 +130,19 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	old_allocated = array->allocated;
 	new_allocated = old_allocated + (new_chunks * array->chunk);
 	if (new_allocated <= old_allocated) {
-		err(51, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: allocated: %ld to %ld",
+		err(61, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: allocated: %ld to %ld",
 		    new_chunks, array->chunk, old_allocated, new_allocated);
 	}
 	// firewall - partial check for size overflow
 	old_bytes = old_allocated * array->elm_size;
 	new_bytes = new_allocated * array->elm_size;
 	if (new_bytes <= old_bytes) {
-		err(51, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: octet size: %ld to %ld",
+		err(61, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: octet size: %ld to %ld",
 		    new_chunks, array->chunk, old_bytes, new_bytes);
 	}
 	data = realloc(array->data, new_bytes);
 	if (data == NULL) {
-		errp(51, __FUNCTION__, "failed to add %d new chunks of %ld elements to dynamic array: octet size %ld to %ld",
+		errp(61, __FUNCTION__, "failed to add %d new chunks of %ld elements to dynamic array: octet size %ld to %ld",
 		     new_chunks, array->chunk, old_bytes, new_bytes);
 	}
 	array->data = data;
@@ -172,13 +189,13 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	 * Also set the byte size.
 	 */
 	if (elm_size <= 0) {
-		err(52, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
+		err(62, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
 	}
 	if (chunk <= 0) {
-		err(52, __FUNCTION__, "chunk must be > 0: %ld", chunk);
+		err(62, __FUNCTION__, "chunk must be > 0: %ld", chunk);
 	}
 	if (start_chunks <= 0) {
-		err(52, __FUNCTION__, "start_chunks must be > 0: %ld", start_chunks);
+		err(62, __FUNCTION__, "start_chunks must be > 0: %ld", start_chunks);
 	}
 
 	/*
@@ -186,7 +203,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
-		errp(52, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
 		     (long int) 1, sizeof(struct dyn_array));
 	}
 
@@ -202,7 +219,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	ret->chunk = chunk;
 	ret->data = malloc(ret->allocated * elm_size);
 	if (ret->data == NULL) {
-		errp(52, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", start_chunks,
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", start_chunks,
 		     elm_size);
 	}
 
@@ -244,26 +261,26 @@ append_value(struct dyn_array *array, void *value_p)
 	 * firewall - sanity check args
 	 */
 	if (array == NULL) {
-		err(53, __FUNCTION__, "array arg is NULL");
+		err(63, __FUNCTION__, "array arg is NULL");
 	}
 	if (value_p == NULL) {
-		err(53, __FUNCTION__, "value_p arg is NULL");
+		err(63, __FUNCTION__, "value_p arg is NULL");
 	}
 
 	/*
 	 * firewall - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(53, __FUNCTION__, "data in dynamic array");
+		err(63, __FUNCTION__, "data in dynamic array");
 	}
 	if (array->elm_size <= 0) {
-		err(53, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(63, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(53, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(63, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(53, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(63, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	/*
@@ -296,7 +313,7 @@ free_dyn_array(struct dyn_array *array)
 	 * firewall - sanity check args
 	 */
 	if (array == NULL) {
-		err(53, __FUNCTION__, "array arg is NULL");
+		err(64, __FUNCTION__, "array arg is NULL");
 	}
 
 	/*

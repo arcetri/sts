@@ -2,6 +2,25 @@
  R A N K   A L G O R I T H M   R O U T I N E S
  *****************************************************************************/
 
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 120 thru 129
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "externs.h"
@@ -25,7 +44,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 	for (i = 0; i < m - 1; i++) {
 		if (matrix[i][i] == 1) {
 			perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
-		} else {		/* matrix[i][i] = 0 */
+		} else {	/* matrix[i][i] = 0 */
 			if (find_unit_element_and_swap(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix) == 1) {
 				perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
 			}
@@ -38,7 +57,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 	for (i = m - 1; i > 0; i--) {
 		if (matrix[i][i] == 1) {
 			perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
-		} else {		/* matrix[i][i] = 0 */
+		} else {	/* matrix[i][i] = 0 */
 			if (find_unit_element_and_swap(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix) == 1) {
 				perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
 			}
@@ -172,10 +191,10 @@ create_matrix(int M, int Q)
 	 * firewall
 	 */
 	if (M < 0) {
-		err(10, __FUNCTION__, "number of rows: %d must be > 0", M);
+		err(120, __FUNCTION__, "number of rows: %d must be > 0", M);
 	}
 	if (Q < 0) {
-		err(10, __FUNCTION__, "number of coolumns per rows: %d must be > 0", Q);
+		err(120, __FUNCTION__, "number of coolumns per rows: %d must be > 0", Q);
 	}
 
 	/*
@@ -183,7 +202,7 @@ create_matrix(int M, int Q)
 	 */
 	matrix = malloc(M * sizeof(matrix[0]));
 	if (matrix == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix rows",
+		errp(120, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix rows",
 		     (long int) M, sizeof(BitSequence *));
 	}
 
@@ -193,7 +212,7 @@ create_matrix(int M, int Q)
 	for (i = 0; i < M; i++) {
 		matrix[i] = malloc(Q * sizeof(matrix[0][0]));
 		if (matrix[i] == NULL) {
-			errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix[%d] column",
+			errp(120, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix[%d] column",
 			     (long int) Q, sizeof(BitSequence), i);
 		}
 	}
@@ -211,10 +230,10 @@ def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(1, __FUNCTION__, "state arg is NULL");
+		err(121, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
-		err(10, __FUNCTION__, "state->epsilon is NULL");
+		err(121, __FUNCTION__, "state->epsilon is NULL");
 	}
 
 	for (i = 0; i < M; i++) {

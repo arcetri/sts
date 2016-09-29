@@ -2,6 +2,21 @@
 #
 # sts - stastical test suite
 
+# This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+# See the initial comment in assess.c and the file README.txt for more information.
+#
+# TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+#
+# chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+#
+# Share and enjoy! :-)
+
 # utilities
 #
 SHELL= bash
@@ -26,20 +41,22 @@ DIFF= diff
 
 # how to compile
 #
-OPT=
+LIBS= -lm
+#OPT=
+OPT= -O3
+#DEBUG=
 DEBUG= -g3
-# XXX - release without -Werror: CFLAGS= -std=c99 -Wall -pedantic ${OPT} ${DEBUG}
-# XXX - release without -DDEBUG_LINT CFLAGS= -std=c99 -Wall -pedantic ${OPT} ${DEBUG}
-#CFLAGS= -std=c99 -Wall -Werror -pedantic -DDEBUG_LINT ${OPT} ${DEBUG}
-CFLAGS= -std=c99 -Wall -Werror -pedantic ${OPT} ${DEBUG}
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${OPT} ${DEBUG}
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${OPT} ${DEBUG}
+CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${OPT} ${DEBUG}
 
 # locations
 #
 ROOTDIR= ..
 DATADIR= ${ROOTDIR}/data
 #
-DESTLIBDIR= /usr/local/lib/sts
-DESTBINDIR= /usr/local/bin
+DESTLIBDIR= /usr/global/lib/sts
+DESTBINDIR= /usr/global/bin
 DESTDATADIR= ${DESTLIBDIR}/data
 
 # source
@@ -73,7 +90,7 @@ OBJ= assess.o frequency.o blockFrequency.o \
       utilities.o generators.o genutils.o \
       Parse_args.o debug.o dyn_alloc.o driver.o
 
-DATA= ${DATADIR}/BBS.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
+DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
 	${DATADIR}/data.pi ${DATADIR}/data.sha1 ${DATADIR}/data.sqrt2 \
 	${DATADIR}/data.sqrt3
 
@@ -85,7 +102,7 @@ all: ${TARGETS} ${DATA}
 
 assess: ${OBJ}
 	${RM} -f $@
-	${CC} ${CFLAGS} ${OBJ} -lm -o $@
+	${CC} ${CFLAGS} ${OBJ} ${LIBS} -o $@
 
 ../assess: assess
 	${RM} -f $@

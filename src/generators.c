@@ -1,3 +1,22 @@
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 80 thru 89
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,7 +78,6 @@ lcg(struct state *state)
 	double *DUNIF;
 	double SEED;
 	long int i;
-	long int counter;
 	unsigned bit;
 	long int num_0s;
 	long int num_1s;
@@ -68,15 +86,14 @@ lcg(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(80, __FUNCTION__, "state arg is NULL");
 	}
 
 	SEED = 23482349.0;
 	DUNIF = calloc(state->tp.n, sizeof(double));
 	if (DUNIF == NULL) {
-		errp(10, __FUNCTION__, "could not calloc for DUNIF: %ld doubles of %lu bytes each", state->tp.n, sizeof(double));
+		errp(80, __FUNCTION__, "could not calloc for DUNIF: %ld doubles of %lu bytes each", state->tp.n, sizeof(double));
 	}
-	counter = 1;
 
 	for (v = 0; v < state->tp.numOfBitStreams; v++) {
 		num_0s = 0;
@@ -98,7 +115,7 @@ lcg(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(80, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -127,7 +144,7 @@ quadRes1(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(81, __FUNCTION__, "state arg is NULL");
 	}
 
 	ahtopb
@@ -155,7 +172,7 @@ quadRes1(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(81, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -187,7 +204,7 @@ quadRes2(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(82, __FUNCTION__, "state arg is NULL");
 	}
 
 	One[0] = 0x01;
@@ -217,7 +234,7 @@ quadRes2(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(82, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -245,7 +262,7 @@ cubicRes(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(83, __FUNCTION__, "state arg is NULL");
 	}
 
 
@@ -270,7 +287,7 @@ cubicRes(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(83, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -294,7 +311,7 @@ exclusiveOR(struct state *state)
 	BYTE bit_sequence[127];	// XXX - array size uses magic number
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(84, __FUNCTION__, "state arg is NULL");
 	}
 
 	memcpy(bit_sequence,
@@ -329,7 +346,7 @@ exclusiveOR(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(state->freqFile);
 			if (io_ret != 0) {
-				errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+				errp(84, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 			}
 			if (state->runMode == MODE_WRITE_ONLY) {
 				write_sequence(state);
@@ -363,7 +380,7 @@ modExp(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(85, __FUNCTION__, "state arg is NULL");
 	}
 
 	ahtopb("7AB36982CE1ADF832019CDFEB2393CABDF0214EC", y, 20);
@@ -389,7 +406,7 @@ modExp(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(85, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -419,7 +436,7 @@ bbs(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(86, __FUNCTION__, "state arg is NULL");
 	}
 
 	ahtopb
@@ -466,7 +483,7 @@ bbs(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(86, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -503,7 +520,7 @@ micali_schnorr(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(87, __FUNCTION__, "state arg is NULL");
 	}
 
 	ahtopb
@@ -540,7 +557,7 @@ micali_schnorr(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(87, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -579,7 +596,7 @@ SHA1(struct state *state)
 
 	// firewall
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(88, __FUNCTION__, "state arg is NULL");
 	}
 
 	ahtopb("ec822a619d6ed5d9492218a7a4c5b15d57c61601", Xkey, 20);
@@ -712,7 +729,7 @@ SHA1(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fflush(state->freqFile);
 		if (io_ret != 0) {
-			errp(10, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			errp(88, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);

@@ -10,6 +10,25 @@
  * is filled with NULL pointers.
  */
 
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 50 thru 59
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -181,10 +200,10 @@ init(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(50, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->workDir == NULL) {
-		err(10, __FUNCTION__, "state->workDir is NULL");
+		err(50, __FUNCTION__, "state->workDir is NULL");
 	}
 	dbg(DBG_LOW, "start of init phase");
 
@@ -225,7 +244,7 @@ init(struct state *state)
 	dbg(DBG_MED, "will use freq.txt file: %s", state->freqFilePath);
 	state->freqFile = fopen(state->freqFilePath, "w");
 	if (state->freqFile == NULL) {
-		errp(10, __FUNCTION__, "Could not open freq.txt file: %s", state->freqFilePath);
+		errp(50, __FUNCTION__, "Could not open freq.txt file: %s", state->freqFilePath);
 	}
 
 	/*
@@ -236,7 +255,7 @@ init(struct state *state)
 		dbg(DBG_MED, "will use finalAnalysisReport.txt file: %s", state->finalReptPath);
 		state->finalRept = fopen(state->finalReptPath, "w");
 		if (state->finalRept == NULL) {
-			errp(10, __FUNCTION__, "Could not open finalAnalysisReport file: %s", state->finalReptPath);
+			errp(50, __FUNCTION__, "Could not open finalAnalysisReport file: %s", state->finalReptPath);
 		}
 	}
 
@@ -251,7 +270,7 @@ init(struct state *state)
 	state->cSetup = false;	// note that the test constants are not yet initialized
 	// firewall - guard against taking the square root of a negative value
 	if (state->tp.n <= 0) {
-		err(10, __FUNCTION__, "bogus n value: %ld sould be > 0", state->tp.n);
+		err(50, __FUNCTION__, "bogus n value: %ld sould be > 0", state->tp.n);
 	}
 	// compute pure numerical constants
 	state->c.sqrt2 = sqrt(2.0);
@@ -274,10 +293,10 @@ init(struct state *state)
 	}
 	state->c.p_32 = pow(2.0, r * (RANK_ROWS + RANK_COLS - r) - RANK_ROWS * RANK_COLS) * product;
 	if (state->c.p_32 <= 0.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_32 value: %f should be > 0.0", state->c.p_32);
+		err(50, __FUNCTION__, "bogus p_32 value: %f should be > 0.0", state->c.p_32);
 	}
 	if (state->c.p_32 >= 1.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", state->c.p_32);
+		err(50, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", state->c.p_32);
 	}
 	// probability of rank RANK_ROWS-1
 	r = RANK_ROWS - 1;
@@ -287,34 +306,34 @@ init(struct state *state)
 	}
 	state->c.p_31 = pow(2.0, r * (RANK_ROWS + RANK_COLS - r) - RANK_ROWS * RANK_COLS) * product;
 	if (state->c.p_31 <= 0.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_31 value: %f should be > 0.0", state->c.p_31);
+		err(50, __FUNCTION__, "bogus p_31 value: %f should be > 0.0", state->c.p_31);
 	}
 	if (state->c.p_31 >= 1.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", state->c.p_31);
+		err(50, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", state->c.p_31);
 	}
 	// probability of rank < RANK_ROWS-1
 	state->c.p_30 = 1.0 - (state->c.p_32 + state->c.p_31);
 	if (state->c.p_30 <= 0.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
+		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
 		    state->c.p_30, state->c.p_31, state->c.p_32);
 	}
 	if (state->c.p_30 >= 1.0) {	// paranoia
-		err(10, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be < 1.0",
+		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be < 1.0",
 		    state->c.p_30, state->c.p_31, state->c.p_32);
 	}
 	// total possible matrix for a given bit stream length - used by RANK_TEST
 	if (RANK_ROWS <= 0) {	// paranoia
-		err(10, __FUNCTION__, "RANK_ROWS: %d must be > 0", RANK_ROWS);
+		err(50, __FUNCTION__, "RANK_ROWS: %d must be > 0", RANK_ROWS);
 	}
 	if (RANK_COLS <= 0) {	// paranoia
-		err(10, __FUNCTION__, "RANK_COLS: %d must be > 0", RANK_COLS);
+		err(50, __FUNCTION__, "RANK_COLS: %d must be > 0", RANK_COLS);
 	}
 	if (((long int) RANK_ROWS * (long int) RANK_COLS) > (long int) LONG_MAX) {	// paranoia
-		err(10, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d cannot fit into an int because the product is > %ld",
+		err(50, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d cannot fit into an int because the product is > %ld",
 		    RANK_ROWS, RANK_COLS, LONG_MAX);
 	}
 	if ((RANK_ROWS * RANK_COLS) == 0) {	// paranoia
-		err(10, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d == 0, perhaps due to overflow", RANK_ROWS, RANK_COLS);
+		err(50, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d == 0, perhaps due to overflow", RANK_ROWS, RANK_COLS);
 	}
 	state->c.logn = log(state->tp.n);
 	state->c.matrix_count = state->tp.n / (RANK_ROWS * RANK_COLS);
@@ -352,7 +371,7 @@ init(struct state *state)
 		}
 	}
 	if (test_count <= 0) {
-		err(10, __FUNCTION__, "no more tests enabled, nothing to do, aborting");
+		err(50, __FUNCTION__, "no more tests enabled, nothing to do, aborting");
 	} else {
 		dbg(DBG_MED, "We have %d tests enabled and initialized", test_count);
 	}
@@ -362,7 +381,7 @@ init(struct state *state)
 	 */
 	state->epsilon = calloc(state->tp.n, sizeof(BitSequence));
 	if (state->epsilon == NULL) {
-		errp(10, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each",
+		errp(50, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each",
 		     state->tp.n, sizeof(BitSequence));
 	}
 	// - end of phase
@@ -386,7 +405,7 @@ interate(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(51, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
@@ -422,7 +441,7 @@ print(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(52, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
@@ -467,7 +486,7 @@ metrics(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(53, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
@@ -489,7 +508,7 @@ metrics(struct state *state)
 	io_ret = fprintf(state->finalRept,
 			 "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 	if (io_ret <= 0) {
-		errp(10, __FUNCTION__, "error in writing to finalRept");
+		errp(53, __FUNCTION__, "error in writing to finalRept");
 	}
 	case1 = false;
 	case2 = false;
@@ -509,29 +528,29 @@ metrics(struct state *state)
 			io_ret = fprintf(state->finalRept,
 					 "The minimum pass rate for each statistical test with the exception of the\n");
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 			io_ret = fprintf(state->finalRept, "random excursion (variant) test is undefined.\n\n");
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 		} else {
 			passRate =
 			    floorl((p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / state->maxGeneralSampleSize)) *
-			    	   state->maxGeneralSampleSize);
+				   state->maxGeneralSampleSize);
 			io_ret = fprintf(state->finalRept,
 					 "The minimum pass rate for each statistical test with the exception of the\n");
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 			io_ret = fprintf(state->finalRept, "random excursion (variant) test is approximately = %ld for a\n",
 					 state->maxGeneralSampleSize ? passRate : 0);
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 			io_ret = fprintf(state->finalRept, "sample size = %ld binary sequences.\n\n", state->maxGeneralSampleSize);
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 		}
 	}
@@ -540,7 +559,7 @@ metrics(struct state *state)
 			io_ret = fprintf(state->finalRept,
 					 "The minimum pass rate for the random excursion (variant) test is undefined.\n\n");
 			if (io_ret <= 0) {
-				errp(10, __FUNCTION__, "error in writing to finalRept");
+				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 		} else {
 			passRate =
@@ -550,25 +569,25 @@ metrics(struct state *state)
 				io_ret = fprintf(state->finalRept,
 						 "The minimum pass rate for the random excursion (variant) test\n");
 				if (io_ret <= 0) {
-					errp(10, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
 				io_ret = fprintf(state->finalRept,
 						 "is approximately = %ld for a sample size = %ld binary sequences.\n\n",
 						 passRate, state->maxRandomExcursionSampleSize);
 				if (io_ret <= 0) {
-					errp(10, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
 			} else {
 				io_ret = fprintf(state->finalRept,
 						 "The minimum pass rate for the RandomExcursions and RandomExcursionsVariant\n");
 				if (io_ret <= 0) {
-					errp(10, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
 				io_ret = fprintf(state->finalRept,
 						 "tests is %ld for a sample size of %ld binary sequences.\n\n",
 						 passRate, state->maxRandomExcursionSampleSize);
 				if (io_ret <= 0) {
-					errp(10, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
 			}
 		}
@@ -577,16 +596,16 @@ metrics(struct state *state)
 		io_ret = fprintf(state->finalRept,
 				 "For further guidelines construct a probability table using the MAPLE program\n");
 		if (io_ret <= 0) {
-			errp(10, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept, "provided in the addendum section of the documentation.\n");
 		if (io_ret <= 0) {
-			errp(10, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
-			 	 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+				 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 		if (io_ret <= 0) {
-			errp(10, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
 	}
 	// - end of phase
@@ -609,7 +628,7 @@ destroy(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(54, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*

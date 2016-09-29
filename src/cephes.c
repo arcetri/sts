@@ -1,3 +1,20 @@
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include "cephes.h"
@@ -5,26 +22,32 @@
 #include "externs.h"
 #include "debug.h"
 
-static const double rel_error = 1E-12;
-
-// 2**-53
-double MACHEP = (double) 1.11022302462515654042363e-16;
-
-double MAXNUM = (double) 1.79769313486231570814527e308;	// 2**1024*(1-MACHEP)
-
-double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(MAXNUM)
+static const double MACHEP = (double) 1.11022302462515654042363e-16;	// 2**-53
+static const double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(2**1024*(1-MACHEP))
 
 // Use C defined value of PI if available
 #if defined(M_PI)
-double PI = M_PI;
+#define PI (M_PI)
 #else
-double PI = (double) 3.14159265358979323846264;
+static const double PI = (double) 3.14159265358979323846264;
 #endif
 
-static double big = 4.503599627370496e15;
-static double biginv = 2.22044604925031308085e-16;
+// Use C defined value of sqrt(2) if available
+#if defined(M_SQRT2)
+#define SQRT2 (M_SQRT2)
+#else
+static const double SQRT2 = (double) 1.41421356237309504880;
+#endif
 
-int sgngam = 0;
+static const double big = 4.503599627370496e15;
+static const double biginv = 2.22044604925031308085e-16;
+
+#if !defined(HAVE_LGAMMA)
+static int sgngam = 0;
+
+static double cephes_p1evl(double x, double *coef, int N);
+static double cephes_polevl(double x, double *coef, int N);
+#endif /* HAVE_LGAMMA */
 
 double
 cephes_igamc(double a, double x)
@@ -144,6 +167,7 @@ cephes_igam(double a, double x)
 }
 
 
+#if !defined(HAVE_LGAMMA)
 /*
  * A[]: Stirling's formula expansion of log gamma B[], C[]: log gamma function between 2 and 3
  */
@@ -175,7 +199,6 @@ static unsigned short C[] = {
 };
 
 #define MAXLGM 2.556348e305
-
 
 /*
  * Logarithm of gamma function
@@ -277,7 +300,7 @@ cephes_lgam(double x)
 	return q;
 }
 
-double
+static double
 cephes_polevl(double x, double *coef, int N)
 {
 	double ans;
@@ -295,7 +318,7 @@ cephes_polevl(double x, double *coef, int N)
 	return ans;
 }
 
-double
+static double
 cephes_p1evl(double x, double *coef, int N)
 {
 	double ans;
@@ -312,6 +335,10 @@ cephes_p1evl(double x, double *coef, int N)
 
 	return ans;
 }
+#endif /* !HAVE_LGAMMA */
+
+#if 0
+static const double rel_error = 1E-12;
 
 double
 cephes_erf(double x)
@@ -372,20 +399,19 @@ cephes_erfc(double x)
 
 	return one_sqrtpi * exp(-x * x) * q2;
 }
-
+#endif
 
 double
 cephes_normal(double x)
 {
 	double arg;
 	double result;
-	double sqrt2 = 1.414213562373095048801688724209698078569672;
 
 	if (x > 0) {
-		arg = x / sqrt2;
+		arg = x / SQRT2;
 		result = 0.5 * (1 + erf(arg));
 	} else {
-		arg = -x / sqrt2;
+		arg = -x / SQRT2;
 		result = 0.5 * (1 - erf(arg));
 	}
 

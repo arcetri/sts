@@ -2,6 +2,25 @@
 	       O V E R L A P P I N G   T E M P L A T E   T E S T
  *****************************************************************************/
 
+/*
+ * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * See the initial comment in assess.c and the file README.txt for more information.
+ *
+ * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
+ */
+
+// Exit codes: 140 thru 149
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -83,7 +102,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(140, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
@@ -91,11 +110,11 @@ OverlappingTemplateMatchings_init(struct state *state)
 		return;
 	}
 	if (state->cSetup != true) {
-		err(10, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
+		err(140, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
 		    __FUNCTION__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
+		err(140, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
 
@@ -187,17 +206,17 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(141, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
-		err(10, __FUNCTION__, "state->epsilon is NULL");
+		err(141, __FUNCTION__, "state->epsilon is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
+		err(141, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
@@ -206,7 +225,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 */
 	m = state->tp.overlappingTemplateBlockLength;
 	if (state->tp.overlappingTemplateBlockLength > (BITS_N_LONGINT - 1)) {	// firewall
-		err(10, __FUNCTION__, "state->tp.overlappingTemplateBlockLength: %ld is too large, "
+		err(141, __FUNCTION__, "state->tp.overlappingTemplateBlockLength: %ld is too large, "
 		    "1 << m:%ld > %ld bits long", state->tp.overlappingTemplateBlockLength, m, BITS_N_LONGINT - 1);
 	}
 	n = state->tp.n;
@@ -219,7 +238,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 *
 	 * sequence = calloc(m, sizeof(BitSequence));
 	 * if (sequence == NULL) {
-	 * errp(10, __FUNCTION__, "cannot calloc for sequence: %ld elements of %lu bytes each", m, sizeof(BitSequence));
+	 * errp(141, __FUNCTION__, "cannot calloc for sequence: %ld elements of %lu bytes each", m, sizeof(BitSequence));
 	 * } else
 	 * for (i = 0; i < m; i++)
 	 * sequence[i] = 1;
@@ -407,16 +426,16 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 	 * firewall
 	 */
 	if (stream == NULL) {
-		err(10, __FUNCTION__, "stream arg is NULL");
+		err(142, __FUNCTION__, "stream arg is NULL");
 	}
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(142, __FUNCTION__, "state arg is NULL");
 	}
 	if (stat == NULL) {
-		err(10, __FUNCTION__, "stat arg is NULL");
+		err(142, __FUNCTION__, "stat arg is NULL");
 	}
 	if (p_value == NON_P_VALUE && stat->success == true) {
-		err(10, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success == true");
+		err(142, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success == true");
 	}
 
 	/*
@@ -570,7 +589,7 @@ OverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 	 * firewall
 	 */
 	if (stream == NULL) {
-		err(10, __FUNCTION__, "stream arg is NULL");
+		err(143, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
@@ -628,7 +647,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(144, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
@@ -640,22 +659,22 @@ OverlappingTemplateMatchings_print(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(10, __FUNCTION__,
+		err(144, __FUNCTION__,
 		    "print driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(10, __FUNCTION__,
+		err(144, __FUNCTION__,
 		    "print driver interface for %s[%d] called with p_val count: %ld != %ld*%d=%ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->datatxt_fmt[test_num] == NULL) {
-		err(10, __FUNCTION__, "format for data0*.txt filename is NULL");
+		err(144, __FUNCTION__, "format for data0*.txt filename is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(144, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -694,7 +713,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = OverlappingTemplateMatchings_print_stat(stats, state, stat, p_value);
 		if (ok == false) {
-			errp(10, __FUNCTION__, "error in writing to %s", stats_txt);
+			errp(144, __FUNCTION__, "error in writing to %s", stats_txt);
 		}
 
 		/*
@@ -703,7 +722,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = OverlappingTemplateMatchings_print_p_value(results, p_value);
 		if (ok == false) {
-			errp(10, __FUNCTION__, "error in writing to %s", results_txt);
+			errp(144, __FUNCTION__, "error in writing to %s", results_txt);
 		}
 	}
 
@@ -713,12 +732,12 @@ OverlappingTemplateMatchings_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", stats_txt);
+		errp(144, __FUNCTION__, "error flushing to: %s", stats_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(stats);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error closing: %s", stats_txt);
+		errp(144, __FUNCTION__, "error closing: %s", stats_txt);
 	}
 	free(stats_txt);
 	stats_txt = NULL;
@@ -729,12 +748,12 @@ OverlappingTemplateMatchings_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", results_txt);
+		errp(144, __FUNCTION__, "error flushing to: %s", results_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(results);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error closing: %s", results_txt);
+		errp(144, __FUNCTION__, "error closing: %s", results_txt);
 	}
 	free(results_txt);
 	results_txt = NULL;
@@ -756,7 +775,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(10, __FUNCTION__,
+				errp(144, __FUNCTION__,
 				     "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ, j + 1, snprintf_ret);
 			}
 
@@ -784,7 +803,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 					errno = 0;	// paranoia
 					ok = OverlappingTemplateMatchings_print_p_value(data, p_value);
 					if (ok == false) {
-						errp(10, __FUNCTION__, "error in writing to %s", data_txt);
+						errp(144, __FUNCTION__, "error in writing to %s", data_txt);
 					}
 
 				}
@@ -796,12 +815,12 @@ OverlappingTemplateMatchings_print(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
 			if (io_ret != 0) {
-				errp(10, __FUNCTION__, "error flushing to: %s", data_txt);
+				errp(144, __FUNCTION__, "error flushing to: %s", data_txt);
 			}
 			errno = 0;	// paranoia
 			io_ret = fclose(data);
 			if (io_ret != 0) {
-				errp(10, __FUNCTION__, "error closing: %s", data_txt);
+				errp(144, __FUNCTION__, "error closing: %s", data_txt);
 			}
 			free(data_txt);
 			data_txt = NULL;
@@ -845,10 +864,10 @@ OverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCo
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(145, __FUNCTION__, "state arg is NULL");
 	}
 	if (freqPerBin == NULL) {
-		err(10, __FUNCTION__, "freqPerBin arg is NULL");
+		err(145, __FUNCTION__, "freqPerBin arg is NULL");
 	}
 
 	/*
@@ -934,7 +953,7 @@ OverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCo
 	errno = 0;		// paranoia
 	io_ret = fflush(state->finalRept);
 	if (io_ret != 0) {
-		errp(10, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+		errp(145, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
 	return;
 }
@@ -964,7 +983,7 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(146, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
@@ -972,18 +991,18 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(10, __FUNCTION__,
+		err(146, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(10, __FUNCTION__,
+		err(146, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->driver_state[test_num] != DRIVER_PRINT) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
+		err(146, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
 	}
 
@@ -992,7 +1011,7 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc %ld bytes for freqPerBin", state->tp.uniformity_bins * sizeof(long int));
+		errp(146, __FUNCTION__, "cannot malloc %ld bytes for freqPerBin", state->tp.uniformity_bins * sizeof(long int));
 	}
 
 	/*
@@ -1108,7 +1127,7 @@ OverlappingTemplateMatchings_destroy(struct state *state)
 	 * firewall
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(147, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __FUNCTION__);
