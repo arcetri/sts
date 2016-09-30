@@ -94,11 +94,21 @@ DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
 	${DATADIR}/data.pi ${DATADIR}/data.sha1 ${DATADIR}/data.sqrt2 \
 	${DATADIR}/data.sqrt3
 
+# Code that is mentioned in source comments that is not structkly part of the
+# sts code base.  And while only mkapertemplate has a rule to compile itself
+# in this Makefile, that rule is not invoked when compiling assess.
+#
+# We only mention this code because it is referenced in the source code
+# comments and we want to be sure it is kept around.
+#
+TOOLS_SRC= ../tools/mkapertemplate.c ../tools/pi_term.nb ../tools/pi_term.txt \
+	../tools/runs_table.cal
+
 TARGETS= assess ../assess
 
 # default rule
 #
-all: ${TARGETS} ${DATA}
+all: ${TARGETS} ${DATA} ${TOOLS_SRC}
 
 assess: ${OBJ}
 	${RM} -f $@
@@ -188,13 +198,16 @@ dyn_alloc.o: dyn_alloc.c
 driver.o: driver.c
 	${CC} -c -o $@ ${CFLAGS} driver.c
 
+mkapertemplate: ../tools/mkapertemplate.c debug.o
+	${CC} -o $@ ${CFLAGS} -I . ../tools/mkapertemplate.c debug.o
+
 # utility rules
 #
 clean:
 	${RM} -f ${OBJ}
 
 clobber: clean
-	@for i in ${TARGETS} tags Makefile.bak; do \
+	@for i in ${TARGETS} tags Makefile.bak mkapertemplate; do \
 	    if [[ -e "$$i" ]]; then \
 		echo ${RM} -f "$$i"; \
 		${RM} -f "$$i"; \

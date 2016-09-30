@@ -54,11 +54,11 @@ static const enum test test_num = TEST_OVERLAPPING;	// this test number
 /*
  * The Mathematica code to evaluate the pi terms is found in the file:
  *
- *      pi_term.txt
+ *      ../tools/pi_term.txt
  *
  * Or the mathematica notebook:
  *
- *      pi_term.nb
+ *      ../tools/pi_term.nb
  */
 static const double pi_term[OPERLAP_K_DEGREES + 1] = {
 	0.36409105321672786245,	// T0[[M]]/2^1032 // N (was 0.364091)

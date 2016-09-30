@@ -65,7 +65,7 @@ static const enum test test_num = TEST_LONGEST_RUN;	// this test number
  *
  * via the calc script:
  *
- *      runs_table.cal
+ *      ../tools/runs_table.cal
  *
  * For a given subscript bit length M, and where K = max_class - min_class - 1:
  *

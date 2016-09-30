@@ -131,14 +131,16 @@
       -=*#@#*=-
       ERROR: MAXNUMOFTEMPLATES is not known for this bit_count!
 
-      To get the bit_count, try:
+      To get the MAXNUMOFTEMPLATES for a given template_length, try:
 
-      	make mkapertemplate
-      	rm -f dataInfo
-      	./mkapertemplate bit_count /dev/null dataInfo
-      	cat dataInfo
+	cd src				# i.e., cd to source code directory
+	make mkapertemplate
 
-      and use the # of nonperiodic templates = line to determine MAXNUMOFTEMPLATES.
+        rm -f dataInfo; ./mkapertemplate template_length /dev/null dataInfo; cat dataInfo
+
+              where template_length is an integer > 0
+
+      From the dataInfo file, use the "# of nonperiodic templates =" line to determine MAXNUMOFTEMPLATES.
 
       WARNING: If you extend MAXTEMPLEN beyond 31, you will have to deal
       	 with signed 32-bit issues and then 64-bit issue in the computig of
@@ -148,6 +150,14 @@
 
       	 On the other hand, the memory requirements and CPU cycles
       	 needed for even MAXTEMPLEN of 31 borders on the asburd.
+
+      NOTE: Running ./mkapertemplate with a non-trivial template_length can take a long time to run!
+            For example, a UCS C240 M4 tool almost 27 CPU minutes to calculate the value for 31.
+
+      FYI: The compile line below should also work in place of the above make rule:
+
+	cd src				# i.e., cd to source code directory
+	cc ../tools/mkapertemplate.c debug.c -o mkapertemplate -O3 -I . --std=c99
       -=*#@#*=-
 #   endif
 
