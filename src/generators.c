@@ -1,10 +1,16 @@
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -14,6 +20,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 80 thru 89
 
@@ -591,7 +598,7 @@ SHA1(struct state *state)
 	long int num_0s;
 	long int num_1s;
 	long int bitsRead;
-	bool done;		// true ==> enoungh data has been converted
+	bool done;		// true ==> enough data has been converted
 	ULONG tx[5] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };	// XXX - array size uses magic number
 
 	// firewall

@@ -2,12 +2,18 @@
 // Parse command line arguments for batch automation of assess.c
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -17,6 +23,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 0 thru 4
 // NOTE: 5-9 is used in assess.c
@@ -45,250 +52,251 @@ static void change_params(struct state *state, long int parameter, long int valu
 static struct state const defaultstate = {
 /* *INDENT-OFF* */
 
-	// batchmode
-	false,				// classic (interactive) mode
+		// batchmode
+		false,					// classic (interactive) mode
 
-	// testVectorFlag & testVector
-	false,				// no -t test1[,test2].. was given
-	{false,
-	 false, false, false, false, false,
-	 false, false, false, false, false,
-	 false, false, false, false, false,
-	 },				// run no tests
+		// testVectorFlag & testVector
+		false,				// no -t test1[,test2].. was given
+		{false,
+		 false, false, false, false, false,
+		 false, false, false, false, false,
+		 false, false, false, false, false,
+		},				// run no tests
 
-	// generatorFlag & generator
-	false,				// no -g generator was given
-	0,				// default read data from a file (-g 0)
+		// generatorFlag & generator
+		false,					// no -g generator was given
+		0,					    // default read data from a file (-g 0)
 
-	// iterationFlag
-	false,				// no -i iterations was given
+		// iterationFlag
+		false,					// no -i iterations was given
 
-	// reportCycleFlag & reportCycle
-	false,				// no -I reportCycle was given
-	0,				// do not report on interation progress
+		// reportCycleFlag & reportCycle
+		false,					// no -I reportCycle was given
+		0,					    // do not report on iteration progress
 
-	// runModeFlag & runMode
-	false,				// no -m mode was given
-	MODE_ITERATE_AND_ASSESS,	// no -m mode, iterate and assess
+		// runModeFlag & runMode
+		false,					// no -m mode was given
+		MODE_ITERATE_AND_ASSESS,    // no -m mode, iterate and assess
 
-	// workDirFlag & workDir
-	false,				// no -w workDir was given
-	"experiments",			// default is to write results under experiments
-	// depending on -b and -g gen, this may become ./experiments/generator
+		// workDirFlag & workDir
+		false,				    // no -w workDir was given
+		"experiments",			    // default is to write results under experiments
+		// depending on -b and -g gen, this may become ./experiments/generator
 
-	// subDirsFlag & subDirs
-	false,				// no -c was given
-	true,				// default is to create directories
+		// subDirsFlag & subDirs
+		false,					// no -c was given
+		true,				    // default is to create directories
 
-	// resultstxtFlag
-	true,				// no -n, create results.txt, data*.txt and stats.txt files
+		// resultstxtFlag
+		true,					// no -n, create results.txt, data*.txt and stats.txt files
 
-	// randomDataFlag & randomDataPath
-	false,				// no -f randdata was given
-	"/dev/null",			// default input file is /dev/null
+		// randomDataFlag & randomDataPath
+		false,					// no -f randdata was given
+		"/dev/null",			    // default input file is /dev/null
 
-	// dataFormatFlag & dataFormat
-	false,				// if -F format was given
-	FORMAT_RAW_BINARY,		// 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')
+		// dataFormatFlag & dataFormat
+		false,				    // if -F format was given
+		FORMAT_RAW_BINARY,		// 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')
 
-	// jobnumFlag & jobnum
-	false,				// no -j jobnum was given
-	0,				// -j 0: begin at start of randdata
+		// jobnumFlag & jobnum
+		false,				// no -j jobnum was given
+		0,					// -j 0: begin at start of randdata
 
-	// tp & promptFlag
-	{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
-	 DEFAULT_NONPERIODIC,		// -P 2=m, NonOverlapping Template Test - block length
-	 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
-	 DEFAULT_APEN,			// -P 4=m, Approximate Entropy Test - block length
-	 DEFAULT_SERIAL,		// -P 5=m, Serial Test - block length
-	 DEFAULT_LINEARCOMPLEXITY,	// -P 6=M, Linear Complexity Test - block length
-	 DEFAULT_ITERATIONS,		// -P 7=iterations (-i iterations)
-	 DEFAULT_UNIFORMITY_BINS,	// -P 8=bins, uniformity test is thru this many bins
-	 DEFAULT_BITCOUNT,		// -P 9=bitcount, Length of a single bit stream
-	 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
-	 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance leve
-	 },
-	false,				// no -p, prompt for change of parameters if no -b
+		// tp & promptFlag
+		{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
+		 DEFAULT_NON_OVERLAPPING,	// -P 2=m, NonOverlapping Template Test - block length
+		 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
+		 DEFAULT_APEN,			// -P 4=m, Approximate Entropy Test - block length
+		 DEFAULT_SERIAL,		    // -P 5=m, Serial Test - block length
+		 DEFAULT_LINEARCOMPLEXITY,	// -P 6=M, Linear Complexity Test - block length
+		 DEFAULT_ITERATIONS,		// -P 7=iterations (-i iterations)
+		 DEFAULT_UNIFORMITY_BINS,	// -P 8=bins, uniformity test is thru this many bins
+		 DEFAULT_BITCOUNT,		    // -P 9=bitcount, Length of a single bit stream
+		 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
+		 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
+		},
+		false,					// no -p, prompt for change of parameters if no -b
 
-	// c, cSetup
-	{
-	 UNSET_DOUBLE,		// square root of 2 - used by several tests
-	 UNSET_DOUBLE,		// log(2) - used by many tests
-	 UNSET_DOUBLE,		// square root of n - used by TEST_FREQUENCY
-	 UNSET_DOUBLE,		// square root of (n / 4.0 * 0.95 * 0.05) - used by TEST_FFT
-	 UNSET_DOUBLE,		// square root of ln(20) * n - used by TEST_FFT
-	 UNSET_DOUBLE,		// square root of (2*n) - used by TEST_RUNS
-	 UNSET_DOUBLE,		// 2 / square root of n - used by TEST_RUNS
-	 UNSET_DOUBLE,		// probability of rank RANK_ROWS - used by RANK_TEST
-	 UNSET_DOUBLE,		// probability of rank RANK_ROWS-1 - used by RANK_TEST
-	 UNSET_DOUBLE,		// probability of rank < RANK_ROWS-1 - used by RANK_TEST
-	 UNSET_DOUBLE,		// log(n) - used by many tests
-	 0,			// number of crossings required to complete the test -
-				//    used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
-	 0,			// total possible matrix for a given bit stream length - used by RANK_TEST
-	 },
-	false,			// init() has not yet initialized c
+		// c, cSetup
+		{UNSET_DOUBLE,		// Square root of 2 - used by several tests
+		 UNSET_DOUBLE,		// log(2) - used by many tests
+		 UNSET_DOUBLE,		// Square root of n - used by TEST_FREQUENCY
+		 UNSET_DOUBLE,		// Square root of (n / 4.0 * 0.95 * 0.05) - used by TEST_FFT
+		 UNSET_DOUBLE,		// Square root of ln(20) * n - used by TEST_FFT
+		 UNSET_DOUBLE,		// Square root of (2*n) - used by TEST_RUNS
+		 UNSET_DOUBLE,		// 2 / Square root of n - used by TEST_RUNS
+		 UNSET_DOUBLE,		// Probability of rank RANK_ROWS - used by RANK_TEST
+		 UNSET_DOUBLE,		// Probability of rank RANK_ROWS-1 - used by RANK_TEST
+		 UNSET_DOUBLE,		// Probability of rank < RANK_ROWS-1 - used by RANK_TEST
+		 UNSET_DOUBLE,		// log(n) - used by many tests
+		 0,			// Number of crossings required to complete the test -
+					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
+		 0,			// Total possible matrix for a given bit stream length - used by RANK_TEST
+		},
+		false,			// init() has not yet initialized c
 
-	// streamFile, finalReptPath, finalRept, freqFilePath, finalRept
-	NULL,			// initially the randomDataPath is not open
-	NULL,			// path of finalAnalysisReport.txt
-	NULL,			// initially finalAnalysisReport.txt is not open
-	NULL,			// path of freq.txt
-	NULL,			// initiall freq.txt is not open
+		// streamFile, finalReptPath, finalRept, freqFilePath, finalRept
+		NULL,			// initially the randomDataPath is not open
+		NULL,			// path of finalAnalysisReport.txt
+		NULL,			// initially finalAnalysisReport.txt is not open
+		NULL,			// path of freq.txt
+		NULL,			// initially freq.txt is not open
 
-	// generatorDir
-	{"AlgorithmTesting",	// -g 0, Read from file
-	 "LCG",			// -g 1, Linear Congruential
-	 "QCG1",		// -g 2, Quadratic Congruential I
-	 "QCG2",		// -g 3, Quadratic Congruential II
-	 "CCG",			// -g 4, Cubic Congruential
-	 "XOR",			// -g 5, XOR
-	 "MODEXP",		// -g 6, Modular Exponentiation
-	 "BBS",			// -g 7, Blum-Blum-Shub
-	 "MS",			// -g 8, Micali-Schnorr
-	 "G-SHA1",		// -g 9, G Using SHA-1
-	 },
+		// generatorDir
+		{"AlgorithmTesting",	// -g 0, Read from file
+		 "LCG",			// -g 1, Linear Congruential
+		 "QCG1",		// -g 2, Quadratic Congruential I
+		 "QCG2",		// -g 3, Quadratic Congruential II
+		 "CCG",			// -g 4, Cubic Congruential
+		 "XOR",			// -g 5, XOR
+		 "MODEXP",		// -g 6, Modular Exponentiation
+		 "BBS",			// -g 7, Blum-Blum-Shub
+		 "MS",			// -g 8, Micali-Schnorr
+		 "G-SHA1",		// -g 9, G Using SHA-1
+		},
 
-	// testNames, subDir, driver_state
-	{"((all_tests))",		// TEST_ALL = 0, converence for indicating run all tests
-	 "Frequency",			// TEST_FREQUENCY = 1, Frequency test (frequency.c)
-	 "BlockFrequency",		// TEST_BLOCK_FREQUENCY = 2, Block Frequency test (blockFrequency.c)
-	 "CumulativeSums",		// TEST_CUSUM = 3, Cumluative Sums test (cusum.c)
-	 "Runs",			// TEST_RUNS = 4, Runs test (runs.c)
-	 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
-	 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
-	 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
-	 "NonOverlappingTemplate",	// TEST_NONPERIODIC = 8, Nonoverlapping Template test (nonOverlappingTemplateMatchings.c)
-	 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
-	 "Universal",			// TEST_UNIVERSAL = 10, Universal test (universal.c)
-	 "ApproximateEntropy",		// TEST_APEN = 11, Aproximate Entrooy test (approximateEntropy.c)
-	 "RandomExcursions",		// TEST_RND_EXCURSION = 12, Random Excursions test (randomExcursions.c)
-	 "RandomExcursionsVariant",	// TEST_RND_EXCURSION_VAR = 13, Random Excursions Variant test (randomExcursionsVariant.c)
-	 "Serial",			// TEST_SERIAL = 14, Serial test (serial.c)
-	 "LinearComplexity",		// TEST_LINEARCOMPLEXITY = 15, Linear Complexity test (linearComplexity.c)
-	 },
-	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 },
-	{DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
-	 DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
-	 },
+		// testNames, subDir, driver_state
+		{"((all_tests))",		// TEST_ALL = 0, convention for indicating run all tests
+		 "Frequency",			// TEST_FREQUENCY = 1, Frequency test (frequency.c)
+		 "BlockFrequency",		// TEST_BLOCK_FREQUENCY = 2, Block Frequency test (blockFrequency.c)
+		 "CumulativeSums",		// TEST_CUSUM = 3, Cumulative Sums test (cusum.c)
+		 "Runs",			// TEST_RUNS = 4, Runs test (runs.c)
+		 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
+		 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
+		 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
+		 "NonOverlappingTemplate",	// TEST_NONPERIODIC = 8,
+						//    Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
+		 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
+		 "Universal",			// TEST_UNIVERSAL = 10, Universal test (universal.c)
+		 "ApproximateEntropy",		// TEST_APEN = 11, Approximate Entropy test (approximateEntropy.c)
+		 "RandomExcursions",		// TEST_RND_EXCURSION = 12, Random Excursions test (randomExcursions.c)
+		 "RandomExcursionsVariant",	// TEST_RND_EXCURSION_VAR = 13,
+						//    Random Excursions Variant test (randomExcursionsVariant.c)
+		 "Serial",			// TEST_SERIAL = 14, Serial test (serial.c)
+		 "LinearComplexity",		// TEST_LINEARCOMPLEXITY = 15, Linear Complexity test (linearComplexity.c)
+		},
+		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		},
+		{DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
+		 DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
+		},
 
-	// partitionCount - how much to partition the p_value / results.txt file, datatxt_fmt
-	{0,			// TEST_ALL = 0 - not a real test
-	 1,			// TEST_FREQUENCY = 1
-	 1,			// TEST_BLOCK_FREQUENCY = 2
-	 2,			// TEST_CUSUM = 3
-	 1,			// TEST_RUNS = 4
-	 1,			// TEST_LONGEST_RUN = 5
-	 1,			// TEST_RANK = 6
-	 1,			// TEST_FFT = 7
-	 MAXNUMOFTEMPLATES,	// TEST_NONPERIODIC = 8
-	 			// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
-	 1,			// TEST_OVERLAPPING = 9
-	 1,			// TEST_UNIVERSAL = 10
-	 1,			// TEST_APEN = 11
-	 EXCURSION_TEST_CNT,	// TEST_RND_EXCURSION = 12
-	 EXCURSTION_VAR_STATES,	// TEST_RND_EXCURSION_VAR = 13
-	 2,			// TEST_SERIAL = 14
-	 1,			// TEST_LINEARCOMPLEXITY = 15
-	 },
-	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 },
+		// partitionCount - how much to partition the p_value / results.txt file, datatxt_fmt
+		{0,			// TEST_ALL = 0 - not a real test
+		 1,			// TEST_FREQUENCY = 1
+		 1,			// TEST_BLOCK_FREQUENCY = 2
+		 2,			// TEST_CUSUM = 3
+		 1,			// TEST_RUNS = 4
+		 1,			// TEST_LONGEST_RUN = 5
+		 1,			// TEST_RANK = 6
+		 1,			// TEST_FFT = 7
+		 MAXNUMOFTEMPLATES,	// TEST_NONPERIODIC = 8
+				// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
+		 1,			// TEST_OVERLAPPING = 9
+		 1,			// TEST_UNIVERSAL = 10
+		 1,			// TEST_APEN = 11
+		 EXCURSION_TEST_CNT,	// TEST_RND_EXCURSION = 12
+		 EXCURSION_VAR_STATES,	// TEST_RND_EXCURSION_VAR = 13
+		 2,			// TEST_SERIAL = 14
+		 1,			// TEST_LINEARCOMPLEXITY = 15
+		},
+		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		},
 
-	// freq, stats, p_val - per test dynamic arrays
-	NULL,
-	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 },
-	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	 },
+		// freq, stats, p_val - per test dynamic arrays
+		NULL,
+		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		},
+		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		},
 
-	// is_excursion
-	{false, false, false, false, false, false, false, false,
-	 false, false, false, false, true, true, false, false,
-	 },
+		// is_excursion
+		{false, false, false, false, false, false, false, false,
+		 false, false, false, false, true, true, false, false,
+		},
 
-	// epsilon, tmpepsilon
-	NULL,
-	NULL,
+		// epsilon, tmpepsilon
+		NULL,
+		NULL,
 
-	// count, valid, success, failure, valid_p_val
-	{0, 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0, 0,
-	 },
-	{0, 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0, 0,
-	 },
-	{0, 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0, 0,
-	 },
-	{0, 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0, 0,
-	 },
-	{0, 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0, 0,
-	 },
+		// Count, valid, success, failure, valid_p_val
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0,
+		},
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0,
+		},
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0,
+		},
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0,
+		},
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0,
+		},
 
-	// uniformity_failure, proportional_failure
-	{false, false, false, false, false, false, false, false,
-	 false, false, false, false, false, false, false, false,
-	 },
-	{false, false, false, false, false, false, false, false,
-	 false, false, false, false, false, false, false, false,
-	 },
+		// uniformity_failure, proportional_failure
+		{false, false, false, false, false, false, false, false,
+		 false, false, false, false, false, false, false, false,
+		},
+		{false, false, false, false, false, false, false, false,
+		 false, false, false, false, false, false, false, false,
+		},
 
-	// maxGeneralSampleSize, maxRandomExcursionSampleSize
-	0,
-	0,
+		// maxGeneralSampleSize, maxRandomExcursionSampleSize
+		0,
+		0,
 
-	// nonovTemp
-	NULL,
+		// nonovTemplates
+		NULL,
 
-	// fft_m, fft_X, fft_wsave
-	NULL,
-	NULL,
-	NULL,
+		// fft_m, fft_X, fft_wsave
+		NULL,
+		NULL,
+		NULL,
 
-	// rank_matrix
-	NULL,
+		// rank_matrix
+		NULL,
 
-	// excursion_var_stateX, ex_var_partial_sums
-	NULL,
-	NULL,
+		// excursion_var_stateX, ex_var_partial_sums
+		NULL,
+		NULL,
 
-	// linear_T, linear_P, linear_B_, linear_C
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+		// linear_t, linear_p, linear_b, linear_c
+		NULL,
+		NULL,
+		NULL,
+		NULL,
 
-	// apen_P, apen_p_len
-	NULL,
-	0,
+		// apen_P, apen_p_len
+		NULL,
+		0,
 
-	// serial_P, serial_p_len
-	NULL,
-	0,
+		// serial_P, serial_p_len
+		NULL,
+		0,
 
-	// nonper_seq
-	NULL,
+		// nonper_seq
+		NULL,
 
-	// universal_L
-	0,
+		// universal_L
+		0,
 
-	// rnd_excursion_S_k, rnd_excursion_cycle, rnd_excursion_cycle_len
-	NULL,
-	NULL,
-	0,
+		// rnd_excursion_S_k, rnd_excursion_cycle, rnd_excursion_cycle_len
+		NULL,
+		NULL,
+		0,
 
-	// legacy_output
-	false,
+		// legacy_output
+		false,
 
-	// curIteration
-	0,			// no interaction completed so far
+		// curIteration
+		0,			// no interaction completed so far
 /* *INDENT-ON* */
 };
 
@@ -298,73 +306,73 @@ static struct state const defaultstate = {
  */
 /* *INDENT-OFF* */
 static const char * const usage =
-    "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
-"               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
-"               [-w workDir] [-c] [-n] [-f randdata] [-F format] [-j jobnum]\n"
-"               [-s statePath] [-r stateDir] [-R] [-m mode]\n"
-"               [-h]\n"
-"               bitcount\n"
-"\n"
-"    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
-"    -b                 batch mode - no stdin (def: prompt when needed)\n"
-"    -t test1[,test2].. tests to invoke, 0-15 (def: 0 -> run all tests)\n"
-"\n"
-"        0: Run all tests (1-15)\n"
-"        1: Frequency                        2: Block Frequency\n"
-"        3: Cumulative Sums                  4: Runs\n"
-"        5: Longest Run of Ones              6: Rank\n"
-"        7: Discrete Fourier Transform       8: Nonperiodic Template Matchings\n"
-"        9: Overlapping Template Matchings  10: Universal Statistical\n"
-"       11: Approximate Entropy             12: Random Excursions\n"
-"       13: Random Excursions Variant       14: Serial\n"
-"       15: Linear Complexity\n"
-"\n"
-"    -g generator       generator to use, 0-9 (if -b, def: 0)\n"
-"\n"
-"       0: Read from file               1: Linear Congruential\n"
-"       2: Quadratic Congruential I     3: Quadratic Congruential II\n"
-"       4: Cubic Congruential           5: XOR\n"
-"       6: Modular Exponentiation       7: Blum-Blum-Shub\n"
-"       8: Micali-Schnorr               9: G Using SHA-1\n"
-"\n"
-"    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
-"\n"
-"       1: Block Frequency Test - block length(M):            128\n"
-"       2: NonOverlapping Template Test - block length(m):      9\n"
-"       3: Overlapping Template Test - block length(m):         9\n"
-"       4: Approximate Entropy Test - block length(m):         10\n"
-"       5: Serial Test - block length(m):                      16\n"
-"       6: Linear Complexity Test - block length(M):          500\n"
-"       7: Number of bitcount runs (same as -i iterations):     1\n"
-"       8: Uniformity bins                                     10\n"
-"       9: Length of a single bit stream (bitcount):      1000000\n"
-"      10: Uniformity Cutoff Level                         0.0001\n"
-"      11: Alpha Confidence Level:                           0.01\n"
-"\n"
-"    -p    In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
-"\n"
-"    -i iterations    number of bitstream runs (if -b, def: 1)\n"
-"\n"
-"       NOTE: -i iterations is the same as -P 7=iterations\n"
-"\n"
-"    -I reportCycle   Report after completion of reportCycle iterations (def: 0: do not report)\n"
-"    -O		      try to mimic output format of legacy code (def: don't be output compatible)\n"
-"\n"
-"    -w workDir       write experiment results under workDir (def: .)\n"
-"    -c               don't create any directories needed for creating files (def: do create)\n"
-"    -n               don't create result.txt, data*.txt, nor stats.txt (def: do create)\n"
-"    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
-"    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
-"    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
-"\n"
-"    -m mode          w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
-"                     i --> iterate only (not currently implemented)\n"
-"                     a --> assess only (not currently implemented)\n"
-"                     b --> iterate and then assess (default: b)\n"
-"\n"
-"    -h               print this message and exit\n"
-"\n"
-"    bitcount         Length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
+"[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
+		"		[-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
+		"		[-w workDir] [-c] [-n] [-f randdata] [-F format] [-j jobnum]\n"
+		"		[-s statePath] [-r stateDir] [-R] [-m mode]\n"
+		"		[-h]\n"
+		"		bitcount\n"
+		"\n"
+		"    -v	 debuglevel	debug level (def: 0 -> no debug messages)\n"
+		"    -b			batch mode - no stdin (def: prompt when needed)\n"
+		"    -t test1[,test2].. tests to invoke, 0-15 (def: 0 -> run all tests)\n"
+		"\n"
+		"	 0: Run all tests (1-15)\n"
+		"	 1: Frequency			     2: Block Frequency\n"
+		"	 3: Cumulative Sums		     4: Runs\n"
+		"	 5: Longest Run of Ones		     6: Rank\n"
+		"	 7: Discrete Fourier Transform	     8: Nonperiodic Template Matchings\n"
+		"	 9: Overlapping Template Matchings  10: Universal Statistical\n"
+		"	11: Approximate Entropy		    12: Random Excursions\n"
+		"	13: Random Excursions Variant	    14: Serial\n"
+		"	15: Linear Complexity\n"
+		"\n"
+		"    -g generator	generator to use, 0-9 (if -b, def: 0)\n"
+		"\n"
+		"	0: Read from file		1: Linear Congruential\n"
+		"	2: Quadratic Congruential I	3: Quadratic Congruential II\n"
+		"	4: Cubic Congruential		5: XOR\n"
+		"	6: Modular Exponentiation	7: Blum-Blum-Shub\n"
+		"	8: Micali-Schnorr		9: G Using SHA-1\n"
+		"\n"
+		"    -P num=value[,num=value]..	    change parameter num to value (def: keep defaults)\n"
+		"\n"
+		"	1: Block Frequency Test - block length(M):	      128\n"
+		"	2: NonOverlapping Template Test - block length(m):	9\n"
+		"	3: Overlapping Template Test - block length(m):		9\n"
+		"	4: Approximate Entropy Test - block length(m):	       10\n"
+		"	5: Serial Test - block length(m):		       16\n"
+		"	6: Linear Complexity Test - block length(M):	      500\n"
+		"	7: Number of bitcount runs (same as -i iterations):	1\n"
+		"	8: Uniformity bins				       10\n"
+		"	9: Length of a single bit stream (bitcount):	  1000000\n"
+		"      10: Uniformity Cutoff Level			   0.0001\n"
+		"      11: Alpha Confidence Level:			     0.01\n"
+		"\n"
+		"    -p	   In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
+		"\n"
+		"    -i iterations    number of bitstream runs (if -b, def: 1)\n"
+		"\n"
+		"	NOTE: -i iterations is the same as -P 7=iterations\n"
+		"\n"
+		"    -I reportCycle   Report after completion of reportCycle iterations (def: 0: do not report)\n"
+		"    -O		      try to mimic output format of legacy code (def: don't be output compatible)\n"
+		"\n"
+		"    -w workDir	      write experiment results under workDir (def: .)\n"
+		"    -c		      don't create any directories needed for creating files (def: do create)\n"
+		"    -n		      don't create result.txt, data*.txt, nor stats.txt (def: do create)\n"
+		"    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
+		"    -F format	      randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
+		"    -j jobnum	      seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
+		"\n"
+		"    -m mode	      w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
+		"		      i --> iterate only (not currently implemented)\n"
+		"		      a --> assess only (not currently implemented)\n"
+		"		      b --> iterate and then assess (default: b)\n"
+		"\n"
+		"    -h		      print this message and exit\n"
+		"\n"
+		"    bitcount	      Length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
 /* *INDENT-ON* */
 
 
@@ -386,14 +394,14 @@ Parse_args(struct state *state, int argc, char *argv[])
 	extern int optind;	// index to the next argv element to parse
 	extern int opterr;	// 0 ==> disable internal getopt() error messages
 	extern int optopt;	// last known option character returned by getopt()
-	int scan_cnt;		// number of items scanned by sscanf()
+	int scan_cnt;		// Number of items scanned by sscanf()
 	char *brkt;		// last state of strtok_r()
 	char *phrase;		// string without separator as parsed by strtok_r()
 	long int testnum;	// parsed test number
 	long int num;		// parsed parameter number
 	long int value;		// parsed parameter integer value
 	double d_value;		// parsed parameter floating point
-	bool success = false;	// if str2longtint was sucessful
+	bool success = false;	// if str2longtint was successful
 	int snprintf_ret;	// snprintf return value
 	int test_cnt = 0;
 	long int i;
@@ -401,9 +409,13 @@ Parse_args(struct state *state, int argc, char *argv[])
 
 	// record the program name
 	program = argv[0];
-
+	if (program == NULL) {
+		program = "((NULL))";	// paranoia
+	} else if (program[0] == '\0') {
+		program = "((empty))";	// paranoia
+	}
 	// firewall
-	if (argc <= 0 || argv == NULL || state == NULL) {
+	if (argc <= 0 || state == NULL) {
 		err(1, __FUNCTION__, "called with bogus args");
 	}
 	// initialize state to defaults
@@ -448,8 +460,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 						state->testVector[i] = true;
 					}
 				} else if (testnum < 0 || testnum > NUMOFTESTS) {
-					usage_err(usage, 1, __FUNCTION__, "-t test: %lu must be in the range [0-%d]",
-						  testnum, NUMOFTESTS);
+					usage_err(usage, 1, __FUNCTION__, "-t test: %lu must be in the range [0-%d]", testnum,
+						  NUMOFTESTS);
 				} else {
 					state->testVector[testnum] = true;
 				}
@@ -486,8 +498,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 				}
 				if (num < MIN_PARAM || num > MAX_PARAM) {
 					usage_err(usage, 1, __FUNCTION__,
-						  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]",
-						  num, MAX_PARAM);
+						  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
+						  MAX_PARAM);
 				}
 				// parse parameter value
 				if (num <= MAX_INT_PARAM) {
@@ -504,8 +516,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(usage, 1, __FUNCTION__,
-							  "-P num=value[,num=value].. "
-							  "num: %lu must be in the range [1-%d]", num, MAX_PARAM);
+							  "-P num=value[,num=value].. " "num: %lu must be in the range [1-%d]", num,
+							  MAX_PARAM);
 					}
 					change_params(state, num, value, 0.0);
 				} else {
@@ -522,8 +534,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(usage, 1, __FUNCTION__,
-							  "-P num=value[,num=value].. "
-							  "num: %lu must be in the range [1-%d]", num, MAX_PARAM);
+							  "-P num=value[,num=value].. " "num: %lu must be in the range [1-%d]", num,
+							  MAX_PARAM);
 					}
 					change_params(state, num, 0, d_value);
 				}
@@ -619,7 +631,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 			}
 			break;
 
-		case 'm':	// -m mode (w-->write only. i-->iterate only, a-->assess only, b-->interate & assess)
+		case 'm':	// -m mode (w-->write only. i-->iterate only, a-->assess only, b-->iterate & assess)
 			state->runModeFlag = true;
 			if (optarg[0] == '\0' || optarg[1] != '\0') {
 				usage_err(usage, 1, __FUNCTION__, "-m mode must be a single character: %s", optarg);
@@ -784,11 +796,12 @@ Parse_args(struct state *state, int argc, char *argv[])
 	}
 
 	/*
-	 * report on how we will run, if debugging
+	 * Report on how we will run, if debugging
 	 */
 	if (debuglevel > 0) {
 		print_option_summary(state, "parsed command line");
 	}
+
 	return;
 }
 
@@ -842,6 +855,7 @@ change_params(struct state *state, long int parameter, long int value, double d_
 		err(2, __FUNCTION__, "invalid parameter option: %ld", parameter);
 		break;
 	}
+
 	return;
 }
 
@@ -860,7 +874,7 @@ print_option_summary(struct state *state, char *where)
 	}
 
 	/*
-	 * report on high level state
+	 * Report on high level state
 	 */
 	dbg(DBG_LOW, "High level state for: %s", where);
 	dbg(DBG_LOW, "\tsts version: %s", version);
@@ -874,16 +888,16 @@ print_option_summary(struct state *state, char *where)
 				switch (state->dataFormat) {
 				case FORMAT_ASCII_01:
 				case FORMAT_0:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
 					    state->randomDataPath, "ASCII '0' and '1' character bits");
 					break;
 				case FORMAT_RAW_BINARY:
 				case FORMAT_1:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
 					    state->randomDataPath, "raw 8 binary bits per byte");
 					break;
 				default:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s"
+					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s"
 					    "in -F format: unknown: %c", state->randomDataPath, (char) state->dataFormat);
 					break;
 				}
@@ -894,11 +908,11 @@ print_option_summary(struct state *state, char *where)
 				break;
 
 			case MODE_ASSESS_ONLY:
-				dbg(DBG_LOW, "\tWill assess only (skip interation)");
+				dbg(DBG_LOW, "\tWill assess only (skip iteration)");
 				break;
 
 			case MODE_ITERATE_AND_ASSESS:
-				dbg(DBG_LOW, "\tWill interate and assess");
+				dbg(DBG_LOW, "\tWill iterate and assess");
 				break;
 
 			default:
@@ -906,18 +920,18 @@ print_option_summary(struct state *state, char *where)
 				break;
 			}
 		} else {
-			dbg(DBG_LOW, "\tWill interate and assess");
+			dbg(DBG_LOW, "\tWill iterate and assess");
 		}
 		dbg(DBG_MED, "\tTesting %lld bits of data", (long long) state->tp.numOfBitStreams * (long long) state->tp.n);
 		dbg(DBG_MED, "\t    Testing %lld bytes of data",
 		    ((((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7) / 8));
-		dbg(DBG_LOW, "\tTesting %ld interations of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
+		dbg(DBG_LOW, "\tTesting %ld iterations of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
 	} else {
 		dbg(DBG_LOW, "\tclassic (interactive mode)\n");
 	}
 
 	/*
-	 * report on tests enabled
+	 * Report on tests enabled
 	 */
 	dbg(DBG_LOW, "Tests enabled:");
 	for (j = 1; j <= NUMOFTESTS; j++) {
@@ -944,7 +958,7 @@ print_option_summary(struct state *state, char *where)
 	}
 
 	/*
-	 * report on generator (or file) to be used
+	 * Report on generator (or file) to be used
 	 */
 	if (state->generatorFlag == true) {
 
@@ -1008,7 +1022,7 @@ print_option_summary(struct state *state, char *where)
 	if (state->jobnumFlag == true) {
 		dbg(DBG_LOW, "\tJob number: %ld", state->jobnum);
 		dbg(DBG_LOW,
-		    "\t    Will skip %lld bytes of data before processing\n",
+		    "\t	   Will skip %lld bytes of data before processing\n",
 		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
 	} else {
 		dbg(DBG_LOW, "\tno -j numnum was given");
@@ -1025,16 +1039,16 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -i iterations was given");
 	}
-	dbg(DBG_MED, "\t    iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
+	dbg(DBG_MED, "\t	iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
 	if (state->reportCycleFlag == true) {
 		dbg(DBG_MED, "\t-I reportCycle was given");
 	} else {
 		dbg(DBG_MED, "\tno -I reportCycle was given");
 	}
 	if (state->reportCycle == 0) {
-		dbg(DBG_MED, "\t    will not report on progress of interations");
+		dbg(DBG_MED, "\t    will not report on progress of iterations");
 	} else {
-		dbg(DBG_MED, "\t    will progress after every %ld interations", state->reportCycle);
+		dbg(DBG_MED, "\t    will progress after every %ld iterations", state->reportCycle);
 	}
 	if (state->legacy_output == true) {
 		dbg(DBG_MED, "\t-O was given, backward compatible output where reasonable");
@@ -1051,16 +1065,16 @@ print_option_summary(struct state *state, char *where)
 		switch (state->dataFormat) {
 		case FORMAT_ASCII_01:
 		case FORMAT_0:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "ASCII '0' and '1' character bits");
 			break;
 		case FORMAT_RAW_BINARY:
 		case FORMAT_1:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "raw 8 binary bits per byte");
 			break;
 		default:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: unknown: %c",
+			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: unknown: %c",
 			    state->randomDataPath, (char) state->dataFormat);
 			break;
 		}
@@ -1078,7 +1092,7 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\t    -m %c: unknown runMode", state->runMode);
 		break;
 	}
-	dbg(DBG_MED, "\t    workDir: -w %s", state->workDir);
+	dbg(DBG_MED, "\t	workDir: -w %s", state->workDir);
 	if (state->subDirsFlag == true) {
 		dbg(DBG_MED, "\t-c was given");
 	} else {
@@ -1101,7 +1115,7 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -f was given");
 	}
-	dbg(DBG_MED, "\t    randomDataPath: -f %s", state->randomDataPath);
+	dbg(DBG_MED, "\t	randomDataPath: -f %s", state->randomDataPath);
 	if (state->dataFormatFlag == true) {
 		dbg(DBG_MED, "\t-F format was given");
 	} else {
@@ -1124,7 +1138,7 @@ print_option_summary(struct state *state, char *where)
 	dbg(DBG_MED, "\tprogram name: %s\n", program);
 
 	/*
-	 * report on test parameters
+	 * Report on test parameters
 	 */
 	dbg(DBG_MED, "Test parameters:");
 	if (state->batchmode == false) {
@@ -1145,10 +1159,11 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\talpha = %f", state->tp.alpha);
 		if (state->promptFlag == true) {
-			dbg(DBG_LOW, "\t    -p was given: will NOT prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t	-p was given: will NOT prompt for any changes to default parameters\n");
 		} else {
-			dbg(DBG_LOW, "\t    no -p was given: will prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t	no -p was given: will prompt for any changes to default parameters\n");
 		}
 	}
+
 	return;
 }

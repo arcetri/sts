@@ -3,12 +3,18 @@
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 210 thru 234
 
@@ -30,6 +37,7 @@
 #include <math.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 // for checking dir
 #include <fcntl.h>
@@ -51,7 +59,7 @@
 
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
 static void readBinaryDigitsInASCIIFormat(struct state *state);
 static void getTimestamp(char *buf, size_t len);
@@ -75,12 +83,12 @@ long int
 getNumber(FILE * input, FILE * output)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
-	size_t buflen = 0;	// ignored when line == NULL
-	ssize_t linelen;	// length of line read from stream
+	size_t buflen = 0;	// Ignored when line == NULL
+	ssize_t linelen;	// Length of line read from stream
 	long int number;	// value to return
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (input == NULL) {
 		err(210, __FUNCTION__, "input arg is NULL");
@@ -101,11 +109,11 @@ getNumber(FILE * input, FILE * output)
 			errp(210, __FUNCTION__, "line is still NULL after getline call");
 		}
 		if (linelen < 0) {
-			errp(210, __FUNCTION__, "getline retuned: %ld", linelen);
+			errp(210, __FUNCTION__, "getline returned: %ld", linelen);
 		}
 		// firewall
 		if (line[linelen] != '\0') {
-			err(210, __FUNCTION__, "getline did not return a NUL terminated string");
+			err(210, __FUNCTION__, "getline did not return a NULL terminated string");
 		}
 
 		/*
@@ -145,12 +153,12 @@ double
 getDouble(FILE * input, FILE * output)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
-	size_t buflen = 0;	// ignored when line == NULL
-	ssize_t linelen;	// length of line read from stream
+	size_t buflen = 0;	// Ignored when line == NULL
+	ssize_t linelen;	// Length of line read from stream
 	double number;		// value to return
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (input == NULL) {
 		err(211, __FUNCTION__, "input arg is NULL");
@@ -171,11 +179,13 @@ getDouble(FILE * input, FILE * output)
 			errp(211, __FUNCTION__, "line is still NULL after getline call");
 		}
 		if (linelen < 0) {
-			errp(211, __FUNCTION__, "getline retuned: %ld", linelen);
+			errp(211, __FUNCTION__, "getline returned: %ld", linelen);
 		}
-		// firewall
+		/*
+		 * paranoia
+		 */
 		if (line[linelen] != '\0') {
-			err(211, __FUNCTION__, "getline did not return a NUL terminated string");
+			err(211, __FUNCTION__, "getline did not return a NULL terminated string");
 		}
 
 		/*
@@ -213,12 +223,12 @@ long int
 getNumberOrDie(FILE * stream)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
-	size_t buflen = 0;	// ignored when line == NULL
-	ssize_t linelen;	// length of line read from stream
+	size_t buflen = 0;	// Ignored when line == NULL
+	ssize_t linelen;	// Length of line read from stream
 	long int number;	// value to return
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(212, __FUNCTION__, "stream arg is NULL");
@@ -232,10 +242,10 @@ getNumberOrDie(FILE * stream)
 		errp(212, __FUNCTION__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(212, __FUNCTION__, "getline retuned: %ld", linelen);
+		errp(212, __FUNCTION__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(212, __FUNCTION__, "getline did not return a NUL terminated string");
+		err(212, __FUNCTION__, "getline did not return a NULL terminated string");
 	}
 
 	/*
@@ -262,7 +272,7 @@ getNumberOrDie(FILE * stream)
  *      stream          FILE stream to read
  *
  * returns:
- *      NUL terminated line read from stream, w/o and trailing newline or return.
+ *      NULL terminated line read from stream, w/o and trailing newline or return.
  *
  * This function does not return on error.
  */
@@ -270,12 +280,12 @@ char *
 getString(FILE * stream)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
-	size_t buflen = 0;	// ignored when line == NULL
-	ssize_t linelen;	// length of line read from stream
+	size_t buflen = 0;	// Ignored when line == NULL
+	ssize_t linelen;	// Length of line read from stream
 	bool ready = false;	// line is ready to return
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(213, __FUNCTION__, "stream arg is NULL");
@@ -284,15 +294,15 @@ getString(FILE * stream)
 	/*
 	 * read the line
 	 */
-	linelen = getline(&line, &buflen, stdin);
+	linelen = getline(&line, &buflen, stream);
 	if (line == NULL) {
 		errp(213, __FUNCTION__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(213, __FUNCTION__, "getline retuned: %ld", linelen);
+		errp(213, __FUNCTION__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(213, __FUNCTION__, "getline did not return a NUL terminated string");
+		err(213, __FUNCTION__, "getline did not return a NULL terminated string");
 	}
 
 	/*
@@ -429,12 +439,17 @@ openTruncate(char *filename)
 {
 	FILE *stream;		// tunrcated flle or NULL
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (filename == NULL) {
 		warn(__FUNCTION__, "filename arg was NULL");
 		return NULL;
 	}
-	// attempt to truncate file
+
+	/*
+	 * attempt to truncate file
+	 */
 	errno = 0;		// paranoia
 	stream = fopen(filename, "w");
 	if (stream == NULL) {
@@ -462,11 +477,11 @@ char *
 filePathName(char *head, char *tail)
 {
 	char *fullpath;		// dir/file
-	size_t len;		// length of fullpath
+	size_t len;		// Length of fullpath
 	int snprintf_ret;	// snprintf return value
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (head == NULL) {
 		err(214, __FUNCTION__, "head arg is NULL");
@@ -476,7 +491,7 @@ filePathName(char *head, char *tail)
 	}
 
 	/*
-	 * allocate full path including subdir
+	 * Allocate full path including subdir
 	 */
 	len = strlen(head) + 1 + strlen(tail) + 1;
 	fullpath = malloc(len + 1);	// +1 for later paranoia
@@ -517,18 +532,18 @@ data_filename_format(int partitionCount)
 {
 	char *buf;		// allocated buffer
 	int digits;		// decimal digits contained in partitionCount
-	int len;		// length of the format
+	int len;		// Length of the format
 	int snprintf_ret;	// snprintf return value
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (partitionCount < 1) {
 		err(215, __FUNCTION__, "partitionCount arg: %d must be >= 1", partitionCount);
 	}
 
 	/*
-	 * determine the lenth of the allocated buffer
+	 * Determine the lenth of the allocated buffer
 	 */
 	if (partitionCount < 2) {
 		digits = 0;	// no partitions, just use data.txt
@@ -548,7 +563,7 @@ data_filename_format(int partitionCount)
 	}
 
 	/*
-	 * allocate the format
+	 * Allocate the format
 	 */
 	buf = malloc(len + 1);	// + 1 for paranoia
 	if (buf == NULL) {
@@ -557,7 +572,7 @@ data_filename_format(int partitionCount)
 	}
 
 	/*
-	 * form the format
+	 * Form the format
 	 */
 	if (digits < 1) {
 		strcpy(buf, "data.txt");
@@ -565,8 +580,8 @@ data_filename_format(int partitionCount)
 		errno = 0;	// paranoia
 		snprintf_ret = snprintf(buf, len, "data%%0%dd.txt", digits);
 		if (snprintf_ret <= 0 || snprintf_ret >= len || errno != 0) {
-			errp(215, __FUNCTION__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d",
-			     len, digits, snprintf_ret);
+			errp(215, __FUNCTION__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d", len, digits,
+			     snprintf_ret);
 		}
 		buf[len] = '\0';	// paranoia
 	}
@@ -593,7 +608,7 @@ makePath(char *dir)
 	// set tmp string to length of dir
 	char *tmp;		// copy of dir, //'s turned into /, trailing / removed
 	char *p = NULL;		// working pointer
-	size_t len;		// length of tmp copy of dir
+	size_t len;		// Length of tmp copy of dir
 	struct stat statbuf;	// sub-directory status
 
 	// firewall
@@ -735,7 +750,7 @@ void
 precheckPath(struct state *state, char *dir)
 {
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(217, __FUNCTION__, "state arg is NULL");
@@ -753,7 +768,7 @@ precheckPath(struct state *state, char *dir)
 	if (state->subDirs == true) {
 
 		// make the directory if it does not exist (or not writable)
-		dbg(DBG_VVHIGH, "no -c, check if %s is a writballe directory", dir);
+		dbg(DBG_VVHIGH, "no -c, check if %s is a writeable directory", dir);
 		if (checkWritePermissions(dir) != true) {
 			dbg(DBG_VVHIGH, "it is not, so try to mkdir %s", dir);
 			makePath(dir);
@@ -765,7 +780,7 @@ precheckPath(struct state *state, char *dir)
 	/*
 	 * if -c, then verify that directory exists and is writable
 	 */
-	dbg(DBG_VVHIGH, "with -c, %s must be a writballe directory", dir);
+	dbg(DBG_VVHIGH, "with -c, %s must be a writeable directory", dir);
 	if (checkWritePermissions(dir) != true) {
 		err(217, __FUNCTION__, "directory does not exist or is not writable: %s", dir);
 	}
@@ -796,7 +811,7 @@ precheckSubdir(struct state *state, char *subdir)
 	char *fullpath;		// workDir/subdir
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(218, __FUNCTION__, "state arg is NULL");
@@ -846,7 +861,7 @@ str2longint(bool * success_p, char *string)
 	int saved_errno;	// saved errno from strtol()
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (success_p == NULL) {
 		err(219, __FUNCTION__, "success_p arg is NULL");
@@ -894,7 +909,7 @@ str2longint_or_die(char *string)
 	long int number;	// value to return
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (string == NULL) {
 		err(220, __FUNCTION__, "string arg is NULL");
@@ -926,7 +941,7 @@ str2longint_or_die(char *string)
  * case of generator 0 (read from a file) we also ask for the filename and verify
  * that the file is readable.
  *
- * In bagch more we just cheeck if, for generator 0 (read from a file) the filename
+ * In batch more we just check if, for generator 0 (read from a file) the filename
  * is readable.
  *
  * This function does not return on error.
@@ -943,11 +958,12 @@ generatorOptions(struct state *state)
 	 * case: write to file (-m w)
 	 */
 	if (state->runMode == MODE_WRITE_ONLY) {
-		// open the input file for writing
+		// Open the input file for writing
 		state->streamFile = fopen(state->randomDataPath, "w");
 		if (state->streamFile == NULL) {
 			errp(221, __FUNCTION__, "unable to open data file to writing: %s", state->randomDataPath);
 		}
+
 
 		/*
 		 * case: read from file
@@ -957,7 +973,7 @@ generatorOptions(struct state *state)
 		if (checkReadPermissions(state->randomDataPath) == false) {
 			err(221, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
 		}
-		// open the input file for reading
+		// Open the input file for reading
 		state->streamFile = fopen(state->randomDataPath, "r");
 		if (state->streamFile == NULL) {
 			errp(221, __FUNCTION__, "unable to open data file to reading: %s", state->randomDataPath);
@@ -968,7 +984,7 @@ generatorOptions(struct state *state)
 	 * batch mode, nothing to do here
 	 */
 	if (state->batchmode == true) {
-		// nothing else to do but return the generator number
+		// nothing else to do
 		return;
 	}
 
@@ -985,17 +1001,17 @@ generatorOptions(struct state *state)
 			// -g was not used, prompt for generator
 		} else {
 			// prompt
-			printf("           G E N E R A T O R    S E L E C T I O N \n");
-			printf("           ______________________________________\n\n");
+			printf("	       G E N E R A T O R    S E L E C T I O N \n");
+			printf("	       ______________________________________\n\n");
 			if (state->runMode == MODE_WRITE_ONLY) {
-				printf("                                   [1] Linear Congruential\n");
+				printf("				   [1] Linear Congruential\n");
 			} else {
-				printf("    [0] Input File                 [1] Linear Congruential\n");
+				printf("    [0] Input File		   [1] Linear Congruential\n");
 			}
-			printf("    [2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
-			printf("    [4] Cubic Congruential         [5] XOR\n");
-			printf("    [6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
-			printf("    [8] Micali-Schnorr             [9] G Using SHA-1\n\n");
+			printf("	[2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
+			printf("	[4] Cubic Congruential	       [5] XOR\n");
+			printf("	[6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
+			printf("	[8] Micali-Schnorr	       [9] G Using SHA-1\n\n");
 			printf("   Enter Choice: ");
 			fflush(stdout);
 
@@ -1003,10 +1019,11 @@ generatorOptions(struct state *state)
 			generator = getNumber(stdin, stdout);
 			putchar('\n');
 
-			// help if they gave us a wrong nunber
+			// help if they gave us a wrong number
 			if (generator < 0 || generator > NUMOFGENERATORS) {
 				printf("\ngenerator number must be from 0 to %d inclusive, try again\n\n", NUMOFGENERATORS);
 				fflush(stdout);
+				continue;
 			}
 		}
 
@@ -1029,7 +1046,7 @@ generatorOptions(struct state *state)
 				src = getString(stdin);
 				putchar('\n');
 
-				// open the file for writing/truncation
+				// Open the file for writing/truncation
 				state->streamFile = openTruncate(src);
 				if (state->streamFile == NULL) {
 					printf("\ncould not create/open for writing/truncation: %s, try again\n\n", src);
@@ -1045,7 +1062,7 @@ generatorOptions(struct state *state)
 				state->streamFile = openTruncate(state->randomDataPath);
 				if (state->streamFile == NULL) {
 					printf("\ncould not create/open for writing/truncation: %s, try again\n\n",
-						state->randomDataPath);
+					       state->randomDataPath);
 					fflush(stdout);
 					continue;
 				}
@@ -1074,7 +1091,7 @@ generatorOptions(struct state *state)
 		}
 		// for generator 0 (read from a file), open the file
 		if (generator == GENERATOR_FROM_FILE) {
-			// open the input file for reading
+			// Open the input file for reading
 			state->streamFile = fopen(state->randomDataPath, "r");
 			if (state->streamFile == NULL) {
 				printf("\nunable to open %s of reading, try again\n\n", state->randomDataPath);
@@ -1093,8 +1110,9 @@ generatorOptions(struct state *state)
 				do {
 					// prompt
 					printf("   Input File Format:\n");
-					printf("    [0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
-					printf("    [1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
+					printf("	[0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
+					printf
+					    ("	[1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
 					printf("   Select input mode:  ");
 					fflush(stdout);
 
@@ -1118,8 +1136,8 @@ generatorOptions(struct state *state)
 						state->dataFormat = (enum format) line[0];
 						break;
 					default:
-						printf("\ninput must be %d of %c, %d or %c\n\n",
-						       0, (char) FORMAT_ASCII_01, 1, (char) FORMAT_RAW_BINARY);
+						printf("\ninput must be %d of %c, %d or %c\n\n", 0, (char) FORMAT_ASCII_01, 1,
+						       (char) FORMAT_RAW_BINARY);
 						fflush(stdout);
 						break;
 					}
@@ -1142,7 +1160,7 @@ chooseTests(struct state *state)
 {
 	long int run_all;
 	char *run_test;
-	bool success;		// if parse in the input line was sucessful
+	bool success;		// if parse in the input line was successful
 	int i;
 
 	// firewall
@@ -1154,19 +1172,19 @@ chooseTests(struct state *state)
 		return;
 	}
 	// prompt
-	printf("                S T A T I S T I C A L   T E S T S\n");
-	printf("                _________________________________\n\n");
-	printf("    [01] Frequency                       [02] Block Frequency\n");
-	printf("    [03] Cumulative Sums                 [04] Runs\n");
-	printf("    [05] Longest Run of Ones             [06] Rank\n");
-	printf("    [07] Discrete Fourier Transform      [08] Nonperiodic Template Matchings\n");
-	printf("    [09] Overlapping Template Matchings  [10] Universal Statistical\n");
-	printf("    [11] Approximate Entropy             [12] Random Excursions\n");
-	printf("    [13] Random Excursions Variant       [14] Serial\n");
-	printf("    [15] Linear Complexity\n\n");
-	printf("         INSTRUCTIONS\n");
-	printf("            Enter 0 if you DO NOT want to apply all of the\n");
-	printf("            statistical tests to each sequence and 1 if you DO.\n\n");
+	printf("		    S T A T I S T I C A L   T E S T S\n");
+	printf("		    _________________________________\n\n");
+	printf("	[01] Frequency			     [02] Block Frequency\n");
+	printf("	[03] Cumulative Sums		     [04] Runs\n");
+	printf("	[05] Longest Run of Ones	     [06] Rank\n");
+	printf("	[07] Discrete Fourier Transform	     [08] Nonperiodic Template Matchings\n");
+	printf("	[09] Overlapping Template Matchings  [10] Universal Statistical\n");
+	printf("	[11] Approximate Entropy	     [12] Random Excursions\n");
+	printf("	[13] Random Excursions Variant	     [14] Serial\n");
+	printf("	[15] Linear Complexity\n\n");
+	printf("	     INSTRUCTIONS\n");
+	printf("		Enter 0 if you DO NOT want to apply all of the\n");
+	printf("		statistical tests to each sequence and 1 if you DO.\n\n");
 	printf("   Enter Choice: ");
 	fflush(stdout);
 
@@ -1183,12 +1201,12 @@ chooseTests(struct state *state)
 	} else {
 		do {
 			// prompt
-			printf("         INSTRUCTIONS\n");
-			printf("            Enter a 0 or 1 to indicate whether or not the numbered statistical\n");
-			printf("            test should be applied to each sequence.\n\n");
-			printf("               111111\n");
-			printf("      123456789012345\n");
-			printf("      ");
+			printf("	     INSTRUCTIONS\n");
+			printf("		Enter a 0 or 1 to indicate whether or not the numbered statistical\n");
+			printf("		test should be applied to each sequence.\n\n");
+			printf("		   111111\n");
+			printf("	  123456789012345\n");
+			printf("	  ");
 			fflush(stdout);
 
 			// read the test string
@@ -1229,7 +1247,7 @@ fixParameters(struct state *state)
 	int testid;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(223, __FUNCTION__, "state arg is NULL");
@@ -1244,40 +1262,40 @@ fixParameters(struct state *state)
 		/*
 		 * prompt
 		 */
-		printf("        P a r a m e t e r   A d j u s t m e n t s\n");
-		printf("        -----------------------------------------\n");
+		printf("	P a r a m e t e r   A d j u s t m e n t s\n");
+		printf("	-----------------------------------------\n");
 		if (state->testVector[TEST_BLOCK_FREQUENCY] == true) {
-			printf("    [%d] Block Frequency Test - block length(M):         %ld\n",
+			printf("	[%d] Block Frequency Test - block length(M):	     %ld\n",
 			       PARAM_blockFrequencyBlockLength, state->tp.blockFrequencyBlockLength);
 		}
 		if (state->testVector[TEST_NONPERIODIC] == true) {
-			printf("    [%d] NonOverlapping Template Test - block length(m): %ld\n",
+			printf("	[%d] NonOverlapping Template Test - block length(m): %ld\n",
 			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateBlockLength);
 		}
 		if (state->testVector[TEST_OVERLAPPING] == true) {
-			printf("    [%d] Overlapping Template Test - block length(m):    %ld\n",
+			printf("	[%d] Overlapping Template Test - block length(m):    %ld\n",
 			       PARAM_overlappingTemplateBlockLength, state->tp.overlappingTemplateBlockLength);
 		}
 		if (state->testVector[TEST_APEN] == true) {
-			printf("    [%d] Approximate Entropy Test - block length(m):     %ld\n",
+			printf("	[%d] Approximate Entropy Test - block length(m):     %ld\n",
 			       PARAM_approximateEntropyBlockLength, state->tp.approximateEntropyBlockLength);
 		}
 		if (state->testVector[TEST_SERIAL] == true) {
-			printf("    [%d] Serial Test - block length(m):                  %ld\n",
+			printf("	[%d] Serial Test - block length(m):		     %ld\n",
 			       PARAM_serialBlockLength, state->tp.serialBlockLength);
 		}
 		if (state->testVector[TEST_LINEARCOMPLEXITY] == true) {
-			printf("    [%d] Linear Complexity Test - block length(M):       %ld\n",
+			printf("	[%d] Linear Complexity Test - block length(M):	     %ld\n",
 			       PARAM_linearComplexitySequenceLength, state->tp.linearComplexitySequenceLength);
 		}
-		printf("    [%d] bitstream interations:				%ld\n",
-		       PARAM_numOfBitStreams, state->tp.numOfBitStreams);
-		printf("    [%d] Uniformity bins:				%ld\n",
-		       PARAM_uniformity_bins, state->tp.uniformity_bins);
+		printf("    [%d] bitstream iterations:				%ld\n", PARAM_numOfBitStreams,
+		       state->tp.numOfBitStreams);
+		printf("    [%d] Uniformity bins:				%ld\n", PARAM_uniformity_bins,
+		       state->tp.uniformity_bins);
 		printf("    [%d] Length of a single bit stream:			%ld\n", PARAM_n, state->tp.n);
-		printf("    [%d] Uniformity Cutoff Level:			%f\n",
-		       PARAM_uniformity_level, state->tp.uniformity_level);
-		printf("    [%d] Alpha - confidence level:       		%f\n", PARAM_alpha, state->tp.alpha);
+		printf("    [%d] Uniformity Cutoff Level:			%f\n", PARAM_uniformity_level,
+		       state->tp.uniformity_level);
+		printf("    [%d] Alpha - confidence level:			%f\n", PARAM_alpha, state->tp.alpha);
 		putchar('\n');
 		printf("   Select Test (%d to continue): ", PARAM_continue);
 		fflush(stdout);
@@ -1306,7 +1324,7 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.blockFrequencyBlockLength <= 0) {
-					printf("    Block Frequency Test block length %ld must be > 0, try again\n\n",
+					printf("	Block Frequency Test block length %ld must be > 0, try again\n\n",
 					       state->tp.blockFrequencyBlockLength);
 				}
 			} while (state->tp.blockFrequencyBlockLength <= 0);
@@ -1324,15 +1342,15 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN) {
-					printf("    NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					printf("	NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
 					       state->tp.nonOverlappingTemplateBlockLength, MINTEMPLEN);
 				}
 				if (state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN) {
-					printf("    NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					printf("	NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
 					       state->tp.nonOverlappingTemplateBlockLength, MAXTEMPLEN);
 				}
-			} while (state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN ||
-				 state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN);
+			} while ((state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN) ||
+				 (state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN));
 			break;
 
 		case PARAM_overlappingTemplateBlockLength:
@@ -1347,15 +1365,15 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.overlappingTemplateBlockLength < MINTEMPLEN) {
-					printf("    Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					printf("	Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
 					       state->tp.overlappingTemplateBlockLength, MINTEMPLEN);
 				}
 				if (state->tp.overlappingTemplateBlockLength > MAXTEMPLEN) {
-					printf("    Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					printf("	Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
 					       state->tp.overlappingTemplateBlockLength, MAXTEMPLEN);
 				}
-			} while (state->tp.overlappingTemplateBlockLength < MINTEMPLEN ||
-				 state->tp.overlappingTemplateBlockLength > MAXTEMPLEN);
+			} while ((state->tp.overlappingTemplateBlockLength < MINTEMPLEN) ||
+				 (state->tp.overlappingTemplateBlockLength > MAXTEMPLEN));
 			break;
 
 		case PARAM_approximateEntropyBlockLength:
@@ -1370,7 +1388,7 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.approximateEntropyBlockLength <= 0) {
-					printf("    Approximate Entropy Test block Length %ld must be > 0, try again\n\n",
+					printf("	Approximate Entropy Test block Length %ld must be > 0, try again\n\n",
 					       state->tp.approximateEntropyBlockLength);
 				}
 			} while (state->tp.approximateEntropyBlockLength <= 0);
@@ -1388,7 +1406,7 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.serialBlockLength <= 0) {
-					printf("    Serial Test block Length %ld must be > 0, try again\n\n",
+					printf("	Serial Test block Length %ld must be > 0, try again\n\n",
 					       state->tp.serialBlockLength);
 				}
 			} while (state->tp.serialBlockLength <= 0);
@@ -1406,10 +1424,10 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) {
-					printf("    linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
+					printf("	linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
 					       state->tp.linearComplexitySequenceLength, MIN_LINEARCOMPLEXITY);
 				} else if (state->tp.linearComplexitySequenceLength > MAX_LINEARCOMPLEXITY + 1) {
-					printf("    linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
+					printf("	linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
 					       state->tp.linearComplexitySequenceLength, MAX_LINEARCOMPLEXITY);
 				}
 			} while ((state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) ||
@@ -1419,7 +1437,7 @@ fixParameters(struct state *state)
 		case PARAM_numOfBitStreams:
 			do {
 				// prompt
-				printf("   Enter the number bitstream interations (try: %d): ", DEFAULT_UNIFORMITY_BINS);
+				printf("   Enter the number bitstream iterations (try: %d): ", DEFAULT_UNIFORMITY_BINS);
 				fflush(stdout);
 
 				// read number
@@ -1428,7 +1446,7 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.numOfBitStreams <= 0) {
-					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
+					printf("	Number of uniformity bins %ld must be > 0, try again\n\n",
 					       state->tp.numOfBitStreams);
 				}
 			} while (state->tp.numOfBitStreams <= 0);
@@ -1446,7 +1464,7 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.uniformity_bins <= 0) {
-					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
+					printf("	Number of uniformity bins %ld must be > 0, try again\n\n",
 					       state->tp.uniformity_bins);
 				}
 			} while (state->tp.uniformity_bins <= 0);
@@ -1464,10 +1482,10 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.n < MIN_BITCOUNT) {
-					printf("    Length of a single bit stream %ld must be >= %d, try again\n\n",
+					printf("	Length of a single bit stream %ld must be >= %d, try again\n\n",
 					       state->tp.n, MIN_BITCOUNT);
 				} else if (state->tp.n > MAX_BITCOUNT) {
-					printf("    Length of a single bit stream %ld must be <= %d, try again\n\n",
+					printf("	Length of a single bit stream %ld must be <= %d, try again\n\n",
 					       state->tp.n, MAX_BITCOUNT);
 				}
 			} while ((state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT));
@@ -1485,10 +1503,10 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.uniformity_level <= 0.0) {
-					printf("    Uniformity Cutoff Level must be > 0.0: %f, try again\n\n",
+					printf("	Uniformity Cutoff Level must be > 0.0: %f, try again\n\n",
 					       state->tp.uniformity_level);
 				} else if (state->tp.uniformity_level > 0.1) {
-					printf("    Uniformity Cutoff Level must be <= 0.1: %f, try again\n\n",
+					printf("	Uniformity Cutoff Level must be <= 0.1: %f, try again\n\n",
 					       state->tp.uniformity_level);
 				}
 			} while (state->tp.uniformity_level <= 0.0 || state->tp.uniformity_level > 0.1);
@@ -1507,9 +1525,9 @@ fixParameters(struct state *state)
 
 				// error range check
 				if (state->tp.alpha <= 0.0) {
-					printf("    Alpha must be > 0.0: %f, try again\n\n", state->tp.alpha);
+					printf("	Alpha must be > 0.0: %f, try again\n\n", state->tp.alpha);
 				} else if (state->tp.alpha > 0.1) {
-					printf("    Alpha must be <= 0.1: %f, try again\n\n", state->tp.alpha);
+					printf("	Alpha must be <= 0.1: %f, try again\n\n", state->tp.alpha);
 				}
 			} while (state->tp.alpha <= 0.0 || state->tp.alpha > 0.1);
 			break;
@@ -1532,7 +1550,7 @@ fileBasedBitStreams(struct state *state)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(224, __FUNCTION__, "state arg is NULL");
@@ -1546,7 +1564,9 @@ fileBasedBitStreams(struct state *state)
 	 */
 	if (state->dataFormat == FORMAT_ASCII_01) {
 
-		// set file pointer jobnum chunks into file
+		/*
+		 * set file pointer after jobnum chunks into file
+		 */
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
 		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
@@ -1555,10 +1575,14 @@ fileBasedBitStreams(struct state *state)
 			errp(224, __FUNCTION__, "could not seek %ld into file: %s",
 			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		}
-		// parse data
+		/*
+		 * parse data
+		 */
 		readBinaryDigitsInASCIIFormat(state);
 
-		// close file
+		/*
+		 * close file
+		 */
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
 		if (io_ret != 0) {
@@ -1576,22 +1600,28 @@ fileBasedBitStreams(struct state *state)
 		 *
 		 * We need to round up the byte count to the next whole byte.
 		 * However if the bit count is a multiple of 8, then we do
-		 * not increase the byte only.  We only increase by one in
-		 * the case of a final partial bytw.
+		 * not increase it.  We only increase by one in
+		 * the case of a final partial byte.
 		 */
 		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8;
 
-		// set file pointer jobnum chunks into file
+		/*
+		 * set file pointer after jobnum chunks into file
+		 */
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
 		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
 		if (seekError != 0) {
 			err(224, __FUNCTION__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
 		}
-		// parse data
+		/*
+		 * parse data
+		 */
 		readHexDigitsInBinaryFormat(state);
 
-		// close file
+		/*
+		 * close file
+		 */
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
 		if (io_ret != 0) {
@@ -1621,7 +1651,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(225, __FUNCTION__, "state arg is NULL");
@@ -1631,13 +1661,13 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	}
 
 	/*
-	 * intertate reading bitstream sized binary digits in ASCII
+	 * iterate reading bitstream sized binary digits in ASCII
 	 */
-	dbg(DBG_LOW, "start of interate phase");
+	dbg(DBG_LOW, "start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
-		 * read ocetets from the bitstread and count 0 and 1 bits
+		 * read octets from the bitstream and count 0 and 1 bits
 		 */
 		num_0s = 0;
 		num_1s = 0;
@@ -1645,8 +1675,8 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		for (j = 0; j < state->tp.n; j++) {
 			io_ret = fscanf(state->streamFile, "%ld", &bit);
 			if (io_ret == EOF) {
-				warn(__FUNCTION__, "Insufficient data in file %s: %ld bits were read",
-				     state->randomDataPath, bitsRead);
+				warn(__FUNCTION__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
+				     bitsRead);
 				return;
 			} else {
 				bitsRead++;
@@ -1660,7 +1690,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		}
 
 		/*
-		 * write stats to freq.txt
+		 * Write stats to freq.txt
 		 */
 		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
 		if (io_ret <= 0) {
@@ -1672,12 +1702,12 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		}
 
 		/*
-		 * perform stastical tests for this interation
+		 * Perform statistical tests for this iteration
 		 */
 		nist_test_suite(state);
 	}
 
-	dbg(DBG_LOW, "end of interate phase");
+	dbg(DBG_LOW, "end of iterate phase");
 	return;
 }
 
@@ -1694,16 +1724,16 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 void
 readHexDigitsInBinaryFormat(struct state *state)
 {
-	long int num_0s;	// count of 0 bits processed
-	long int num_1s;	// count of 1 bits processed
-	long int bitsRead;	// number of bits to read and process
+	long int num_0s;	// Count of 0 bits processed
+	long int num_1s;	// Count of 1 bits processed
+	long int bitsRead;	// Number of bits to read and process
 	bool done;		// true ==> we have converted enough data
 	BYTE byte;		// single bite
 	int io_ret;		// I/O return status
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(226, __FUNCTION__, "state arg is NULL");
@@ -1713,18 +1743,17 @@ readHexDigitsInBinaryFormat(struct state *state)
 	}
 
 	/*
-	 * intertate reading bitstream in octets
+	 * iterate reading bitstream in octets
 	 */
-	dbg(DBG_LOW, "start of interate phase");
+	dbg(DBG_LOW, "start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
-		 * read ocetets from the bitstread and count 0 and 1 bits
+		 * read octets from the bitstream and count 0 and 1 bits
 		 */
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
-		done = 0;
 		do {
 			/*
 			 * read the next binary octet
@@ -1742,7 +1771,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 		} while (done == false);
 
 		/*
-		 * write stats to freq.txt
+		 * Write stats to freq.txt
 		 */
 		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
 		if (io_ret <= 0) {
@@ -1754,12 +1783,12 @@ readHexDigitsInBinaryFormat(struct state *state)
 		}
 
 		/*
-		 * perform stastical tests for this interation
+		 * Perform statistical tests for this iteration
 		 */
 		nist_test_suite(state);
 
 	}
-	dbg(DBG_LOW, "end of interate phase");
+	dbg(DBG_LOW, "end of iterate phase");
 	return;
 }
 
@@ -1770,8 +1799,8 @@ readHexDigitsInBinaryFormat(struct state *state)
  * given:
  *      state           // pointer to run state
  *      x               // pointer to an array (even just 1) binary bytes
- *      xBitLength      // number of bits to convert
- *      bitsNeeded      // total number of bits we want to convert this run
+ *      xBitLength      // Number of bits to convert
+ *      bitsNeeded      // Total number of bits we want to convert this run
  *      num_0s          // pointer to number of 0 bits converted so far
  *      num_1s          // pointer to number of 1 bits converted so far
  *      bitsRead        // pointer to number of bits converted so far
@@ -1793,7 +1822,7 @@ convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bits
 	long int ones;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(227, __FUNCTION__, "state arg is NULL");
@@ -1838,11 +1867,11 @@ invokeTestSuite(struct state *state)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(228, __FUNCTION__, "state arg is NULL");
-	}
+	 /*NOTREACHED*/}
 
 	/*
 	 * case: prep for writing to the datafile
@@ -1850,15 +1879,17 @@ invokeTestSuite(struct state *state)
 	if (state->runMode == MODE_WRITE_ONLY) {
 
 		/*
-		 * allocate the write buffer
+		 * Allocate the write buffer
 		 */
 		switch (state->dataFormat) {
 		case FORMAT_RAW_BINARY:
-			// compression 8:1
+			/*
+			 * compression 8:1
+			 */
 			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
 				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
-				     (state->tp.n / BITS_N_BYTE) + 1, sizeof(BitSequence));
+				     (state->tp.n / BITS_N_BYTE) + 1, sizeof(state->tmpepsilon[0]));
 			}
 			state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
 			break;
@@ -1867,7 +1898,7 @@ invokeTestSuite(struct state *state)
 			state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
 				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
-				     state->tp.n + 1, sizeof(BitSequence));
+				     state->tp.n + 1, sizeof(state->tmpepsilon[0]));
 			}
 			state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
 			break;
@@ -1885,14 +1916,15 @@ invokeTestSuite(struct state *state)
 		/*
 		 * announce test
 		 */
-		io_ret = fprintf(state->freqFile,
-				 "________________________________________________________________________________\n\n");
+		io_ret =
+		    fprintf(state->freqFile,
+			    "________________________________________________________________________________\n\n");
 		if (io_ret <= 0) {
 			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 		}
 		if (state->generator == 0) {
-			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-					 state->randomDataPath, state->tp.alpha);
+			io_ret =
+			    fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n", state->randomDataPath, state->tp.alpha);
 			if (io_ret <= 0) {
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
@@ -1903,8 +1935,9 @@ invokeTestSuite(struct state *state)
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
 		}
-		io_ret = fprintf(state->freqFile,
-				 "________________________________________________________________________________\n\n");
+		io_ret =
+		    fprintf(state->freqFile,
+			    "________________________________________________________________________________\n\n");
 		if (io_ret <= 0) {
 			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 		}
@@ -1915,15 +1948,18 @@ invokeTestSuite(struct state *state)
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Statistical Testing In Progress.........");
 		} else {
-			printf("     Statistical Testing In Progress.........\n\n");
+			printf("	 Statistical Testing In Progress.........\n\n");
 			fflush(stdout);
 		}
 	}
 
 	/*
 	 * test data from a file or from an internal generator
+	 *
+	 * Introduce new pseudo random number generators in this switch
 	 */
 	switch (state->generator) {
+
 	case GENERATOR_FROM_FILE:
 		fileBasedBitStreams(state);
 		break;
@@ -1955,10 +1991,6 @@ invokeTestSuite(struct state *state)
 		SHA1(state);
 		break;
 
-		/*
-		 * INTRODUCE NEW PSEUDO RANDOM NUMBER GENERATORS HERE
-		 */
-
 	default:
 		err(228, __FUNCTION__, "Error in invokeTestSuite!");
 		break;
@@ -1972,12 +2004,12 @@ invokeTestSuite(struct state *state)
 	if (state->runMode == MODE_WRITE_ONLY) {
 
 		/*
-		 * announce end if writes
+		 * announce end of writes
 		 */
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Exiting, completed writes to %s", state->randomDataPath);
 		} else {
-			printf("     Exiting completed writes to %s\n", state->randomDataPath);
+			printf("	 Exiting completed writes to %s\n", state->randomDataPath);
 			fflush(stdout);
 		}
 		destroy(state);
@@ -1991,27 +2023,28 @@ invokeTestSuite(struct state *state)
 	} else if (state->runMode == MODE_ITERATE_ONLY) {
 
 		/*
-		 * announce end of interation only
+		 * announce end of iteration only
 		 */
 		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Exiting interate only");
+			dbg(DBG_LOW, "     Exiting iterate only");
 		} else {
-			printf("     Exiting interate only\n");
+			printf("	 Exiting iterate only\n");
 			fflush(stdout);
 		}
 		destroy(state);
 		exit(0);
+	}
 
-		/*
-		 * -m b: iterate and then assess
-		 *
-		 * Iterations complete, move on to assess
-		 */
-	} else if (state->runMode == MODE_ITERATE_AND_ASSESS) {
+	/*
+	 * -m b: iterate and then assess
+	 *
+	 * Iterations complete, move on to assess
+	 */
+	else if (state->runMode == MODE_ITERATE_AND_ASSESS) {
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Statistical Testing Complete!!!!!!!!!!!!");
 		} else {
-			printf("     Statistical Testing Complete!!!!!!!!!!!!\n");
+			printf("	 Statistical Testing Complete!!!!!!!!!!!!\n");
 			fflush(stdout);
 		}
 
@@ -2023,7 +2056,7 @@ invokeTestSuite(struct state *state)
 	 * -m b: iterate and then assess
 	 */
 	if (state->batchmode == true) {
-		dbg(DBG_LOW, "     About to start assessment");
+		dbg(DBG_LOW, "	   About to start assessment");
 	} else {
 		printf("     About to start assessment\n");
 		fflush(stdout);
@@ -2050,7 +2083,7 @@ getTimestamp(char *buf, size_t len)
 	time_t seconds;		// seconds since the epoch
 	struct tm *loc_ret;	// return value form localtime_r()
 	struct tm now;		// the time now
-	size_t time_len;	// length of string produced by strftime() or 0
+	size_t time_len;	// Length of string produced by strftime() or 0
 
 	// firewall
 	if (buf == NULL) {
@@ -2061,7 +2094,7 @@ getTimestamp(char *buf, size_t len)
 	}
 
 	/*
-	 * determine the time for now
+	 * Determine the time for now
 	 */
 	errno = 0;		// paranoia
 	seconds = time(NULL);
@@ -2083,7 +2116,7 @@ getTimestamp(char *buf, size_t len)
 
 
 /*
- * nist_test_suite - run an interation for all enabled tests
+ * nist_test_suite - run an iteration for all enabled tests
  *
  * given:
  *      state           // run state and which tests are enabled
@@ -2093,7 +2126,9 @@ nist_test_suite(struct state *state)
 {
 	char buf[BUFSIZ + 1];	// time string buffer
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(230, __FUNCTION__, "state arg is NULL");
 	}
@@ -2107,12 +2142,12 @@ nist_test_suite(struct state *state)
 	}
 
 	/*
-	 * perform interation on all enabled tests
+	 * Perform iteration on all enabled tests
 	 */
-	interate(state);
+	iterate(state);
 
 	/*
-	 * count the interation and report process if requested
+	 * Count the iteration and report process if requested
 	 */
 	++state->curIteration;
 	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
@@ -2155,7 +2190,7 @@ write_sequence(struct state *state)
 	}
 
 	/*
-	 * write contents of epsilon
+	 * Write contents of epsilon
 	 */
 	switch (state->dataFormat) {
 	case FORMAT_RAW_BINARY:
@@ -2173,7 +2208,7 @@ write_sequence(struct state *state)
 			}
 			++count;
 
-			// when an output byte is complete
+			// When an output byte is complete
 			if (count >= BITS_N_BYTE) {
 				// prep for next byte
 				count = 0;
@@ -2186,7 +2221,7 @@ write_sequence(struct state *state)
 		}
 
 		/*
-		 * write output buffer
+		 * Write output buffer
 		 */
 		errno = 0;	// paranoia
 		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), j, state->streamFile);
@@ -2217,7 +2252,7 @@ write_sequence(struct state *state)
 		}
 
 		/*
-		 * write file as ASCII string of numbers
+		 * Write file as ASCII string of numbers
 		 */
 		errno = 0;	// paranoia
 		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), state->tp.n, state->streamFile);
@@ -2237,7 +2272,7 @@ write_sequence(struct state *state)
 	}
 
 	/*
-	 * count the interation and report process if requested
+	 * Count the iteration and report process if requested
 	 */
 	++state->curIteration;
 	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
@@ -2249,4 +2284,24 @@ write_sequence(struct state *state)
 			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
 	}
+}
+
+/*
+ * long_will_overflow - check if a sum operation will lead to overflow
+ *
+ * given:
+ *      number          // the number to which we want to sum something
+ *      addend          // the addend that we want to add to number
+ *
+ * returns:
+ *      1 if the operation would cause number to overflow, 0 otherwise
+ */
+int
+long_will_overflow(long int number, int addend)
+{
+	if (LONG_MAX - addend < number) {
+		return 1;	// will overflow
+	}
+
+	return 0;		// will not overflow
 }

@@ -1,14 +1,20 @@
 /*****************************************************************************
-	  N O N O V E R L A P P I N G   T E M P L A T E   T E S T
+	  N O N O V E R L A P P I N G	T E M P L A T E	  T E S T
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 130 thru 139
 
@@ -32,17 +39,16 @@
 #include "debug.h"
 
 
-#define BASE_BITS (8*sizeof(ULONG))	// bits in a template word - was B
-#define TEST_K (5)		// some test value that seems to be fixed at 5
+#define BASE_BITS (BITS_N_BYTE*sizeof(ULONG))	// bits in a template word - was B
 
 
 /*
- * private_stats - stats.txt information for this test
+ * Private stats - stats.txt information for this test
  */
 struct NonOverlappingTemplateMatchings_private_stats {
-	double lambda;		// theoretical mean
+	double mu;		// theoretical mean
 	long int M;		// length in bits of the substring to be tested
-	long int N;		// number of independent blocks (fixed to BITS_N_BYTE)
+	long int N;		// Number of independent blocks (fixed to BITS_N_BYTE)
 	long int template_cnt;	// actual number of templates processed per iteration
 };
 
@@ -51,19 +57,19 @@ struct NonOverlappingTemplateMatchings_private_stats {
  * special data for each template of each iteration in p_val (instead of just p_value doubles)
  */
 struct nonover_stats {
-	double p_value;		// p_value for interation test for a given template
-	bool success;		// success or failure forward of interation test for a given template
+	double p_value;		// p_value for iteration test for a given template
+	bool success;		// Success or failure forward of iteration test for a given template
 	double chi2;		// how well the observed number of template hits matches expectations
 	ULONG template_val;	// current template value as a ULONG
-	long int jj;		// template number of a given template
+	long int template_index;	// template number of a given template
 	unsigned int Wj[BITS_N_BYTE];	// times that m-bit template occurs within a block
 };
 
 
 /*
- * static constant variable declarations
+ * Static const variables declarations
  */
-static const enum test test_num = TEST_NONPERIODIC;	// this test number
+static const enum test test_num = TEST_NONPERIODIC;	// This test number
 
 
 /*
@@ -74,103 +80,103 @@ static const enum test test_num = TEST_NONPERIODIC;	// this test number
  */
 static const long int numOfTemplates[MAXTEMPLEN + 1] = {
 #if MAXTEMPLEN >= 2
-	0,			// invalid tempate length 0
-	0,			// invalid tempate length 1
-	2,			// for tempate length 2
+	0,			// invalid template length 0
+	0,			// invalid template length 1
+	2,			// for template length 2
 #endif
 #if MAXTEMPLEN >= 3
-	4,			// for tempate length 3
+	4,			// for template length 3
 #endif
 #if MAXTEMPLEN >= 4
-	6,			// for tempate length 4
+	6,			// for template length 4
 #endif
 #if MAXTEMPLEN >= 5
-	12,			// for tempate length 5
+	12,			// for template length 5
 #endif
 #if MAXTEMPLEN >= 6
-	20,			// for tempate length 6
+	20,			// for template length 6
 #endif
 #if MAXTEMPLEN >= 7
-	40,			// for tempate length 7
+	40,			// for template length 7
 #endif
 #if MAXTEMPLEN >= 8
-	74,			// for tempate length 8
+	74,			// for template length 8
 #endif
 #if MAXTEMPLEN >= 9
-	148,			// for tempate length 9
+	148,			// for template length 9
 #endif
 #if MAXTEMPLEN >= 10
-	284,			// for tempate length 10
+	284,			// for template length 10
 #endif
 #if MAXTEMPLEN >= 11
-	568,			// for tempate length 11
+	568,			// for template length 11
 #endif
 #if MAXTEMPLEN >= 12
-	1116,			// for tempate length 12
+	1116,			// for template length 12
 #endif
 #if MAXTEMPLEN >= 13
-	2232,			// for tempate length 13
+	2232,			// for template length 13
 #endif
 #if MAXTEMPLEN >= 14
-	4424,			// for tempate length 14
+	4424,			// for template length 14
 #endif
 #if MAXTEMPLEN >= 15
-	8848,			// for tempate length 15
+	8848,			// for template length 15
 #endif
 #if MAXTEMPLEN >= 16
-	17622,			// for tempate length 16
+	17622,			// for template length 16
 #endif
 #if MAXTEMPLEN >= 17
-	35244,			// for tempate length 17
+	35244,			// for template length 17
 #endif
 #if MAXTEMPLEN >= 18
-	70340,			// for tempate length 18
+	70340,			// for template length 18
 #endif
 #if MAXTEMPLEN >= 19
-	140680,			// for tempate length 19
+	140680,			// for template length 19
 #endif
 #if MAXTEMPLEN >= 20
-	281076,			// for tempate length 20
+	281076,			// for template length 20
 #endif
 #if MAXTEMPLEN >= 21
-	562152,			// for tempate length 21
+	562152,			// for template length 21
 #endif
 #if MAXTEMPLEN >= 22
-	1123736,		// for tempate length 22
+	1123736,		// for template length 22
 #endif
 #if MAXTEMPLEN >= 23
-	2247472,		// for tempate length 23
+	2247472,		// for template length 23
 #endif
 #if MAXTEMPLEN >= 24
-	4493828,		// for tempate length 24
+	4493828,		// for template length 24
 #endif
 #if MAXTEMPLEN >= 25
-	8987656,		// for tempate length 25
+	8987656,		// for template length 25
 #endif
 #if MAXTEMPLEN >= 26
-	17973080,		// for tempate length 26
+	17973080,		// for template length 26
 #endif
 #if MAXTEMPLEN >= 27
-	35946160,		// for tempate length 27
+	35946160,		// for template length 27
 #endif
 #if MAXTEMPLEN >= 28
-	71887896,		// for tempate length 28
+	71887896,		// for template length 28
 #endif
 #if MAXTEMPLEN >= 29
-	143775792,		// for tempate length 29
+	143775792,		// for template length 29
 #endif
 #if MAXTEMPLEN >= 30
-	287542736,		// for tempate length 30
+	287542736,		// for template length 30
 #endif
 #if MAXTEMPLEN >= 31
-	575085472,		// for tempate length 31
+	575085472,		// for template length 31
 #endif
 };
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
-static void appendTemplate(struct state *state, ULONG value, int count);
+static void appendTemplate(struct state *state, ULONG value, long int count);
 static bool NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 						       struct NonOverlappingTemplateMatchings_private_stats *stat,
 						       struct dyn_array *nonover_stats, long int nonstat_index);
@@ -179,34 +185,34 @@ static bool NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double 
 
 
 /*
- * NonOverlappingTemplateMatchings_init - initalize the Nonoverlapping Template test
+ * NonOverlappingTemplateMatchings_init - initialize the Nonoverlapping Template test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
 void
 NonOverlappingTemplateMatchings_init(struct state *state)
 {
-	long int tbits;		// number of significant bits in a template word
+	long int tbits;		// Number of significant bits in a template word
 	ULONG num;		// integer for which a template word is being considered
 	long int SKIP;		// how often do we skip templates
-	long int template_use;	// number of templates that could be used
+	long int template_use;	// Number of templates that could be used
 	long int template_cnt;	// actual number of templates processed per iteration
-	int i;
+	ULONG i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(130, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->cSetup != true) {
@@ -217,9 +223,11 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 		err(130, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
+	// TODO N should be chosen such that N <= 100 to be assured that the P-values are valid.
+	// Additionally, be sure that M > 0.01 * n and N = floor(n/M).
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	tbits = state->tp.nonOverlappingTemplateBlockLength;
 
@@ -252,7 +260,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	}
 
 	/*
-	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 * Create working sub-directory if forming files such as results.txt and stats.txt
 	 */
 	if (state->resultstxtFlag == true) {
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
@@ -260,7 +268,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	}
 
 	/*
-	 * allocate special BitSequence
+	 * Allocate special BitSequence
 	 */
 	state->nonper_seq = malloc(tbits * sizeof(state->nonper_seq[0]));
 	if (state->nonper_seq == NULL) {
@@ -271,11 +279,11 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * set the proper partitionCount value for this test
 	 */
-	state->partitionCount[test_num] = numOfTemplates[tbits];
+	state->partitionCount[test_num] = (int) numOfTemplates[tbits];
 	dbg(DBG_HIGH, "partitionCount for %s[%d] is now %ld", state->testNames[test_num], test_num, numOfTemplates[tbits]);
 
 	/*
-	 * determine how we will seek through the template
+	 * Determine how we will seek through the template
 	 */
 	if (numOfTemplates[tbits] < MAXNUMOFTEMPLATES) {
 		SKIP = 1;
@@ -284,55 +292,60 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	}
 	template_use = (long int) numOfTemplates[tbits] / SKIP;
 	template_cnt = MIN(MAXNUMOFTEMPLATES, template_use);
-	state->partitionCount[test_num] = template_cnt;
+	state->partitionCount[test_num] = (int) template_cnt;
 	dbg(DBG_HIGH, "partitionCount for %s[%d] finalized at %ld", state->testNames[test_num], test_num, numOfTemplates[tbits]);
 
 	/*
-	 * allocate dynamic arrays
+	 * Allocate dynamic arrays
+	 *
+	 * NonOverlapping Template Test uses array of struct nonover_stats instead of p_value doubles
 	 */
-	// stats.txt data
-	state->stats[test_num] =
-	    create_dyn_array(sizeof(struct NonOverlappingTemplateMatchings_private_stats), DEFAULT_CHUNK, state->tp.numOfBitStreams,
-			     false);
-
-	// NonOverlapping Template Test uses array of struct nonover_stats instead of p_value doubles
+	state->stats[test_num] = create_dyn_array(sizeof(struct NonOverlappingTemplateMatchings_private_stats),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
 	state->p_val[test_num] = create_dyn_array(sizeof(struct nonover_stats), DEFAULT_CHUNK,
-						  template_use * state->tp.numOfBitStreams, false);
+	                                          template_use * state->tp.numOfBitStreams, false);	// results.txt
+
+	// TODO check if BITS_N_BYTES * sizeof(ULONG) <= tbits
 
 	/*
-	 * generate nonovTemp - array of non-overlapping template words
+	 * generate nonovTemplates - array of non-overlapping template words
 	 *
 	 * We will generate, in the style of mkapertemplate.c, an array
 	 * of 32-bit (ULONG) non-overlapping template words for use in
 	 * in this test.  Generating them once here is usually much faster
 	 * than reading them from a pre-computed file as the old code did.
 	 */
-	// setup for generating template words
 	dbg(DBG_LOW, "about to form a %ld bit non-overlapping template of %ld words of %ld bytes each",
 	    tbits, numOfTemplates[tbits], sizeof(ULONG));
-	state->nonovTemp = create_dyn_array(sizeof(ULONG), numOfTemplates[tbits], numOfTemplates[tbits], false);
+	state->nonovTemplates = create_dyn_array(sizeof(ULONG), numOfTemplates[tbits], numOfTemplates[tbits], false);
 	num = (ULONG) 1 << tbits;	// This is one reason why MAXTEMPLEN cannot be 32 for a 32-bit ULONG
-	// non-overlapping word template
+
+	/*
+	 * non-overlapping word template
+	 */
 	for (i = 1; i < num; i++) {
 		appendTemplate(state, i, tbits);
 	}
-	// verify size of nonovTemp
-	if (state->nonovTemp->count != numOfTemplates[tbits]) {
-		err(130, __FUNCTION__, "nonovTemp->count: %ld != numOfTemplates[%ld]: %ld", state->nonovTemp->count,
+
+	/*
+	 * verify size of nonovTemplates
+	 */
+	if (state->nonovTemplates->count != numOfTemplates[tbits]) {
+		err(130, __FUNCTION__, "nonovTemplates->count: %ld != numOfTemplates[%ld]: %ld", state->nonovTemplates->count,
 		    tbits, numOfTemplates[tbits]);
 	}
 	dbg(DBG_MED, "formed a %ld bit non-overlapping template of %ld words of %ld bytes each",
 	    tbits, numOfTemplates[tbits], sizeof(ULONG));
 
 	/*
-	 * determine format of data*.txt filenames based on state->partitionCount[test_num]
+	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(template_cnt);
 	dbg(DBG_HIGH, "%s[%d] will form data*.txt filenames with the following format: %s",
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
 	/*
-	 * driver initialized - set driver state to DRIVER_INIT
+	 * Set driver state to DRIVER_INIT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
@@ -346,7 +359,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
  *
  * given:
  *      state           // run state to test under
- *      value           // value being test if it is non-perodic
+ *      value           // value being test if it is non-periodic
  *      tbits           // significant bit count of value
  *
  * NOTE: This function was based on, in part, code from NIST Special Publication 800-22 Revision 1a:
@@ -356,34 +369,35 @@ NonOverlappingTemplateMatchings_init(struct state *state)
  * In particular see section F.2 (page F-4) of the document revised April 2010.  See mkapertemplate.c
  * in this source directory.  This function uses ULONG (32-bit) instead of uint64_t (64-bit) as
  * found in the mkapertemplate.c source file.  Moreover it appends a template word as a ULONG to
- * a dynamc array instead of writing ASCII bits to a file.
+ * a dynamic array instead of writing ASCII bits to a file.
  */
 static void
-appendTemplate(struct state *state, ULONG value, int tbits)
+appendTemplate(struct state *state, ULONG value, long int tbits)
 {
+	// TODO make A[] only tbits long (like in iterate function)
 	unsigned int A[BASE_BITS];	// bit values for each bit in a template word
 	ULONG test_value;	// copy of value being bit-tested
 	ULONG displayMask;	// template top of word mask
-	bool overlap;		// if potential template word overlaps
+	bool overlap = true;	// if potential template word overlaps
 	int c;
 	int i;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(131, __FUNCTION__, "state arg is NULL");
 	}
-	if (state->nonovTemp == NULL) {
-		err(131, __FUNCTION__, "state->nonovTemp is NULL");
+	if (state->nonovTemplates == NULL) {
+		err(131, __FUNCTION__, "state->nonovTemplates is NULL");
 	}
 
 	/*
-	 * setup to convert value into bits
+	 * Setup and convert value into an array of binary values.
+	 * The array A has BASE_BITS size (although are only interested in the last tbits values).
+	 * Bits are stored in a big-endian way, with the least significant bit last.
 	 */
 	displayMask = (ULONG) 1 << (BASE_BITS - 1);
-
-	/*
-	 * determine of value is non-perodic
-	 */
 	test_value = value;
 	for (c = 1; c <= BASE_BITS; c++) {
 		if (test_value & displayMask) {
@@ -393,8 +407,18 @@ appendTemplate(struct state *state, ULONG value, int tbits)
 		}
 		test_value <<= 1;
 	}
+
+	/*
+	 * Determine if value is non-periodic.
+	 * NOTE: Because value is smaller than 2^tbits, only the last tbits of the array are of interest for the check.
+	 * All the other bits will be zero anyway (that's why we check only the final part of the array).
+	 */
 	for (i = 1; i < tbits; i++) {
 		overlap = true;
+
+		/*
+		 * Check if the sequence is non-periodic considering the current stride i
+		 */
 		if ((A[BASE_BITS - tbits] != A[BASE_BITS - 1]) &&
 		    ((A[BASE_BITS - tbits] != A[BASE_BITS - 2]) || (A[BASE_BITS - tbits + 1] != A[BASE_BITS - 1]))) {
 			for (c = BASE_BITS - tbits; c <= (BASE_BITS - 1) - i; c++) {
@@ -404,8 +428,11 @@ appendTemplate(struct state *state, ULONG value, int tbits)
 				}
 			}
 		}
+
+		/*
+		 * If the sequence is periodic, exit the loop
+		 */
 		if (overlap == true) {
-			// PERIODIC TEMPLATE: SHIFT is i
 			break;
 		}
 	}
@@ -414,55 +441,54 @@ appendTemplate(struct state *state, ULONG value, int tbits)
 	 * value is non-overlapping, append it
 	 */
 	if (overlap == false) {
-		append_value(state->nonovTemp, &value);
+		append_value(state->nonovTemplates, &value);	// TODO make it so that A is appended instead of value
 	}
+
 	return;
 }
 
 
 /*
- * NonOverlappingTemplateMatchings_iterate - interate one bit stream for Nonoverlapping Template test
+ * NonOverlappingTemplateMatchings_iterate - iterate one bit stream for Nonoverlapping Template test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
 void
 NonOverlappingTemplateMatchings_iterate(struct state *state)
 {
-	struct NonOverlappingTemplateMatchings_private_stats stat;	// stats for this interation
-	struct nonover_stats nonover_stat;	// stats for a template of this iteration
+	struct NonOverlappingTemplateMatchings_private_stats stat;	// Stats for this iteration
+	struct nonover_stats nonover_stat;	// Stats for a template of this iteration
 	long int n;		// Length of a single bit stream
 	long int m;		// NonOverlapping Template Test - block length
-	long int template_use;	// number of templates that could be used
+	long int template_use;	// Number of templates that could be used
 	unsigned int W_obs;
-	double sum;
-	double pi[TEST_K + 1];
-	double varWj;
+	double sigma_squared;
 	long int i;
 	long int j;
 	long int jj;
 	int k;
 	bool match;
 	long int SKIP;		// how often do we skip templates
-	long int temp_index;	// index in template nonovTemp dynamic array
+	long int temp_index;	// index in template nonovTemplates dynamic array
 	double chi2_term;	// per template term whose square is sumed to get chi squared for this iteration
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(132, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] == false) {
-		dbg(DBG_LOW, "interate function[%d] %s called when testVector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when testVector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->testNames[test_num] == NULL) {
-		dbg(DBG_LOW, "interate function[%d] %s called when testNames was NULL", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when testNames was NULL", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
@@ -477,7 +503,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	}
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	m = state->tp.nonOverlappingTemplateBlockLength;
 	if ((m * 2) > (BITS_N_LONGINT - 1)) {	// firewall
@@ -487,10 +513,10 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	m = state->tp.nonOverlappingTemplateBlockLength;
 
 	/*
-	 * determinte octets in sequence bit length
+	 * Determine octets in sequence bit length
 	 */
-	stat.N = BITS_N_BYTE;
-	stat.M = n / BITS_N_BYTE;
+	stat.N = BITS_N_BYTE;	// Number of independent blocks, fixed by STS
+	stat.M = n / BITS_N_BYTE;	// length in bits of the sub-sequences to be tested
 	memset(nonover_stat.Wj, 0, sizeof(nonover_stat.Wj));
 	/*
 	 * NOTE: Mathematical expression code rewrite, old code commented out below:
@@ -498,31 +524,31 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	 * stat.lambda = (stat.M - m + 1) / pow(2, m);
 	 * varWj = stat.M * (1.0 / pow(2.0, m) - (2.0 * m - 1.0) / pow(2.0, 2.0 * m));
 	 */
-	stat.lambda = (stat.M - m + 1) / ((double) ((long int) 1 << m));
-	varWj = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
-	if (varWj < 0.0) {
-		err(132, __FUNCTION__, "varWj: %f < 0.0", varWj);
+	stat.mu = (stat.M - m + 1) / ((double) ((long int) 1 << m));
+	sigma_squared = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
+	if (sigma_squared < 0.0) {
+		err(132, __FUNCTION__, "sigma_squared: %f < 0.0", sigma_squared);
 	}
 
 	/*
-	 * lambda must be > 0.0
+	 * mu must be > 0.0
 	 */
-	if (isNegative(stat.lambda)) {
-		warn(__FUNCTION__, "aborting %s, Lambda < 0.0: %f", state->testNames[test_num], stat.lambda);
+	if (isNegative(stat.mu)) {
+		warn(__FUNCTION__, "aborting %s, Lambda < 0.0: %f", state->testNames[test_num], stat.mu);
 		return;
 	}
-	if (isZero(stat.lambda)) {
-		warn(__FUNCTION__, "aborting %s, Lambda == 0.0: %f", state->testNames[test_num], stat.lambda);
+	if (isZero(stat.mu)) {
+		warn(__FUNCTION__, "aborting %s, Lambda == 0.0: %f", state->testNames[test_num], stat.mu);
 		return;
 	}
 
 	/*
-	 * zeroize our special BitSequence
+	 * Zeroize our special BitSequence
 	 */
 	memset(state->nonper_seq, 0, m * sizeof(BitSequence));
 
 	/*
-	 * determine how we will seek through the template
+	 * Determine how we will seek through the template
 	 */
 	if (numOfTemplates[m] < MAXNUMOFTEMPLATES) {
 		SKIP = 1;
@@ -533,43 +559,33 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	stat.template_cnt = template_use;
 
 	/*
-	 * setup for test
-	 */
-	sum = 0.0;
-	for (i = 0; i < 2; i++) {	/* Compute Probabilities */
-		pi[i] = exp(-stat.lambda + i * log(stat.lambda) - cephes_lgam(i + 1));
-		sum += pi[i];
-	}
-	pi[0] = sum;
-	for (i = 2; i <= TEST_K; i++) {	/* Compute Probabilities */
-		pi[i - 1] = exp(-stat.lambda + i * log(stat.lambda) - cephes_lgam(i + 1));
-		sum += pi[i - 1];
-	}
-	pi[TEST_K] = 1 - sum;
-
-	/*
 	 * process all template values
 	 */
 	temp_index = 0;		// start at the beginning of the index
 	for (jj = 0; jj < template_use; jj++) {
 
 		/*
-		 * determine current template bits
+		 * Determine current template bits
 		 */
-		// firewall
-		if (temp_index >= state->nonovTemp->count) {
-			err(132, __FUNCTION__, "attempt to seek to nonovTemp[%ld] which >= last index: %ld",
-			    temp_index, state->nonovTemp->count - 1);
+
+		/*
+		 * Check preconditions (firewall)
+		 */
+		if (temp_index >= state->nonovTemplates->count) {
+			err(132, __FUNCTION__, "attempt to seek to nonovTemplates[%ld] which >= last index: %ld",
+			    temp_index, state->nonovTemplates->count - 1);
 		}
-		nonover_stat.template_val = get_value(state->nonovTemp, ULONG, temp_index);
+		// TODO if instead of storing the value we store directly the array of bits, here we can avoid reconverting
+		nonover_stat.template_val = get_value(state->nonovTemplates, ULONG, temp_index);
 		for (k = 0; k < m; k++) {
-			state->nonper_seq[k] = (((nonover_stat.template_val & ((ULONG) 1 << (m - k - 1))) == 0) ? 0 : 1);
+			state->nonper_seq[k] =
+			    (BitSequence) (((nonover_stat.template_val & ((ULONG) 1 << (m - k - 1))) == 0) ? 0 : 1);
 		}
 
 		/*
-		 * perform the test
+		 * Perform the test
 		 */
-		for (i = 0; i < BITS_N_BYTE; i++) {
+		for (i = 0; i < stat.N; i++) {
 			W_obs = 0;
 			for (j = 0; j < stat.M - m + 1; j++) {
 				match = true;
@@ -587,40 +603,42 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 			nonover_stat.Wj[i] = W_obs;
 		}
 		nonover_stat.chi2 = 0.0;	/* Compute Chi Square */
-		for (i = 0; i < BITS_N_BYTE; i++) {
+		for (i = 0; i < stat.N; i++) {
 			/*
 			 * NOTE: Mathematical expression code rewrite, old code commented out below:
 			 *
-			 * nonover_stat.chi2 += pow(((double) nonover_stat.Wj[i] - stat.lambda) / pow(varWj, 0.5), 2);
+			 * nonover_stat.chi2 += pow(((double) nonover_stat.Wj[i] - stat.mu) / pow(sigma_squared, 0.5), 2);
 			 */
-			chi2_term = ((double) nonover_stat.Wj[i] - stat.lambda) / sqrt(varWj);
+			chi2_term = ((double) nonover_stat.Wj[i] - stat.mu) / sqrt(sigma_squared);
 			nonover_stat.chi2 += (chi2_term * chi2_term);
 		}
-		nonover_stat.jj = jj;
-		nonover_stat.p_value = cephes_igamc(BITS_N_BYTE / 2.0, nonover_stat.chi2 / 2.0);
+		nonover_stat.template_index = jj;
+		nonover_stat.p_value = cephes_igamc(stat.N / 2.0, nonover_stat.chi2 / 2.0);
 
 		/*
-		 * record testable test success or failure
+		 * Record testable test success or failure
 		 */
-		state->count[test_num]++;	// count this test
-		state->valid[test_num]++;	// count this valid test
+		state->count[test_num]++;	// Count this test
+		state->valid[test_num]++;	// Count this valid test
 		if (isNegative(nonover_stat.p_value)) {
-			state->failure[test_num]++;	// bogus p_value < 0.0 treated as a failure
+			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
-			warn(__FUNCTION__, "interation %ld template[%ld] of test %s[%d] produced bogus p_value: %f < 0.0\n",
-			     state->curIteration, nonover_stat.jj, state->testNames[test_num], test_num, nonover_stat.p_value);
+			warn(__FUNCTION__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f < 0.0\n",
+			     state->curIteration, nonover_stat.template_index, state->testNames[test_num], test_num,
+			     nonover_stat.p_value);
 		} else if (isGreaterThanOne(nonover_stat.p_value)) {
-			state->failure[test_num]++;	// bogus p_value > 1.0 treated as a failure
+			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
-			warn(__FUNCTION__, "interation %ld template[%ld] of test %s[%d] produced bogus p_value: %f > 1.0\n",
-			     state->curIteration, nonover_stat.jj, state->testNames[test_num], test_num, nonover_stat.p_value);
+			warn(__FUNCTION__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f > 1.0\n",
+			     state->curIteration, nonover_stat.template_index, state->testNames[test_num], test_num,
+			     nonover_stat.p_value);
 		} else if (nonover_stat.p_value < state->tp.alpha) {
-			state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-			state->failure[test_num]++;	// valid p_value but too low is a failure
+			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+			state->failure[test_num]++;	// Valid p_value but too low is a failure
 			nonover_stat.success = false;	// FAILURE
 		} else {
-			state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-			state->success[test_num]++;	// valid p_value not too low is a success
+			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+			state->success[test_num]++;	// Valid p_value not too low is a success
 			nonover_stat.success = true;	// SUCCESS
 		}
 
@@ -634,29 +652,31 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		}
 
 		/*
-		 * results.txt and stats.txt accounting
+		 * Record values computed during this iteration
 		 */
 		append_value(state->p_val[test_num], &nonover_stat);
 	}
 
 	/*
-	 * special stat acconting
+	 * special stat accounting
 	 *
-	 * Unlike other tests, we have one stat for an interation
-	 * and multiple nonover_stat (one for each template) per interation.
+	 * Unlike other tests, we have one stat for an iteration
+	 * and multiple nonover_stat (one for each template) per iteration.
 	 *
 	 * NOTE: The number of nonover_stat values in state->p_val is found in stat.template_cnt.
 	 */
+
 	append_value(state->stats[test_num], &stat);
 
 	/*
-	 * driver iterating - set driver state to DRIVER_ITERATE
+	 * Set driver state to DRIVER_ITERATE
 	 */
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -677,20 +697,20 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
  *
  * NOTE: This function prints the initial header for an internation to the stats.txt file.
  *       Finally the nonover_stats dynamic array is used to print the results from each
- *       template to stats.txt for this interation.
+ *       template to stats.txt for this iteration.
  */
 static bool
 NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 					   struct NonOverlappingTemplateMatchings_private_stats *stat,
 					   struct dyn_array *nonover_stats, long int nonstat_index)
 {
-	struct nonover_stats *nonover_stat;	// current nonover_stats for a given interation
+	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
 	int io_ret;		// I/O return status
 	long int i;
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(133, __FUNCTION__, "stream arg is NULL");
@@ -712,10 +732,10 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	}
 
 	/*
-	 * print head of stat to a file
+	 * Print head of stat to a file
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t  NONPERIODIC TEMPLATES TEST\n");
+		io_ret = fprintf(stream, "\t\t	NONPERIODIC TEMPLATES TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -723,7 +743,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t  COMPUTATIONAL INFORMATION\n");
+		io_ret = fprintf(stream, "\t\t	COMPUTATIONAL INFORMATION\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -732,7 +752,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 			return false;
 		}
 		io_ret =
-		    fprintf(stream, "\tLAMBDA = %f\tM = %ld\tN = %ld\tm = %ld\tn = %ld\n", stat->lambda, stat->M, stat->N,
+		    fprintf(stream, "\tLAMBDA = %f\tM = %ld\tN = %ld\tm = %ld\tn = %ld\n", stat->mu, stat->M, stat->N,
 			    state->tp.nonOverlappingTemplateBlockLength, state->tp.n);
 		if (io_ret <= 0) {
 			return false;
@@ -745,7 +765,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Template   W_1  W_2  W_3  W_4  W_5  W_6  W_7  W_8    Chi^2   P_value Assignment Index\n");
+		io_ret = fprintf(stream, "Template   W_1  W_2  W_3  W_4	 W_5  W_6  W_7	W_8    Chi^2   P_value Assignment Index\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -754,7 +774,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t  Non-periodic templates test\n");
+		io_ret = fprintf(stream, "\t\t	Non-periodic templates test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -762,7 +782,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Lambda = %f\n", stat->lambda);
+		io_ret = fprintf(stream, "Lambda = %f\n", stat->mu);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -790,7 +810,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Template   W[1] W[2] W[3] W[4] W[5] W[6] W[7] W[8]   Chi^2   P_value       Index\n");
+		io_ret = fprintf(stream, "Template   W[1] W[2] W[3] W[4] W[5] W[6] W[7] W[8]   Chi^2   P_value	     Index\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -801,7 +821,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	}
 
 	/*
-	 * print values for each template of this iteration
+	 * Print values for each template of this iteration
 	 */
 	for (i = 0; i < stat->template_cnt; ++i, ++nonstat_index) {
 
@@ -820,7 +840,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		nonover_stat = addr_value(nonover_stats, struct nonover_stats, nonstat_index);
 
 		/*
-		 * print template bits
+		 * Print template bits
 		 */
 		for (j = 0; j < state->tp.nonOverlappingTemplateBlockLength; j++) {
 			io_ret = fprintf(stream, "%1d",
@@ -836,7 +856,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		}
 
 		/*
-		 * print observation count per bit in a byte
+		 * Print observation count per bit in a byte
 		 */
 		for (j = 0; j < BITS_N_BYTE; j++) {
 			io_ret = fprintf(stream, "%4d ", nonover_stat->Wj[j]);
@@ -846,26 +866,26 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		}
 
 		/*
-		 * print remainer of template stats line
+		 * Print remainder of template stats line
 		 */
 		if (nonover_stat->p_value == NON_P_VALUE && nonover_stat->success == true) {
 			err(133, __FUNCTION__, "nonover_stat->p_value was set to NON_P_VALUE but "
-			    "nonover_stat->success == true for jj: %ld", nonover_stat->jj);
+			    "nonover_stat->success == true for jj: %ld", nonover_stat->template_index);
 		}
 		if (nonover_stat->success == true) {
 			io_ret = fprintf(stream, "%9.6f %f SUCCESS %3ld\n", nonover_stat->chi2, nonover_stat->p_value,
-					 nonover_stat->jj);
+					 nonover_stat->template_index);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else if (nonover_stat->p_value == NON_P_VALUE) {
-			io_ret = fprintf(stream, "%9.6f      __INVALID__ %3ld\n", nonover_stat->chi2, nonover_stat->jj);
+			io_ret = fprintf(stream, "%9.6f	 __INVALID__ %3ld\n", nonover_stat->chi2, nonover_stat->template_index);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
 			io_ret = fprintf(stream, "%9.6f %f FAILURE %3ld\n", nonover_stat->chi2, nonover_stat->p_value,
-					 nonover_stat->jj);
+					 nonover_stat->template_index);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -873,7 +893,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	}
 
 	/*
-	 * final newline for this interation
+	 * final newline for this iteration
 	 */
 	io_ret = fputc('\n', stream);
 	if (io_ret == EOF) {
@@ -881,7 +901,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
@@ -892,7 +912,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
  *
  * given:
  *      stream          // open writable FILE stream
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -904,14 +924,14 @@ NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(134, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
-	 * print p_value to a file
+	 * Print p_value to a file
 	 */
 	if (p_value == NON_P_VALUE) {
 		io_ret = fprintf(stream, "__INVALID__\n");
@@ -926,14 +946,14 @@ NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
 
 
 /*
- * NonOverlappingTemplateMatchings_print - print to results.txt, data*.txt, stats.txt for all interations
+ * NonOverlappingTemplateMatchings_print - print to results.txt, data*.txt, stats.txt for all iterations
  *
  * given:
  *      state           // run state to test under
@@ -946,15 +966,15 @@ NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 void
 NonOverlappingTemplateMatchings_print(struct state *state)
 {
-	struct NonOverlappingTemplateMatchings_private_stats *stat;	// pointer to statistics of an interation
-	struct nonover_stats *nonover_stat;	// current nonover_stats for a given interation
-	FILE *stats = NULL;	// open stats.txt file
-	FILE *results = NULL;	// open stats.txt file
-	FILE *data = NULL;	// open data*.txt file
-	char *stats_txt = NULL;	// pathname for stats.txt
-	char *results_txt = NULL;	// pathname for results.txt
-	char *data_txt = NULL;	// pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// basebame for a given data*.txt pathname
+	struct NonOverlappingTemplateMatchings_private_stats *stat;	// pointer to statistics of an iteration
+	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
+	FILE *stats = NULL;	// Open stats.txt file
+	FILE *results = NULL;	// Open results.txt file
+	FILE *data = NULL;	// Open data*.txt file
+	char *stats_txt = NULL;	// Pathname for stats.txt
+	char *results_txt = NULL;	// Pathname for results.txt
+	char *data_txt = NULL;	// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
 	bool ok;		// true -> I/O was OK
 	long int nonstat_index;	// starting index into state->nonstat from which to print
 	int snprintf_ret;	// snprintf return value
@@ -963,14 +983,14 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(135, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->resultstxtFlag == false) {
@@ -998,32 +1018,32 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	}
 
 	/*
-	 * open stats.txt file
+	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
-	 * open results.txt file
+	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
-	 * write results.txt and stats.txt files
+	 * Write results.txt and stats.txt files
 	 */
 	nonstat_index = 0;
 	for (i = 0; i < state->stats[test_num]->count; ++i) {
 
 		/*
-		 * locate stat for this interation
+		 * Locate stat for this iteration
 		 */
 		stat = addr_value(state->stats[test_num], struct NonOverlappingTemplateMatchings_private_stats, i);
 
 		/*
-		 * print stat to stats.txt
+		 * Print stat to stats.txt
 		 */
 		errno = 0;	// paranoia
 		ok = NonOverlappingTemplateMatchings_print_stat(stats, state, stat, state->p_val[test_num], nonstat_index);
@@ -1032,7 +1052,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 		}
 
 		/*
-		 * print p_value to results.txt
+		 * Print p_value to results.txt
 		 */
 		for (j = 0; j < stat->template_cnt; ++j, ++nonstat_index) {
 
@@ -1049,7 +1069,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			nonover_stat = addr_value(state->p_val[test_num], struct nonover_stats, nonstat_index);
 
 			/*
-			 * print p_value
+			 * Print p_value
 			 */
 			errno = 0;	// paranoia
 			ok = NonOverlappingTemplateMatchings_print_p_value(results, nonover_stat->p_value);
@@ -1060,7 +1080,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	}
 
 	/*
-	 * flush and close stats.txt, free pathname
+	 * Flush and close stats.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
@@ -1076,7 +1096,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	stats_txt = NULL;
 
 	/*
-	 * flush and close results.txt, free pathname
+	 * Flush and close results.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
@@ -1092,17 +1112,13 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	results_txt = NULL;
 
 	/*
-	 * write data*.txt if we need to partition results
+	 * Write data*.txt for each data file if we need to partition results
 	 */
 	if (state->partitionCount[test_num] > 1) {
-
-		/*
-		 * for each data file
-		 */
 		for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 			/*
-			 * form the data*.txt basename
+			 * Form the data*.txt basename
 			 */
 			errno = 0;	// paranoia
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
@@ -1113,26 +1129,26 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			}
 
 			/*
-			 * form the data*.txt filename
+			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
 			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*
-			 * write this particular data*.txt filename
+			 * Write this particular data*.txt filename
 			 */
 			if (j < state->p_val[test_num]->count) {
 				for (nonstat_index = j; nonstat_index < state->p_val[test_num]->count;
 				     nonstat_index += state->partitionCount[test_num]) {
 
 					/*
-					 * get p_value for an interation belonging to this data*.txt filename
+					 * Get p_value for an iteration belonging to this data*.txt filename
 					 */
 					nonover_stat = addr_value(state->p_val[test_num], struct nonover_stats, nonstat_index);
 
 					/*
-					 * print p_value to results.txt
+					 * Print p_value to results.txt
 					 */
 					errno = 0;	// paranoia
 					ok = NonOverlappingTemplateMatchings_print_p_value(data, nonover_stat->p_value);
@@ -1144,7 +1160,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			}
 
 			/*
-			 * flush and close data*.txt, free pathname
+			 * Flush and close data*.txt, free pathname
 			 */
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
@@ -1163,7 +1179,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	}
 
 	/*
-	 * driver print - set driver state to DRIVER_PRINT
+	 * Set driver state to DRIVER_PRINT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
@@ -1177,25 +1193,25 @@ NonOverlappingTemplateMatchings_print(struct state *state)
  *
  * given:
  *      state           // run state to test under
- *      sampleCount             // number of bitstreams in which we counted p_values
+ *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // uniformanity frequency bins
+ *      freqPerBin              // Uniformity frequency bins
  */
 static void
 NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
 	long int passCount;	// p_values that pass
 	double p_hat;		// 1 - alpha
-	double proportion_threshold_max;	// when passCount is too high
-	double proportion_threshold_min;	// when passCount is too low
-	double chi2;		// sum of chi^2 for each tenth
-	double uniformity;	// uniformitu of frequency bins
-	double expCount;	// sample size divided by frequency bin count
+	double proportion_threshold_max;	// When passCount is too high
+	double proportion_threshold_min;	// When passCount is too low
+	double chi2;		// Sum of chi^2 for each tenth
+	double uniformity;	// Uniformity of frequency bins
+	double expCount;	// Sample size divided by frequency bin count
 	int io_ret;		// I/O return status
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(136, __FUNCTION__, "state arg is NULL");
@@ -1205,7 +1221,7 @@ NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampl
 	}
 
 	/*
-	 * determine the number tests that passed
+	 * Determine the number tests that passed
 	 */
 	if ((sampleCount <= 0) || (sampleCount < toolow)) {
 		passCount = 0;
@@ -1214,69 +1230,69 @@ NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampl
 	}
 
 	/*
-	 * determine proportion threadholds
+	 * Determine proportion thresholds
 	 */
 	p_hat = 1.0 - state->tp.alpha;
 	proportion_threshold_max = (p_hat + 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 	proportion_threshold_min = (p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 
 	/*
-	 * uniformity failure check
+	 * Check uniformity failure
 	 */
 	chi2 = 0.0;
 	expCount = sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		uniformity = 0.0;
 	} else {
-		// sum chi squared of the frequency bins
+		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
-		// uniformity threashold level
+		// Uniformity threshold level
 		uniformity = cephes_igamc((state->tp.uniformity_bins - 1.0) / 2.0, chi2 / 2.0);
 	}
 
 	/*
-	 * output uniformity results in trandtional format to finalAnalysisReport.txt
+	 * Output uniformity results in traditional format to finalAnalysisReport.txt
 	 */
 	for (i = 0; i < state->tp.uniformity_bins; ++i) {
 		fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
 	}
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
 	} else if (uniformity < state->tp.uniformity_level) {
-		// uniformity failure
+		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;
 		dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
 	} else {
-		// uniformity success
+		// Uniformity success
 		fprintf(state->finalRept, " %8.6f   ", uniformity);
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
 	}
 
 	/*
-	 * output proportional results in trandtional format to finalAnalysisReport.txt
+	 * Output proportional results in traditional format to finalAnalysisReport.txt
 	 */
 	if (sampleCount == 0) {
-		// not enough samples for proportional check
+		// Not enough samples for proportional check
 		fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
 		state->proportional_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
 	} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
-		// proportional failure
+		// Proportional failure
 		state->proportional_failure[test_num] = true;
-		fprintf(state->finalRept, "%4ld/%-4ld *  %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
 	} else {
-		// proportional success
+		// Proportional success
 		state->proportional_failure[test_num] = false;
-		fprintf(state->finalRept, "%4ld/%-4ld    %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
 	}
 	errno = 0;		// paranoia
@@ -1284,6 +1300,7 @@ NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampl
 	if (io_ret != 0) {
 		errp(136, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -1294,30 +1311,30 @@ NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampl
  * given:
  *      state           // run state to test under
  *
- * This function is called once to complete the test analysis for all interations.
+ * This function is called once to complete the test analysis for all iterations.
  *
  * NOTE: The initialize and iterate functions must be called before this function is called.
  */
 void
 NonOverlappingTemplateMatchings_metrics(struct state *state)
 {
-	struct nonover_stats *nonover_stat;	// current nonover_stats for a given interation
-	long int sampleCount;	// number of bitstreams in which we will count p_values
+	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
+	long int sampleCount;	// Number of bitstreams in which we will count p_values
 	long int toolow;	// p_values that were below alpha
-	double p_value;		// p_value interation test result(s)
-	long int *freqPerBin;	// uniformanity frequency bins
+	double p_value;		// p_value iteration test result(s)
+	long int *freqPerBin;	// Uniformity frequency bins
 	long int i;
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(137, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -1338,7 +1355,7 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 	}
 
 	/*
-	 * allocate uniformanity frequency bins
+	 * Allocate uniformity frequency bins
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
@@ -1347,12 +1364,12 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 	}
 
 	/*
-	 * print for each partition (or the whole set of p_values if partitionCount is 1)
+	 * Print for each partition (or the whole set of p_values if partitionCount is 1)
 	 */
 	for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 		/*
-		 * zero counters
+		 * Set counters to zero
 		 */
 		toolow = 0;
 		sampleCount = 0;
@@ -1366,37 +1383,37 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
-		 * p_value tally
+		 * Tally p_value
 		 */
 		for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
-			// get the intertion p_value
+			// Get the iteration p_value
 			nonover_stat = addr_value(state->p_val[test_num], struct nonover_stats, i);
 			p_value = nonover_stat->p_value;
 			if (p_value == NON_P_VALUE) {
-				continue;	// the test was not possible for this interation
+				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
-				// random excursion tests only sample > 0 p_values
+				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
 					++sampleCount;
 				} else {
-					// ignore p_value of 0 for random excursion tests
+					// Ignore p_value of 0 for random excursion tests
 					continue;
 				}
-
-				// case: general (non-random excursion) test
-			} else {
-				// all other tests count all p_values
+			}
+			// Case: general (non-random excursion) test
+			else {
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
-			// count the number of p_values below alpha
+			// Count the number of p_values below alpha
 			if (p_value < state->tp.alpha) {
 				++toolow;
 			}
-			// tally the p_value in a uniformity bin
+			// Tally the p_value in a uniformity bin
 			if (p_value >= 1.0) {
 				++freqPerBin[state->tp.uniformity_bins - 1];
 			} else if (p_value >= 0.0) {
@@ -1407,35 +1424,32 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 		}
 
 		/*
-		 * print uniformity and proportional information for a tallied count
+		 * Print uniformity and proportional information for a tallied count
 		 */
 		NonOverlappingTemplateMatchings_metric_print(state, sampleCount, toolow, freqPerBin);
 
 		/*
-		 * track maximum samples
+		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
-	 * free allocated storage
+	 * Free allocated storage
 	 */
 	free(freqPerBin);
 	freqPerBin = NULL;
 
 	/*
-	 * driver uniformity and proportional analysis - set driver state to DRIVER_METRICS
+	 * Set driver state to DRIVER_METRICS
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
@@ -1457,7 +1471,7 @@ void
 NonOverlappingTemplateMatchings_destroy(struct state *state)
 {
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(138, __FUNCTION__, "state arg is NULL");
@@ -1468,7 +1482,7 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 	}
 
 	/*
-	 * free dynamic arrays
+	 * Free dynamic arrays
 	 */
 	if (state->stats[test_num] != NULL) {
 		free_dyn_array(state->stats[test_num]);
@@ -1482,7 +1496,7 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 	}
 
 	/*
-	 * free other test storage
+	 * Free other test storage
 	 */
 	if (state->datatxt_fmt[test_num] != NULL) {
 		free(state->datatxt_fmt[test_num]);
@@ -1492,10 +1506,10 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	if (state->nonovTemp != NULL) {
-		free_dyn_array(state->nonovTemp);
-		free(state->nonovTemp);
-		state->nonovTemp = NULL;
+	if (state->nonovTemplates != NULL) {
+		free_dyn_array(state->nonovTemplates);
+		free(state->nonovTemplates);
+		state->nonovTemplates = NULL;
 	}
 	if (state->nonper_seq != NULL) {
 		free(state->nonper_seq);
@@ -1503,7 +1517,7 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 	}
 
 	/*
-	 * driver state destroyed - set driver state to DRIVER_DESTROY
+	 * Set driver state to DRIVER_DESTROY
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);

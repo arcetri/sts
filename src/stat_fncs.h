@@ -3,12 +3,18 @@
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -23,7 +29,7 @@
 #   define STAT_FNCS_H
 
 /*
- * initialize functions
+ * Initialize functions
  */
 extern void Frequency_init(struct state *state);
 extern void BlockFrequency_init(struct state *state);
@@ -42,7 +48,7 @@ extern void LinearComplexity_init(struct state *state);
 extern void Serial_init(struct state *state);
 
 /*
- * interate functions
+ * iterate functions
  */
 extern void Frequency_iterate(struct state *state);
 extern void BlockFrequency_iterate(struct state *state);
@@ -61,7 +67,7 @@ extern void LinearComplexity_iterate(struct state *state);
 extern void Serial_iterate(struct state *state);
 
 /*
- * print functions
+ * Print functions
  */
 extern void Frequency_print(struct state *state);
 extern void BlockFrequency_print(struct state *state);
@@ -80,7 +86,7 @@ extern void LinearComplexity_print(struct state *state);
 extern void Serial_print(struct state *state);
 
 /*
- * compute metrics functions
+ * Compute metrics functions
  */
 extern void Frequency_metrics(struct state *state);
 extern void BlockFrequency_metrics(struct state *state);

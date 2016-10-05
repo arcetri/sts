@@ -1,14 +1,20 @@
 /*****************************************************************************
-		A P P R O X I M A T E   E N T R O P Y    T E S T
+		A P P R O X I M A T E	E N T R O P Y	 T E S T
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 10 thru 19
 
@@ -33,24 +40,24 @@
 
 
 /*
- * private_stats - stats.txt information for this test
+ * Private stats - stats.txt information for this test
  */
 struct ApproximateEntropy_private_stats {
-	bool success;		// success or failure of interation test
-	double phi[1 + 1];	// entropic surprise both block sizes
-	double apen;		// aproximate entropy
-	double chi_squared;	// chi^2 of test results
+	bool success;		// Success or failure of iteration test
+	double phi[1 + 1];	// Entropic surprise both block sizes
+	double ApEn;		// Approximate entropy
+	double chi_squared;	// Chi^2 of test results
 };
 
 
 /*
- * static constant variable declarations
+ * Static const variables declarations
  */
-static const enum test test_num = TEST_APEN;	// this test number
+static const enum test test_num = TEST_APEN;	// This test number
 
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
 static bool ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct ApproximateEntropy_private_stats *stat,
 					  double p_value);
@@ -59,12 +66,12 @@ static void ApproximateEntropy_metric_print(struct state *state, long int sample
 
 
 /*
- * ApproximateEntropy_init - initalize the Aproximate Entrooy test
+ * ApproximateEntropy_init - initialize the Approximate Entropy test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
@@ -74,14 +81,14 @@ ApproximateEntropy_init(struct state *state)
 	long int m;		// Approximate Entropy Test - block length
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(10, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->cSetup != true) {
@@ -92,9 +99,10 @@ ApproximateEntropy_init(struct state *state)
 		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
+	// TODO Choose m and n such that m < floor(log2 n) - 5.
 
 	/*
-	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 * Create working sub-directory if forming files such as results.txt and stats.txt
 	 */
 	if (state->resultstxtFlag == true) {
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
@@ -102,9 +110,9 @@ ApproximateEntropy_init(struct state *state)
 	}
 
 	/*
-	 * allocate frequency count P array
+	 * Allocate frequency count P array
 	 *
-	 * The P array, an array of long int's, is allocated with length:
+	 * The P array, an array of long ints, is allocated with length:
 	 *
 	 *      powLen = ((long int) 1 << (blockSize + 1)) - 1;
 	 *
@@ -112,7 +120,7 @@ ApproximateEntropy_init(struct state *state)
 	 *
 	 *      (1 << (m+2)) - 1
 	 *
-	 * We ignore the final "- 1" for safety.
+	 * We ignore the final "- 1" for safety. // TODO allocate less space
 	 */
 	m = state->tp.approximateEntropyBlockLength;
 	if ((m + 2) > (BITS_N_LONGINT - 1 - 3)) {	// firewall, -3 is for 8 byte long int
@@ -127,17 +135,15 @@ ApproximateEntropy_init(struct state *state)
 	}
 
 	/*
-	 * allocate dynamic arrays
+	 * Allocate dynamic arrays
 	 */
-	// stats.txt data
-	state->stats[test_num] =
-	    create_dyn_array(sizeof(struct ApproximateEntropy_private_stats), DEFAULT_CHUNK, state->tp.numOfBitStreams, false);
-
-	// results.txt data
-	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK, state->tp.numOfBitStreams, false);
+	state->stats[test_num] = create_dyn_array(sizeof(struct ApproximateEntropy_private_stats),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
+	state->p_val[test_num] = create_dyn_array(sizeof(double),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// results.txt
 
 	/*
-	 * determine format of data*.txt filenames based on state->partitionCount[test_num]
+	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
 	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
@@ -146,7 +152,7 @@ ApproximateEntropy_init(struct state *state)
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
 	/*
-	 * driver initialized - set driver state to DRIVER_INIT
+	 * Set driver state to DRIVER_INIT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
@@ -156,39 +162,39 @@ ApproximateEntropy_init(struct state *state)
 
 
 /*
- * ApproximateEntropy_iterate - interate one bit stream for Aproximate Entrooy test
+ * ApproximateEntropy_iterate - iterate one bit stream for Approximate Entropy test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
 void
 ApproximateEntropy_iterate(struct state *state)
 {
-	struct ApproximateEntropy_private_stats stat;	// stats for this interation
+	struct ApproximateEntropy_private_stats stat;	// Stats for this iteration
 	long int m;		// Approximate Entropy Test - block length
 	long int n;		// Length of a single bit stream
 	long int r;		// 0 ==> first block, 1 ==> second block
-	long int blockSize;	// length of each block
-	long int powLen;	// elements in apen_P array to be used for this block
-	double sum;		// frequency sum for block
-	double p_value;		// p_value interation test result(s)
+	long int blockSize;	// Length of each block
+	long int powLen;	// Elements in apen_P array to be used for this block
+	double sum;		// Frequency sum for block
+	double p_value;		// p_value iteration test result(s)
 	long int index;
 	long int i;
 	long int j;
 	long int k;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(11, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
@@ -207,18 +213,18 @@ ApproximateEntropy_iterate(struct state *state)
 	}
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	m = state->tp.approximateEntropyBlockLength;
 	n = state->tp.n;
 
 	/*
-	 * perform the test for blocksize m (r==0) and m+1 (r==1)
+	 * Perform the test for blocksize m (r==0) and m+1 (r==1)
 	 */
 	for (r = 0, blockSize = m; blockSize <= m + 1; blockSize++, ++r) {
 
 		/*
-		 * take care of the zero block size
+		 * Take care of the zero block size
 		 */
 		if (blockSize == 0) {
 			stat.phi[0] = 0.0;
@@ -226,24 +232,26 @@ ApproximateEntropy_iterate(struct state *state)
 		}
 
 		/*
-		 * initialize P (state->apen_P array)
-		 */
-		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * powLen = (long int) pow(2, blockSize + 1) - 1;
+		 * Initialize P (state->apen_P array)
 		 */
 		powLen = ((long int) 1 << (blockSize + 1)) - 1;
-		// firewall
+
+		/*
+		 * Check preconditions (firewall)
+		 */
 		if (powLen > state->apen_p_len) {
 			err(11, __FUNCTION__, "powLen: %ld is too large, "
 			    "1 << (blockSize:%ld + 1) - 1 > state->apen_p_len: %ld ", powLen, blockSize, state->apen_p_len);
 		}
-		// zeroize P (state->apen_P array)
+
+		/*
+		 * Zeroize P (state->apen_P array)
+		 */
 		memset(state->apen_P, 0, powLen * sizeof(state->apen_P[0]));
 
 		/*
-		 * compute frequency
+		 * Step 1 (augmenting the sequence) is not necessary if we use the modulo operation
+		 * Step 2: compute the frequency // TODO improve this algorithm as in serial test
 		 */
 		for (i = 0; i < n; i++) {
 			k = 1;
@@ -253,33 +261,41 @@ ApproximateEntropy_iterate(struct state *state)
 					k++;
 				}
 			}
-			// firewall
+
+			/*
+			 * Check preconditions (firewall)
+			 */
 			if (k <= 0) {
 				err(11, __FUNCTION__, "k: %ld <= 0", k);
 			} else if (k > powLen) {
 				err(11, __FUNCTION__, "k: %ld > powLen: %ld", k, powLen);
 			}
-			// count this frequency
+
+			/*
+			 * Count this frequency
+			 */
 			state->apen_P[k - 1]++;
 		}
-		sum = 0.0;
+
 		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * index = (int) pow(2, blockSize) - 1;
-		 * for (i = 0; i < (int) pow(2, blockSize); i++) {
-		 * ...
-		 * }
+		 * Step 3 and 4: compute the terms of the phi formula, and then phi
 		 */
+		sum = 0.0;
 		index = ((long int) 1 << blockSize) - 1;
 		for (i = 0; i < ((long int) 1 << blockSize); i++) {
-			// firewall
+
+			/*
+			 * Check preconditions (firewall)
+			 */
 			if (index < 0) {
 				err(11, __FUNCTION__, "index: %ld < 0", index);
 			} else if (index >= powLen) {
 				err(11, __FUNCTION__, "index: %ld >= powLen: %ld", index, powLen);
 			}
-			// sum frequency
+
+			/*
+			 * Sum frequency
+			 */
 			if (state->apen_P[index] > 0) {
 				sum += state->apen_P[index] * log(state->apen_P[index] / (double) n);
 			}
@@ -289,57 +305,52 @@ ApproximateEntropy_iterate(struct state *state)
 	}
 
 	/*
-	 * analyze results and compute p_value
+	 * Analyze results and compute p_value
 	 */
-	stat.apen = stat.phi[0] - stat.phi[1];
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * stat.chi_squared = 2.0 * seqLength * (log(2) - stat.apen);
-	 * p_value = cephes_igamc(pow(2, m - 1), stat.chi_squared / 2.0);
-	 */
-	stat.chi_squared = 2.0 * n * (state->c.log2 - stat.apen);
+	stat.ApEn = stat.phi[0] - stat.phi[1];
+	stat.chi_squared = 2.0 * n * (state->c.log2 - stat.ApEn);
 	p_value = cephes_igamc((double) ((long int) 1 << (m - 1)), stat.chi_squared / 2.0);
 
 	/*
-	 * record testable test success or failure
+	 * Record testable test success or failure
 	 */
-	state->count[test_num]++;	// count this test
-	state->valid[test_num]++;	// count this valid test
+	state->count[test_num]++;	// Count this test
+	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
-		state->failure[test_num]++;	// bogus p_value < 0.0 treated as a failure
+		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
-		state->failure[test_num]++;	// bogus p_value > 1.0 treated as a failure
+		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
-		state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-		state->failure[test_num]++;	// valid p_value but too low is a failure
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->failure[test_num]++;	// Valid p_value but too low is a failure
 		stat.success = false;	// FAILURE
 	} else {
-		state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-		state->success[test_num]++;	// valid p_value not too low is a success
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->success[test_num]++;	// Valid p_value not too low is a success
 		stat.success = true;	// SUCCESS
 	}
 
 	/*
-	 * results.txt and stats.txt accounting
+	 * Record values computed during this iteration
 	 */
 	append_value(state->stats[test_num], &stat);
 	append_value(state->p_val[test_num], &p_value);
 
 	/*
-	 * driver iterating - set driver state to DRIVER_ITERATE
+	 * Set driver state to DRIVER_ITERATE
 	 */
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -351,7 +362,7 @@ ApproximateEntropy_iterate(struct state *state)
  *      stream          // open writable FILE stream
  *      state           // run state to test under
  *      stat            // struct ApproximateEntropy_private_stats for format and print
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -363,7 +374,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(12, __FUNCTION__, "stream arg is NULL");
@@ -383,7 +394,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	}
 
 	/*
-	 * print stat to a file
+	 * Print stat to a file
 	 */
 	if (state->legacy_output == true) {
 		io_ret = fprintf(stream, "\t\t\tAPPROXIMATE ENTROPY TEST\n");
@@ -408,7 +419,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) m (block length)    = %ld\n", state->tp.approximateEntropyBlockLength);
+	io_ret = fprintf(stream, "\t\t(a) m (block length)	  = %ld\n", state->tp.approximateEntropyBlockLength);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -416,7 +427,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) Chi^2               = %f\n", stat->chi_squared);
+	io_ret = fprintf(stream, "\t\t(c) Chi^2		  = %f\n", stat->chi_squared);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -428,12 +439,12 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f) ApEn                = %f\n", stat->apen);
+	io_ret = fprintf(stream, "\t\t(f) ApEn		  = %f\n", stat->ApEn);
 	if (io_ret <= 0) {
 		return false;
 	}
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t(g) Log(2)              = %f\n", state->c.log2);
+		io_ret = fprintf(stream, "\t\t(g) Log(2)	      = %f\n", state->c.log2);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -442,15 +453,6 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * if (m > (long int) (log(seqLength) / log(2) - 5)) {
-	 * fprintf(stats[test_num], "\t\tNote: The blockSize = %ld exceeds recommended value of %ld\n", m,
-	 * MAX(1, (long int) (log(n) / log(2) - 5)));
-	 * ...
-	 * }
-	 */
 	if (state->tp.approximateEntropyBlockLength > (long int) (state->c.logn / state->c.log2 - 5.0)) {
 		io_ret = fprintf(stream, "\t\tNote: The blockSize = %ld exceeds recommended value of %ld\n",
 				 state->tp.approximateEntropyBlockLength, MAX(1, (long int) (state->c.logn / state->c.log2 - 5.0)));
@@ -484,7 +486,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
@@ -496,7 +498,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
  * given:
  *      stream          // open writable FILE stream
  *      stat            // struct ApproximateEntropy_private_stats for format and print
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -508,14 +510,14 @@ ApproximateEntropy_print_p_value(FILE * stream, double p_value)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(13, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
-	 * print p_value to a file
+	 * Print p_value to a file
 	 */
 	if (p_value == NON_P_VALUE) {
 		io_ret = fprintf(stream, "__INVALID__\n");
@@ -530,14 +532,14 @@ ApproximateEntropy_print_p_value(FILE * stream, double p_value)
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
 
 
 /*
- * ApproximateEntropy_print - print to results.txt, data*.txt, stats.txt for all interations
+ * ApproximateEntropy_print - print to results.txt, data*.txt, stats.txt for all iterations
  *
  * given:
  *      state           // run state to test under
@@ -550,15 +552,15 @@ ApproximateEntropy_print_p_value(FILE * stream, double p_value)
 void
 ApproximateEntropy_print(struct state *state)
 {
-	struct ApproximateEntropy_private_stats *stat;	// pointer to statistics of an interation
-	double p_value;		// p_value interation test result(s)
-	FILE *stats = NULL;	// open stats.txt file
-	FILE *results = NULL;	// open stats.txt file
-	FILE *data = NULL;	// open data*.txt file
-	char *stats_txt = NULL;	// pathname for stats.txt
-	char *results_txt = NULL;	// pathname for results.txt
-	char *data_txt = NULL;	// pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// basebame for a given data*.txt pathname
+	struct ApproximateEntropy_private_stats *stat;	// pointer to statistics of an iteration
+	double p_value;		// p_value iteration test result(s)
+	FILE *stats = NULL;	// Open stats.txt file
+	FILE *results = NULL;	// Open results.txt file
+	FILE *data = NULL;	// Open data*.txt file
+	char *stats_txt = NULL;	// Pathname for stats.txt
+	char *results_txt = NULL;	// Pathname for results.txt
+	char *data_txt = NULL;	// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
 	bool ok;		// true -> I/O was OK
 	int snprintf_ret;	// snprintf return value
 	int io_ret;		// I/O return status
@@ -566,14 +568,14 @@ ApproximateEntropy_print(struct state *state)
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(14, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->resultstxtFlag == false) {
@@ -601,36 +603,36 @@ ApproximateEntropy_print(struct state *state)
 	}
 
 	/*
-	 * open stats.txt file
+	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
-	 * open results.txt file
+	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
-	 * write results.txt and stats.txt files
+	 * Write results.txt and stats.txt files
 	 */
 	for (i = 0; i < state->stats[test_num]->count; ++i) {
 
 		/*
-		 * locate stat for this interation
+		 * Locate stat for this iteration
 		 */
 		stat = addr_value(state->stats[test_num], struct ApproximateEntropy_private_stats, i);
 
 		/*
-		 * get p_value for this interation
+		 * Get p_value for this iteration
 		 */
 		p_value = get_value(state->p_val[test_num], double, i);
 
 		/*
-		 * print stat to stats.txt
+		 * Print stat to stats.txt
 		 */
 		errno = 0;	// paranoia
 		ok = ApproximateEntropy_print_stat(stats, state, stat, p_value);
@@ -639,7 +641,7 @@ ApproximateEntropy_print(struct state *state)
 		}
 
 		/*
-		 * print p_value to results.txt
+		 * Print p_value to results.txt
 		 */
 		errno = 0;	// paranoia
 		ok = ApproximateEntropy_print_p_value(results, p_value);
@@ -649,7 +651,7 @@ ApproximateEntropy_print(struct state *state)
 	}
 
 	/*
-	 * flush and close stats.txt, free pathname
+	 * Flush and close stats.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
@@ -665,7 +667,7 @@ ApproximateEntropy_print(struct state *state)
 	stats_txt = NULL;
 
 	/*
-	 * flush and close results.txt, free pathname
+	 * Flush and close results.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
@@ -681,46 +683,42 @@ ApproximateEntropy_print(struct state *state)
 	results_txt = NULL;
 
 	/*
-	 * write data*.txt if we need to partition results
+	 * Write data*.txt for each data file if we need to partition results
 	 */
 	if (state->partitionCount[test_num] > 1) {
-
-		/*
-		 * for each data file
-		 */
 		for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 			/*
-			 * form the data*.txt basename
+			 * Form the data*.txt basename
 			 */
 			errno = 0;	// paranoia
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(14, __FUNCTION__,
-				     "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ, j + 1, snprintf_ret);
+				errp(14, __FUNCTION__, "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ,
+				     j + 1, snprintf_ret);
 			}
 
 			/*
-			 * form the data*.txt filename
+			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
 			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*
-			 * write this particular data*.txt filename
+			 * Write this particular data*.txt filename
 			 */
 			if (j < state->p_val[test_num]->count) {
 				for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
 					/*
-					 * get p_value for an interation belonging to this data*.txt filename
+					 * Get p_value for an iteration belonging to this data*.txt filename
 					 */
 					p_value = get_value(state->p_val[test_num], double, i);
 
 					/*
-					 * print p_value to results.txt
+					 * Print p_value to results.txt
 					 */
 					errno = 0;	// paranoia
 					ok = ApproximateEntropy_print_p_value(data, p_value);
@@ -732,7 +730,7 @@ ApproximateEntropy_print(struct state *state)
 			}
 
 			/*
-			 * flush and close data*.txt, free pathname
+			 * Flush and close data*.txt, free pathname
 			 */
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
@@ -751,7 +749,7 @@ ApproximateEntropy_print(struct state *state)
 	}
 
 	/*
-	 * driver print - set driver state to DRIVER_PRINT
+	 * Set driver state to DRIVER_PRINT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
@@ -764,26 +762,26 @@ ApproximateEntropy_print(struct state *state)
  * ApproximateEntropy_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
+ *      state                   // run state to test under
  *      sampleCount             // number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // uniformanity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
 	long int passCount;	// p_values that pass
 	double p_hat;		// 1 - alpha
-	double proportion_threshold_max;	// when passCount is too high
-	double proportion_threshold_min;	// when passCount is too low
-	double chi2;		// sum of chi^2 for each tenth
-	double uniformity;	// uniformitu of frequency bins
-	double expCount;	// sample size divided by frequency bin count
+	double proportion_threshold_max;	// When passCount is too high
+	double proportion_threshold_min;	// When passCount is too low
+	double chi2;		// Sum of chi^2 for each tenth
+	double uniformity;	// Uniformity of frequency bins
+	double expCount;	// Sample size divided by frequency bin count
 	int io_ret;		// I/O return status
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(15, __FUNCTION__, "state arg is NULL");
@@ -793,7 +791,7 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	}
 
 	/*
-	 * determine the number tests that passed
+	 * Determine the number tests that passed
 	 */
 	if ((sampleCount <= 0) || (sampleCount < toolow)) {
 		passCount = 0;
@@ -802,74 +800,67 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	}
 
 	/*
-	 * determine proportion threadholds
+	 * Determine proportion thresholds
 	 */
 	p_hat = 1.0 - state->tp.alpha;
 	proportion_threshold_max = (p_hat + 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 	proportion_threshold_min = (p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 
 	/*
-	 * uniformity failure check
+	 * Check uniformity failure
 	 */
 	chi2 = 0.0;
 	expCount = sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
-		uniformity = 0.0;
+		uniformity = 0.0;	// Not enough samples for uniformity check
 	} else {
-		// sum chi squared of the frequency bins
+		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
-		// uniformity threashold level
-		uniformity = cephes_igamc((state->tp.uniformity_bins - 1.0) / 2.0, chi2 / 2.0);
+		uniformity = cephes_igamc((state->tp.uniformity_bins - 1.0) / 2.0, chi2 / 2.0);	// Uniformity threshold level
 	}
 
 	/*
-	 * output uniformity results in trandtional format to finalAnalysisReport.txt
+	 * Output uniformity results in traditional format to finalAnalysisReport.txt
 	 */
 	for (i = 0; i < state->tp.uniformity_bins; ++i) {
 		fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
 	}
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
 	} else if (uniformity < state->tp.uniformity_level) {
-		// uniformity failure
+		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;
 		dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
 	} else {
-		// uniformity success
+		// Uniformity success
 		fprintf(state->finalRept, " %8.6f   ", uniformity);
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
 	}
 
 	/*
-	 * output proportional results in trandtional format to finalAnalysisReport.txt
+	 * Output proportional results in traditional format to finalAnalysisReport.txt
 	 */
 	if (sampleCount == 0) {
-		// not enough samples for proportional check
+		// Not enough samples for proportional check
 		fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
 		state->proportional_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
 	} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
-		// proportional failure
+		// Proportional failure
 		state->proportional_failure[test_num] = true;
-		fprintf(state->finalRept, "%4ld/%-4ld *  %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
 	} else {
-		// proportional success
+		// Proportional success
 		state->proportional_failure[test_num] = false;
-		fprintf(state->finalRept, "%4ld/%-4ld    %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
 	}
 	errno = 0;		// paranoia
@@ -877,6 +868,7 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	if (io_ret != 0) {
 		errp(15, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -887,29 +879,29 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
  * given:
  *      state           // run state to test under
  *
- * This function is called once to complete the test analysis for all interations.
+ * This function is called once to complete the test analysis for all iterations.
  *
  * NOTE: The initialize and iterate functions must be called before this function is called.
  */
 void
 ApproximateEntropy_metrics(struct state *state)
 {
-	long int sampleCount;	// number of bitstreams in which we will count p_values
+	long int sampleCount;	// Number of bitstreams in which we will count p_values
 	long int toolow;	// p_values that were below alpha
-	double p_value;		// p_value interation test result(s)
-	long int *freqPerBin;	// uniformanity frequency bins
+	double p_value;		// p_value iteration test result(s)
+	long int *freqPerBin;	// Uniformity frequency bins
 	long int i;
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(16, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -929,7 +921,7 @@ ApproximateEntropy_metrics(struct state *state)
 	}
 
 	/*
-	 * allocate uniformanity frequency bins
+	 * Allocate uniformity frequency bins
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
@@ -938,55 +930,48 @@ ApproximateEntropy_metrics(struct state *state)
 	}
 
 	/*
-	 * print for each partition (or the whole set of p_values if partitionCount is 1)
+	 * Print for each partition (or the whole set of p_values if partitionCount is 1)
 	 */
 	for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 		/*
-		 * zero counters
+		 * Set counters to zero
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
-		 * p_value tally
+		 * Tally p_value
 		 */
 		for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
-			// get the intertion p_value
+			// Get the iteration p_value
 			p_value = get_value(state->p_val[test_num], double, i);
 			if (p_value == NON_P_VALUE) {
-				continue;	// the test was not possible for this interation
+				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
-				// random excursion tests only sample > 0 p_values
+				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
 					++sampleCount;
 				} else {
-					// ignore p_value of 0 for random excursion tests
+					// Ignore p_value of 0 for random excursion tests
 					continue;
 				}
-
-				// case: general (non-random excursion) test
-			} else {
-				// all other tests count all p_values
+			}
+			// Case: general (non-random excursion) test
+			else {
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
-			// count the number of p_values below alpha
+			// Count the number of p_values below alpha
 			if (p_value < state->tp.alpha) {
 				++toolow;
 			}
-			// tally the p_value in a uniformity bin
+			// Tally the p_value in a uniformity bin
 			if (p_value >= 1.0) {
 				++freqPerBin[state->tp.uniformity_bins - 1];
 			} else if (p_value >= 0.0) {
@@ -997,35 +982,32 @@ ApproximateEntropy_metrics(struct state *state)
 		}
 
 		/*
-		 * print uniformity and proportional information for a tallied count
+		 * Print uniformity and proportional information for a tallied count
 		 */
 		ApproximateEntropy_metric_print(state, sampleCount, toolow, freqPerBin);
 
 		/*
-		 * track maximum samples
+		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
-	 * free allocated storage
+	 * Free allocated storage
 	 */
 	free(freqPerBin);
 	freqPerBin = NULL;
 
 	/*
-	 * driver uniformity and proportional analysis - set driver state to DRIVER_METRICS
+	 * Set driver state to DRIVER_METRICS
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
@@ -1047,7 +1029,7 @@ void
 ApproximateEntropy_destroy(struct state *state)
 {
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(17, __FUNCTION__, "state arg is NULL");
@@ -1058,7 +1040,7 @@ ApproximateEntropy_destroy(struct state *state)
 	}
 
 	/*
-	 * free dynamic arrays
+	 * Free dynamic arrays
 	 */
 	if (state->stats[test_num] != NULL) {
 		free_dyn_array(state->stats[test_num]);
@@ -1072,7 +1054,7 @@ ApproximateEntropy_destroy(struct state *state)
 	}
 
 	/*
-	 * free other test storage
+	 * Free other test storage
 	 */
 	if (state->datatxt_fmt[test_num] != NULL) {
 		free(state->datatxt_fmt[test_num]);
@@ -1088,7 +1070,7 @@ ApproximateEntropy_destroy(struct state *state)
 	}
 
 	/*
-	 * driver state destroyed - set driver state to DRIVER_DESTROY
+	 * Set driver state to DRIVER_DESTROY
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);

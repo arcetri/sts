@@ -1,14 +1,20 @@
 /*****************************************************************************
-	    R A N D O M   E X C U R S I O N S   V A R I A N T   T E S T
+	    R A N D O M	  E X C U R S I O N S	V A R I A N T	T E S T
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 160 thru 169
 
@@ -33,24 +40,24 @@
 
 
 /*
- * private_stats - stats.txt information for this test
+ * Private stats - stats.txt information for this test
  */
 struct RandomExcursionsVariant_private_stats {
-	bool excursion_success[EXCURSTION_VAR_STATES];	// success or failure of interation test for an excursion state
-	long int J;		// number of zero crossings (cycles) for this interation
-	long int counter[EXCURSTION_VAR_STATES];	// times when partial sun matches the excursion state
-	bool test_possible;	// true --> test is possible for this interation
+	bool excursion_success[EXCURSION_VAR_STATES];	// Success or failure of iteration test for an excursion state
+	long int J;		// Number of zero crossings (cycles) for this iteration
+	long int counter[EXCURSION_VAR_STATES];	// times when partial sun matches the excursion state
+	bool test_possible;	// true --> test is possible for this iteration
 };
 
 
 /*
- * static constant variable declarations
+ * Static const variables declarations
  */
-static const enum test test_num = TEST_RND_EXCURSION_VAR;	// this test number
+static const enum test test_num = TEST_RND_EXCURSION_VAR;	// This test number
 
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
 static bool RandomExcursionsVariant_print_stat(FILE * stream, struct state *state,
 					       struct RandomExcursionsVariant_private_stats *stat, long int iteration);
@@ -61,12 +68,12 @@ static void RandomExcursionsVariant_metric_print(struct state *state, long int s
 
 
 /*
- * RandomExcursionsVariant_init - initalize the Random Excursions Variant test
+ * RandomExcursionsVariant_init - initialize the Random Excursions Variant test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
@@ -76,14 +83,14 @@ RandomExcursionsVariant_init(struct state *state)
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(160, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->cSetup != true) {
@@ -94,9 +101,10 @@ RandomExcursionsVariant_init(struct state *state)
 		err(160, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
+	// TODO n >= 10^6
 
 	/*
-	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 * Create working sub-directory if forming files such as results.txt and stats.txt
 	 */
 	if (state->resultstxtFlag == true) {
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
@@ -104,20 +112,20 @@ RandomExcursionsVariant_init(struct state *state)
 	}
 
 	/*
-	 * allocate and initialize excursion states
+	 * Allocate and initialize excursion states
 	 */
-	state->excursion_var_stateX = malloc(EXCURSTION_VAR_STATES * sizeof(state->excursion_var_stateX[0]));
+	state->excursion_var_stateX = malloc(EXCURSION_VAR_STATES * sizeof(state->excursion_var_stateX[0]));
 	if (state->excursion_var_stateX == NULL) {
 		errp(160, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->excursion_var_stateX",
-		     (long int) EXCURSTION_VAR_STATES, sizeof(long int));
+		     (long int) EXCURSION_VAR_STATES, sizeof(long int));
 	}
 	for (i = 1; i <= MAX_EXCURSION_VAR; ++i) {
 		state->excursion_var_stateX[i - 1] = -MAX_EXCURSION_VAR + i - 1;
-		state->excursion_var_stateX[EXCURSTION_VAR_STATES - MAX_EXCURSION_VAR + i - 1] = i;
+		state->excursion_var_stateX[EXCURSION_VAR_STATES - MAX_EXCURSION_VAR + i - 1] = i;
 	}
 
 	/*
-	 * allocate partial sums working array
+	 * Allocate partial sums working array
 	 */
 	state->ex_var_partial_sums = malloc(state->tp.n * sizeof(state->ex_var_partial_sums[0]));
 	if (state->ex_var_partial_sums == NULL) {
@@ -126,18 +134,15 @@ RandomExcursionsVariant_init(struct state *state)
 	}
 
 	/*
-	 * allocate dynamic arrays
+	 * Allocate dynamic arrays
 	 */
-	// stats.txt data
-	state->stats[test_num] =
-	    create_dyn_array(sizeof(struct RandomExcursionsVariant_private_stats), DEFAULT_CHUNK, state->tp.numOfBitStreams, false);
-
-	// results.txt data
+	state->stats[test_num] = create_dyn_array(sizeof(struct RandomExcursionsVariant_private_stats),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
 	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK,
-						  EXCURSTION_VAR_STATES * state->tp.numOfBitStreams, false);
+	                                          EXCURSION_VAR_STATES * state->tp.numOfBitStreams, false);	// results.txt
 
 	/*
-	 * determine format of data*.txt filenames based on state->partitionCount[test_num]
+	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
 	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
@@ -146,7 +151,7 @@ RandomExcursionsVariant_init(struct state *state)
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
 	/*
-	 * driver initialized - set driver state to DRIVER_INIT
+	 * Set driver state to DRIVER_INIT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
@@ -156,33 +161,33 @@ RandomExcursionsVariant_init(struct state *state)
 
 
 /*
- * RandomExcursionsVariant_iterate - interate one bit stream for Random Excursions Variant test
+ * RandomExcursionsVariant_iterate - iterate one bit stream for Random Excursions Variant test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
 void
 RandomExcursionsVariant_iterate(struct state *state)
 {
-	struct RandomExcursionsVariant_private_stats stat;	// stats for this interation
+	struct RandomExcursionsVariant_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
 	long int *S_k;		// partial sums working array
-	double p_value;		// p_value interation test result(s)
+	double p_value;		// p_value iteration test result(s)
 	long int p;
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(161, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
@@ -204,15 +209,15 @@ RandomExcursionsVariant_iterate(struct state *state)
 	}
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	S_k = state->ex_var_partial_sums;
 	n = state->tp.n;
 
 	/*
-	 * setup excursion state machine for this interation
+	 * setup excursion state machine for this iteration
 	 *
-	 * Count the number of zero crossings for this interation
+	 * Count the number of zero crossings for this iteration
 	 */
 	stat.J = 0;
 	S_k[0] = 2 * (long int) state->epsilon[0] - 1;
@@ -222,32 +227,33 @@ RandomExcursionsVariant_iterate(struct state *state)
 			stat.J++;
 		}
 	}
+
 	if (S_k[n - 1] != 0) {
 		stat.J++;
 	}
 
 	/*
-	 * determine if we still can test
+	 * Determine if we still can test
 	 */
 	stat.test_possible = (stat.J < state->c.excursion_constraint) ? false : true;
 
 	/*
-	 * perform and record the test if it is possible to test
+	 * Perform and record the test if it is possible to test
 	 */
 	if (stat.test_possible == true) {
 
 		/*
 		 * NOTE: Mathematical expression code rewrite, old code commented out below:
 		 *
-		 * for (p = 0; p <= EXCURSTION_VAR_STATES-1; p++) {
+		 * for (p = 0; p <= EXCURSION_VAR_STATES-1; p++) {
 		 * x = stateX[p];
 		 * ...
 		 * }
 		 */
-		for (p = 0; p < EXCURSTION_VAR_STATES; p++) {
+		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
 
 			/*
-			 * count times when the partial sum (S_k[i] matches the excursion state state->excursion_var_stateX[p]
+			 * Count times when the partial sum S_k[i] matches the excursion state state->excursion_var_stateX[p]
 			 */
 			stat.counter[p] = 0;
 			for (i = 0; i < n; i++) {
@@ -264,27 +270,27 @@ RandomExcursionsVariant_iterate(struct state *state)
 				       (sqrt(2.0 * stat.J * (4.0 * labs(state->excursion_var_stateX[p]) - 2.0))));
 
 			/*
-			 * record testable test success or failure
+			 * Record testable test success or failure
 			 */
-			state->count[test_num]++;	// count this test
-			state->valid[test_num]++;	// count this valid test
+			state->count[test_num]++;	// Count this test
+			state->valid[test_num]++;	// Count this valid test
 			if (isNegative(p_value)) {
-				state->failure[test_num]++;	// bogus p_value < 0.0 treated as a failure
+				state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 				stat.excursion_success[p] = false;	// FAILURE
-				warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (isGreaterThanOne(p_value)) {
-				state->failure[test_num]++;	// bogus p_value > 1.0 treated as a failure
+				state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 				stat.excursion_success[p] = false;	// FAILURE
-				warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (p_value < state->tp.alpha) {
-				state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-				state->failure[test_num]++;	// valid p_value but too low is a failure
+				state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+				state->failure[test_num]++;	// Valid p_value but too low is a failure
 				stat.excursion_success[p] = false;	// FAILURE
 			} else {
-				state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-				state->success[test_num]++;	// valid p_value not too low is a success
+				state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+				state->success[test_num]++;	// Valid p_value not too low is a success
 				stat.excursion_success[p] = true;	// SUCCESS
 			}
 
@@ -304,27 +310,29 @@ RandomExcursionsVariant_iterate(struct state *state)
 		 */
 	} else {
 
-		// count this test, which happens to be invalid
+		/*
+		 * Count this test, which happens to be invalid
+		 */
 		state->count[test_num]++;
 
 		/*
 		 * results.txt accounting
 		 */
 		p_value = NON_P_VALUE;
-		for (p = 0; p < EXCURSTION_VAR_STATES; p++) {
+		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
 			append_value(state->p_val[test_num], &p_value);
 		}
 
 		/*
 		 * stats.txt accounting
 		 */
-		for (p = 0; p < EXCURSTION_VAR_STATES; p++) {
+		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
 			stat.excursion_success[p] = false;	// FAILURE
 		}
 		/*
 		 * NOTE: Logical code rewrite, old code commented out below:
 		 *
-		 * for (i = 0; i < EXCURSTION_VAR_STATES; i++) {
+		 * for (i = 0; i < EXCURSION_VAR_STATES; i++) {
 		 *      stat.counter[i] = 0;
 		 * }
 		 */
@@ -333,13 +341,14 @@ RandomExcursionsVariant_iterate(struct state *state)
 	}
 
 	/*
-	 * driver iterating - set driver state to DRIVER_ITERATE
+	 * Set driver state to DRIVER_ITERATE
 	 */
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -351,13 +360,13 @@ RandomExcursionsVariant_iterate(struct state *state)
  *      stream          // open writable FILE stream
  *      state           // run state to test under
  *      stat            // struct RandomExcursionsVariant_private_stats for format and print
- *      iteration       // current intertion number being printed
+ *      iteration       // current iteration number being printed
  *
  * returns:
  *      true --> no errors
  *      false --> an I/O error occurred
  *
- * Unlike most *_print_stat() functions, the EXCURSTION_VAR_STATES number of p_values
+ * Unlike most *_print_stat() functions, the EXCURSION_VAR_STATES number of p_values
  * will be printed by repeated calls to RandomExcursionsVariant_print_stat2()
  * if the test was possible.
  */
@@ -368,7 +377,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(162, __FUNCTION__, "stream arg is NULL");
@@ -385,7 +394,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 	}
 
 	/*
-	 * print stat to a file
+	 * Print stat to a file
 	 */
 	if (state->legacy_output == true) {
 		io_ret = fprintf(stream, "\t\t\tRANDOM EXCURSIONS VARIANT TEST\n");
@@ -450,7 +459,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 			/*
 			 * note which cycle is not applicable
 			 */
-			io_ret = fprintf(stream, "\t\tInteration %ld test not applicable\n", iteration);
+			io_ret = fprintf(stream, "\t\titeration %ld test not applicable\n", iteration);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -463,27 +472,27 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
 
 
 /*
- * RandomExcursionsVariant_print_stat2 - print a excursion info for a possibe test
+ * RandomExcursionsVariant_print_stat2 - print a excursion info for a possible test
  *
  * given:
  *      stream          // open writable FILE stream
  *      state           // run state to test under
  *      stat            // struct RandomExcursionsVariant_private_stats for format and print
- *      p               // excursion number to print [0,EXCURSTION_VAR_STATES)
- *      p_value         // p_value interation test result(s)
+ *      p               // excursion number to print [0,EXCURSION_VAR_STATES)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
  *      false --> an I/O error occurred
  *
- * Unlike most *_print_stat() functions, the EXCURSTION_VAR_STATES number of p_values
+ * Unlike most *_print_stat() functions, the EXCURSION_VAR_STATES number of p_values
  * will be printed by repeated calls to RandomExcursionsVariant_print_stat2()
  * with differet excursion numbers.
  *
@@ -500,7 +509,7 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	// need to cal this function with stat.test_possible == true
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(163, __FUNCTION__, "stream arg is NULL");
@@ -517,8 +526,8 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	if (p < 0) {
 		err(163, __FUNCTION__, "p arg: %ld must be > 0", p);
 	}
-	if (p >= EXCURSTION_VAR_STATES) {
-		err(163, __FUNCTION__, "p arg: %ld must be < %d", p, EXCURSTION_VAR_STATES);
+	if (p >= EXCURSION_VAR_STATES) {
+		err(163, __FUNCTION__, "p arg: %ld must be < %d", p, EXCURSION_VAR_STATES);
 	}
 
 	/*
@@ -532,7 +541,7 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	}
 
 	/*
-	 * print stat to a file
+	 * Print stat to a file
 	 */
 	if (stat->excursion_success[p] == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\t");
@@ -561,13 +570,13 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 		}
 	} else {
 		if (p_value == NON_P_VALUE) {
-			io_ret = fprintf(stream, "x = %2ld  visits = %4ld  p_value = __INVALID__\n",
+			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = __INVALID__\n",
 					 state->excursion_var_stateX[p], stat->counter[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
-			io_ret = fprintf(stream, "x = %2ld  visits = %4ld  p_value = %f\n",
+			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = %f\n",
 					 state->excursion_var_stateX[p], stat->counter[p], p_value);
 			if (io_ret <= 0) {
 				return false;
@@ -575,7 +584,7 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 		}
 	}
 	// extra newline on the last excursion state
-	if (p >= EXCURSTION_VAR_STATES - 1) {
+	if (p >= EXCURSION_VAR_STATES - 1) {
 		io_ret = fputc('\n', stream);
 		if (io_ret == EOF) {
 			return false;
@@ -591,7 +600,7 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
  * given:
  *      stream          // open writable FILE stream
  *      stat            // struct RandomExcursionsVariant_private_stats for format and print
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -603,14 +612,14 @@ RandomExcursionsVariant_print_p_value(FILE * stream, double p_value)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(164, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
-	 * print p_value to a file
+	 * Print p_value to a file
 	 */
 	if (p_value == NON_P_VALUE) {
 		io_ret = fprintf(stream, "__INVALID__\n");
@@ -625,14 +634,14 @@ RandomExcursionsVariant_print_p_value(FILE * stream, double p_value)
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
 
 
 /*
- * RandomExcursionsVariant_print - print to results.txt, data*.txt, stats.txt for all interations
+ * RandomExcursionsVariant_print - print to results.txt, data*.txt, stats.txt for all iterations
  *
  * given:
  *      state           // run state to test under
@@ -645,15 +654,15 @@ RandomExcursionsVariant_print_p_value(FILE * stream, double p_value)
 void
 RandomExcursionsVariant_print(struct state *state)
 {
-	struct RandomExcursionsVariant_private_stats *stat;	// pointer to statistics of an interation
-	double p_value;		// p_value interation test result(s)
-	FILE *stats = NULL;	// open stats.txt file
-	FILE *results = NULL;	// open stats.txt file
-	FILE *data = NULL;	// open data*.txt file
-	char *stats_txt = NULL;	// pathname for stats.txt
-	char *results_txt = NULL;	// pathname for results.txt
-	char *data_txt = NULL;	// pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// basebame for a given data*.txt pathname
+	struct RandomExcursionsVariant_private_stats *stat;	// pointer to statistics of an iteration
+	double p_value;		// p_value iteration test result(s)
+	FILE *stats = NULL;	// Open stats.txt file
+	FILE *results = NULL;	// Open results.txt file
+	FILE *data = NULL;	// Open data*.txt file
+	char *stats_txt = NULL;	// Pathname for stats.txt
+	char *results_txt = NULL;	// Pathname for results.txt
+	char *data_txt = NULL;	// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
 	bool ok;		// true -> I/O was OK
 	int snprintf_ret;	// snprintf return value
 	int io_ret;		// I/O return status
@@ -662,14 +671,14 @@ RandomExcursionsVariant_print(struct state *state)
 	long int p;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(165, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->resultstxtFlag == false) {
@@ -697,31 +706,31 @@ RandomExcursionsVariant_print(struct state *state)
 	}
 
 	/*
-	 * open stats.txt file
+	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
-	 * open results.txt file
+	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
-	 * write results.txt and stats.txt files
+	 * Write results.txt and stats.txt files
 	 */
-	for (i = 0, j = 0; i < state->stats[test_num]->count; ++i, j += EXCURSTION_VAR_STATES) {
+	for (i = 0, j = 0; i < state->stats[test_num]->count; ++i, j += EXCURSION_VAR_STATES) {
 
 		/*
-		 * locate stat for this interation
+		 * Locate stat for this iteration
 		 */
 		stat = addr_value(state->stats[test_num], struct RandomExcursionsVariant_private_stats, i);
 
 		/*
-		 * print stat to stats.txt
+		 * Print stat to stats.txt
 		 */
 		errno = 0;	// paranoia
 		ok = RandomExcursionsVariant_print_stat(stats, state, stat, i);
@@ -730,17 +739,17 @@ RandomExcursionsVariant_print(struct state *state)
 		}
 
 		/*
-		 * print all of the excursion states for this interation
+		 * Print all of the excursion states for this iteration
 		 */
-		for (p = 0; p < EXCURSTION_VAR_STATES; p++) {
+		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
 
 			/*
-			 * get p_value for this excursion state of this interation
+			 * Get p_value for this excursion state of this iteration
 			 */
 			p_value = get_value(state->p_val[test_num], double, j + p);
 
 			/*
-			 * print, if possibe, the excursion success or failure, visit and p_value
+			 * Print, if possible, the excursion success or failure, visit and p_value
 			 */
 			errno = 0;	// paranoia
 			ok = RandomExcursionsVariant_print_stat2(stats, state, stat, p, p_value);
@@ -749,7 +758,7 @@ RandomExcursionsVariant_print(struct state *state)
 			}
 
 			/*
-			 * print p_value to results.txt
+			 * Print p_value to results.txt
 			 */
 			errno = 0;	// paranoia
 			ok = RandomExcursionsVariant_print_p_value(results, p_value);
@@ -760,7 +769,7 @@ RandomExcursionsVariant_print(struct state *state)
 	}
 
 	/*
-	 * flush and close stats.txt, free pathname
+	 * Flush and close stats.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
@@ -776,7 +785,7 @@ RandomExcursionsVariant_print(struct state *state)
 	stats_txt = NULL;
 
 	/*
-	 * flush and close results.txt, free pathname
+	 * Flush and close results.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
@@ -792,17 +801,13 @@ RandomExcursionsVariant_print(struct state *state)
 	results_txt = NULL;
 
 	/*
-	 * write data*.txt if we need to partition results
+	 * Write data*.txt for each data file if we need to partition results
 	 */
 	if (state->partitionCount[test_num] > 1) {
-
-		/*
-		 * for each data file
-		 */
 		for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 			/*
-			 * form the data*.txt basename
+			 * Form the data*.txt basename
 			 */
 			errno = 0;	// paranoia
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
@@ -813,25 +818,25 @@ RandomExcursionsVariant_print(struct state *state)
 			}
 
 			/*
-			 * form the data*.txt filename
+			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
 			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*
-			 * write this particular data*.txt filename
+			 * Write this particular data*.txt filename
 			 */
 			if (j < state->p_val[test_num]->count) {
 				for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
 					/*
-					 * get p_value for an interation belonging to this data*.txt filename
+					 * Get p_value for an iteration belonging to this data*.txt filename
 					 */
 					p_value = get_value(state->p_val[test_num], double, i);
 
 					/*
-					 * print p_value to results.txt
+					 * Print p_value to results.txt
 					 */
 					errno = 0;	// paranoia
 					ok = RandomExcursionsVariant_print_p_value(data, p_value);
@@ -843,7 +848,7 @@ RandomExcursionsVariant_print(struct state *state)
 			}
 
 			/*
-			 * flush and close data*.txt, free pathname
+			 * Flush and close data*.txt, free pathname
 			 */
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
@@ -862,7 +867,7 @@ RandomExcursionsVariant_print(struct state *state)
 	}
 
 	/*
-	 * driver print - set driver state to DRIVER_PRINT
+	 * Set driver state to DRIVER_PRINT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
@@ -876,25 +881,25 @@ RandomExcursionsVariant_print(struct state *state)
  *
  * given:
  *      state           // run state to test under
- *      sampleCount             // number of bitstreams in which we counted p_values
+ *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // uniformanity frequency bins
+ *      freqPerBin              // Uniformity frequency bins
  */
 static void
 RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
 	long int passCount;	// p_values that pass
 	double p_hat;		// 1 - alpha
-	double proportion_threshold_max;	// when passCount is too high
-	double proportion_threshold_min;	// when passCount is too low
-	double chi2;		// sum of chi^2 for each tenth
-	double uniformity;	// uniformitu of frequency bins
-	double expCount;	// sample size divided by frequency bin count
+	double proportion_threshold_max;	// When passCount is too high
+	double proportion_threshold_min;	// When passCount is too low
+	double chi2;		// Sum of chi^2 for each tenth
+	double uniformity;	// Uniformity of frequency bins
+	double expCount;	// Sample size divided by frequency bin count
 	int io_ret;		// I/O return status
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(166, __FUNCTION__, "state arg is NULL");
@@ -904,7 +909,7 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
 	}
 
 	/*
-	 * determine the number tests that passed
+	 * Determine the number tests that passed
 	 */
 	if ((sampleCount <= 0) || (sampleCount < toolow)) {
 		passCount = 0;
@@ -913,22 +918,22 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
 	}
 
 	/*
-	 * determine proportion threadholds
+	 * Determine proportion thresholds
 	 */
 	p_hat = 1.0 - state->tp.alpha;
 	proportion_threshold_max = (p_hat + 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 	proportion_threshold_min = (p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 
 	/*
-	 * uniformity failure check
+	 * Check uniformity failure
 	 */
 	chi2 = 0.0;
 	expCount = sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		uniformity = 0.0;
 	} else {
-		// sum chi squared of the frequency bins
+		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
 			/*
 			 * NOTE: Mathematical expression code rewrite, old code commented out below:
@@ -937,50 +942,50 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
 			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
-		// uniformity threashold level
+		// Uniformity threshold level
 		uniformity = cephes_igamc((state->tp.uniformity_bins - 1.0) / 2.0, chi2 / 2.0);
 	}
 
 	/*
-	 * output uniformity results in trandtional format to finalAnalysisReport.txt
+	 * Output uniformity results in traditional format to finalAnalysisReport.txt
 	 */
 	for (i = 0; i < state->tp.uniformity_bins; ++i) {
 		fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
 	}
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
 	} else if (uniformity < state->tp.uniformity_level) {
-		// uniformity failure
+		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;
 		dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
 	} else {
-		// uniformity success
+		// Uniformity success
 		fprintf(state->finalRept, " %8.6f   ", uniformity);
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
 	}
 
 	/*
-	 * output proportional results in trandtional format to finalAnalysisReport.txt
+	 * Output proportional results in traditional format to finalAnalysisReport.txt
 	 */
 	if (sampleCount == 0) {
-		// not enough samples for proportional check
+		// Not enough samples for proportional check
 		fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
 		state->proportional_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
 	} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
-		// proportional failure
+		// Proportional failure
 		state->proportional_failure[test_num] = true;
-		fprintf(state->finalRept, "%4ld/%-4ld *  %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
 	} else {
-		// proportional success
+		// Proportional success
 		state->proportional_failure[test_num] = false;
-		fprintf(state->finalRept, "%4ld/%-4ld    %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
 	}
 	errno = 0;		// paranoia
@@ -988,6 +993,7 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
 	if (io_ret != 0) {
 		errp(166, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -998,29 +1004,29 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
  * given:
  *      state           // run state to test under
  *
- * This function is called once to complete the test analysis for all interations.
+ * This function is called once to complete the test analysis for all iterations.
  *
  * NOTE: The initialize and iterate functions must be called before this function is called.
  */
 void
 RandomExcursionsVariant_metrics(struct state *state)
 {
-	long int sampleCount;	// number of bitstreams in which we will count p_values
+	long int sampleCount;	// Number of bitstreams in which we will count p_values
 	long int toolow;	// p_values that were below alpha
-	double p_value;		// p_value interation test result(s)
-	long int *freqPerBin;	// uniformanity frequency bins
+	double p_value;		// p_value iteration test result(s)
+	long int *freqPerBin;	// Uniformity frequency bins
 	long int i;
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(167, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -1040,7 +1046,7 @@ RandomExcursionsVariant_metrics(struct state *state)
 	}
 
 	/*
-	 * allocate uniformanity frequency bins
+	 * Allocate uniformity frequency bins
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
@@ -1049,12 +1055,12 @@ RandomExcursionsVariant_metrics(struct state *state)
 	}
 
 	/*
-	 * print for each partition (or the whole set of p_values if partitionCount is 1)
+	 * Print for each partition (or the whole set of p_values if partitionCount is 1)
 	 */
 	for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 		/*
-		 * zero counters
+		 * Set counters to zero
 		 */
 		toolow = 0;
 		sampleCount = 0;
@@ -1068,36 +1074,36 @@ RandomExcursionsVariant_metrics(struct state *state)
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
-		 * p_value tally
+		 * Tally p_value
 		 */
 		for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
-			// get the intertion p_value
+			// Get the iteration p_value
 			p_value = get_value(state->p_val[test_num], double, i);
 			if (p_value == NON_P_VALUE) {
-				continue;	// the test was not possible for this interation
+				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
-				// random excursion tests only sample > 0 p_values
+				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
 					++sampleCount;
 				} else {
-					// ignore p_value of 0 for random excursion tests
+					// Ignore p_value of 0 for random excursion tests
 					continue;
 				}
-
-				// case: general (non-random excursion) test
-			} else {
-				// all other tests count all p_values
+			}
+			// Case: general (non-random excursion) test
+			else {
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
-			// count the number of p_values below alpha
+			// Count the number of p_values below alpha
 			if (p_value < state->tp.alpha) {
 				++toolow;
 			}
-			// tally the p_value in a uniformity bin
+			// Tally the p_value in a uniformity bin
 			if (p_value >= 1.0) {
 				++freqPerBin[state->tp.uniformity_bins - 1];
 			} else if (p_value >= 0.0) {
@@ -1108,35 +1114,32 @@ RandomExcursionsVariant_metrics(struct state *state)
 		}
 
 		/*
-		 * print uniformity and proportional information for a tallied count
+		 * Print uniformity and proportional information for a tallied count
 		 */
 		RandomExcursionsVariant_metric_print(state, sampleCount, toolow, freqPerBin);
 
 		/*
-		 * track maximum samples
+		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
-	 * free allocated storage
+	 * Free allocated storage
 	 */
 	free(freqPerBin);
 	freqPerBin = NULL;
 
 	/*
-	 * driver uniformity and proportional analysis - set driver state to DRIVER_METRICS
+	 * Set driver state to DRIVER_METRICS
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
@@ -1158,7 +1161,7 @@ void
 RandomExcursionsVariant_destroy(struct state *state)
 {
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(168, __FUNCTION__, "state arg is NULL");
@@ -1169,7 +1172,7 @@ RandomExcursionsVariant_destroy(struct state *state)
 	}
 
 	/*
-	 * free dynamic arrays
+	 * Free dynamic arrays
 	 */
 	if (state->stats[test_num] != NULL) {
 		free_dyn_array(state->stats[test_num]);
@@ -1183,7 +1186,7 @@ RandomExcursionsVariant_destroy(struct state *state)
 	}
 
 	/*
-	 * free other test storage
+	 * Free other test storage
 	 */
 	if (state->datatxt_fmt[test_num] != NULL) {
 		free(state->datatxt_fmt[test_num]);
@@ -1203,7 +1206,7 @@ RandomExcursionsVariant_destroy(struct state *state)
 	}
 
 	/*
-	 * driver state destroyed - set driver state to DRIVER_DESTROY
+	 * Set driver state to DRIVER_DESTROY
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);

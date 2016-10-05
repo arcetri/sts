@@ -1,33 +1,29 @@
 # STS experiments is not part of the true source,
 # by default it is where the result of runs are written
 experiments
-src/experiments
 # ignore the sts compiled binary
 assess
-src/assess
 # ignore mkapertemplate compiled binary
-src/mkapertemplate
-src/dataInfo
+mkapertemplate
+dataInfo
 # vi ctags are not source
 tags
 # make depend backup
 makefile.bak
-src/makefile.bak
 Makefile.bak
-src/Makefile.bak
 # in case C is compiled without -o
 a.out
 # valgrind ignore
-src/valrun
-src/valgrind.out
+valrun
+valgrind.out
 # minivalgrind ignore
-src/minivalrun
-src/minivalgrind.out
+minivalrun
+minivalgrind.out
 # osxmalloc ignore
-src/osxmalloc
+osxmalloc
 # miniosxmalloc ignore
-src/miniosxmalloc
+miniosxmalloc
 # common testing ignore
-src/RMME
+RMME
 CMakeLists.txt
 .idea

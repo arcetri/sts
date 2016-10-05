@@ -11,12 +11,18 @@
  */
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -26,6 +32,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 50 thru 59
 
@@ -45,14 +52,14 @@
  */
 struct driver {
 	void (*init) (struct state * state);	// initialize test
-	void (*iterate) (struct state * state);	// perform a single interation of a bitstream
-	void (*print) (struct state * state);	// log interation info into stats.txt, data*.txt, results.txt unless -n
-	void (*metrics) (struct state * state);	// uniformity and proportional analysis of a test
+	void (*iterate) (struct state * state);	// perform a single iteration of a bitstream
+	void (*print) (struct state * state);	// log iteration info into stats.txt, data*.txt, results.txt unless -n
+	void (*metrics) (struct state * state);	// Uniformity and proportional analysis of a test
 	void (*destroy) (struct state * state);	// final test cleanup and deallocation
 };
 static const struct driver testDriver[NUMOFTESTS + 1] = {
 
-	{			// TEST_ALL = 0, converence for indicating run all tests
+	{			// TEST_ALL = 0, convention for indicating run all tests
 	 NULL,
 	 NULL,
 	 NULL,
@@ -76,7 +83,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 	 BlockFrequency_destroy,
 	 },
 
-	{			// TEST_CUSUM = 3, Cumluative Sums test (cusum.c)
+	{			// TEST_CUSUM = 3, Cumulative Sums test (cusum.c)
 	 CumulativeSums_init,
 	 CumulativeSums_iterate,
 	 CumulativeSums_print,
@@ -116,7 +123,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 	 DiscreteFourierTransform_destroy,
 	 },
 
-	{			// TEST_NONPERIODIC = 8, Nonoverlapping Template test (nonOverlappingTemplateMatchings.c)
+	{			// TEST_NONPERIODIC = 8, Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
 	 NonOverlappingTemplateMatchings_init,
 	 NonOverlappingTemplateMatchings_iterate,
 	 NonOverlappingTemplateMatchings_print,
@@ -140,7 +147,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 	 Universal_destroy,
 	 },
 
-	{			// TEST_APEN = 11, Aproximate Entrooy test (approximateEntropy.c)
+	{			// TEST_APEN = 11, Approximate Entropy test (approximateEntropy.c)
 	 ApproximateEntropy_init,
 	 ApproximateEntropy_iterate,
 	 ApproximateEntropy_print,
@@ -192,12 +199,12 @@ void
 init(struct state *state)
 {
 	int r;			// row count to consider
-	double product;		// probability product
-	int test_count;		// number of tests enabled after initialization
+	double product;		// Probability product
+	int test_count;		// Number of tests enabled after initialization
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(50, __FUNCTION__, "state arg is NULL");
@@ -238,7 +245,7 @@ init(struct state *state)
 	}
 
 	/*
-	 * open the freq.txt file
+	 * Open the freq.txt file
 	 */
 	state->freqFilePath = filePathName(state->workDir, "freq.txt");
 	dbg(DBG_MED, "will use freq.txt file: %s", state->freqFilePath);
@@ -248,7 +255,7 @@ init(struct state *state)
 	}
 
 	/*
-	 * open the finalAnalysisReport.txt file
+	 * Open the finalAnalysisReport.txt file
 	 */
 	if (state->runMode != MODE_WRITE_ONLY) {
 		state->finalReptPath = filePathName(state->workDir, "finalAnalysisReport.txt");
@@ -260,17 +267,17 @@ init(struct state *state)
 	}
 
 	/*
-	 * initialize test constants
+	 * Initialize test constants
 	 *
 	 * NOTE: This must be done after the command line arguments are parsed,
-	 *       AND after any test parameters are established (by default or via interactive promot),
+	 *       AND after any test parameters are established (by default or via interactive prompt),
 	 *       AND before the individual test init functions are called
 	 *       (i.e., before the initialize all active tests section below).
 	 */
 	state->cSetup = false;	// note that the test constants are not yet initialized
 	// firewall - guard against taking the square root of a negative value
 	if (state->tp.n <= 0) {
-		err(50, __FUNCTION__, "bogus n value: %ld sould be > 0", state->tp.n);
+		err(50, __FUNCTION__, "bogus n value: %ld should be > 0", state->tp.n);
 	}
 	// compute pure numerical constants
 	state->c.sqrt2 = sqrt(2.0);
@@ -285,7 +292,7 @@ init(struct state *state)
 	} else {
 		state->c.two_over_sqrtn = 2.0 / state->c.sqrtn;
 	}
-	// probability of rank RANK_ROWS
+	// Probability of rank RANK_ROWS
 	r = RANK_ROWS;
 	product = 1.0;
 	for (i = 0; i <= r - 1; i++) {
@@ -298,7 +305,7 @@ init(struct state *state)
 	if (state->c.p_32 >= 1.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", state->c.p_32);
 	}
-	// probability of rank RANK_ROWS-1
+	// Probability of rank RANK_ROWS-1
 	r = RANK_ROWS - 1;
 	product = 1.0;
 	for (i = 0; i <= r - 1; i++) {
@@ -311,7 +318,7 @@ init(struct state *state)
 	if (state->c.p_31 >= 1.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", state->c.p_31);
 	}
-	// probability of rank < RANK_ROWS-1
+	// Probability of rank < RANK_ROWS-1
 	state->c.p_30 = 1.0 - (state->c.p_32 + state->c.p_31);
 	if (state->c.p_30 <= 0.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
@@ -321,7 +328,7 @@ init(struct state *state)
 		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be < 1.0",
 		    state->c.p_30, state->c.p_31, state->c.p_32);
 	}
-	// total possible matrix for a given bit stream length - used by RANK_TEST
+	// Total possible matrix for a given bit stream length - used by RANK_TEST
 	if (RANK_ROWS <= 0) {	// paranoia
 		err(50, __FUNCTION__, "RANK_ROWS: %d must be > 0", RANK_ROWS);
 	}
@@ -342,7 +349,11 @@ init(struct state *state)
 	 *
 	 * constraint = MAX(0.005 * pow(n, 0.5), 500);
 	 */
-	state->c.excursion_constraint = ceill(MAX(0.005 * state->c.sqrtn, 500.0));
+	long double ceill_result = ceill(MAX(0.005 * state->c.sqrtn, 500.0));
+	if (ceill_result > (long double) LONG_MAX) {	// firewall
+		err(50, __FUNCTION__, "ceill result is too big for a long int");
+	}
+	state->c.excursion_constraint = (long) ceill_result;
 
 	/*
 	 * indicate that the test constants have been initialized
@@ -350,7 +361,7 @@ init(struct state *state)
 	state->cSetup = true;
 
 	/*
-	 * initialize all active tests
+	 * Initialize all active tests
 	 */
 	for (i = 1; i <= NUMOFTESTS; i++) {
 		if (state->testVector[i] == true && testDriver[i].init != NULL) {
@@ -377,12 +388,15 @@ init(struct state *state)
 	}
 
 	/*
-	 * allocate bit stresam
+	 * Allocate bit stream
 	 */
-	state->epsilon = calloc(state->tp.n, sizeof(BitSequence));
+	if ((state->tp.n <= 0) || (state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT)) {
+		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d and <= %d", state->tp.n, MIN_BITCOUNT, MAX_BITCOUNT);
+	}
+	state->epsilon = calloc((size_t) state->tp.n, sizeof(BitSequence));
 	if (state->epsilon == NULL) {
-		errp(50, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each",
-		     state->tp.n, sizeof(BitSequence));
+		errp(50, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->tp.n,
+		     sizeof(BitSequence));
 	}
 	// - end of phase
 	dbg(DBG_LOW, "end of init phase");
@@ -391,33 +405,37 @@ init(struct state *state)
 
 
 /*
- * interate - perform a single interation of a bitstream
+ * iterate - perform a single iteration of a bitstream
  *
  * given:
  *      state           // current processing state
  */
 void
-interate(struct state *state)
+iterate(struct state *state)
 {
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(51, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * interate for each test
+	 * iterate for each test
 	 */
 	dbg(DBG_VHIGH, "before an iteration: %ld", state->curIteration);
 	for (i = 1; i <= NUMOFTESTS; ++i) {
 
-		// call if enabled
+		/*
+		 * call if enabled
+		 */
 		if (state->testVector[i] == true && testDriver[i].iterate != NULL) {
 
-			// interate for a test
+			/*
+			 * iterate for a test
+			 */
 			testDriver[i].iterate(state);
 		}
 	}
@@ -427,7 +445,7 @@ interate(struct state *state)
 
 
 /*
- * print - print to results.txt, data*.txt, stats.txt for all interations
+ * Print - print to results.txt, data*.txt, stats.txt for all iterations
  *
  * given:
  *      state           // current processing state
@@ -438,14 +456,14 @@ print(struct state *state)
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(52, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * print results from each test
+	 * Print results from each test
 	 *
 	 * or old code: partition results
 	 */
@@ -483,14 +501,14 @@ metrics(struct state *state)
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(53, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * perform metrics processing for each test
+	 * Perform metrics processing for each test
 	 */
 	dbg(DBG_LOW, "start of metrics phase");
 	for (i = 1; i <= NUMOFTESTS; i++) {	// FOR EACH TEST
@@ -505,8 +523,8 @@ metrics(struct state *state)
 		}
 	}
 
-	io_ret = fprintf(state->finalRept,
-			 "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+	io_ret =
+	    fprintf(state->finalRept, "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 	if (io_ret <= 0) {
 		errp(53, __FUNCTION__, "error in writing to finalRept");
 	}
@@ -525,8 +543,9 @@ metrics(struct state *state)
 	passRate = 0;
 	if (case1 == true) {
 		if (state->maxGeneralSampleSize == 0) {
-			io_ret = fprintf(state->finalRept,
-					 "The minimum pass rate for each statistical test with the exception of the\n");
+			io_ret =
+			    fprintf(state->finalRept,
+				    "The minimum pass rate for each statistical test with the exception of the\n");
 			if (io_ret <= 0) {
 				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
@@ -535,11 +554,18 @@ metrics(struct state *state)
 				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 		} else {
-			passRate =
-			    floorl((p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / state->maxGeneralSampleSize)) *
+			long double floorl_result =
+			    floorl((p_hat -
+				    3.0 * sqrt((p_hat * state->tp.alpha) / state->maxGeneralSampleSize)) *
 				   state->maxGeneralSampleSize);
-			io_ret = fprintf(state->finalRept,
-					 "The minimum pass rate for each statistical test with the exception of the\n");
+			if (floorl_result > (long double) LONG_MAX) {	// firewall
+				err(50, __FUNCTION__, "floorl result is too big for a long int");
+			}
+			passRate = (long) floorl_result;
+
+			io_ret =
+			    fprintf(state->finalRept,
+				    "The minimum pass rate for each statistical test with the exception of the\n");
 			if (io_ret <= 0) {
 				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
@@ -556,18 +582,24 @@ metrics(struct state *state)
 	}
 	if (case2 == true) {
 		if (state->maxRandomExcursionSampleSize == 0) {
-			io_ret = fprintf(state->finalRept,
-					 "The minimum pass rate for the random excursion (variant) test is undefined.\n\n");
+			io_ret =
+			    fprintf(state->finalRept,
+				    "The minimum pass rate for the random excursion (variant) test is undefined.\n\n");
 			if (io_ret <= 0) {
 				errp(53, __FUNCTION__, "error in writing to finalRept");
 			}
 		} else {
-			passRate =
+			long double floorl_result =
 			    floorl((p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / state->maxRandomExcursionSampleSize)) *
 				   state->maxRandomExcursionSampleSize);
+			if (floorl_result > (long double) LONG_MAX) {	// firewall
+				err(50, __FUNCTION__, "floorl result is too big for a long int");
+			}
+			passRate = (long) floorl_result;
+
 			if (state->legacy_output == true) {
-				io_ret = fprintf(state->finalRept,
-						 "The minimum pass rate for the random excursion (variant) test\n");
+				io_ret =
+				    fprintf(state->finalRept, "The minimum pass rate for the random excursion (variant) test\n");
 				if (io_ret <= 0) {
 					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
@@ -578,8 +610,9 @@ metrics(struct state *state)
 					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
 			} else {
-				io_ret = fprintf(state->finalRept,
-						 "The minimum pass rate for the RandomExcursions and RandomExcursionsVariant\n");
+				io_ret =
+				    fprintf(state->finalRept,
+					    "The minimum pass rate for the RandomExcursions and RandomExcursionsVariant\n");
 				if (io_ret <= 0) {
 					errp(53, __FUNCTION__, "error in writing to finalRept");
 				}
@@ -593,8 +626,8 @@ metrics(struct state *state)
 		}
 	}
 	if (state->legacy_output == true) {
-		io_ret = fprintf(state->finalRept,
-				 "For further guidelines construct a probability table using the MAPLE program\n");
+		io_ret =
+		    fprintf(state->finalRept, "For further guidelines construct a probability table using the MAPLE program\n");
 		if (io_ret <= 0) {
 			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
@@ -602,8 +635,9 @@ metrics(struct state *state)
 		if (io_ret <= 0) {
 			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
-		io_ret = fprintf(state->finalRept,
-				 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+		io_ret =
+		    fprintf(state->finalRept,
+			    "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 		if (io_ret <= 0) {
 			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
@@ -625,7 +659,7 @@ destroy(struct state *state)
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(54, __FUNCTION__, "state arg is NULL");
@@ -644,7 +678,7 @@ destroy(struct state *state)
 	}
 
 	/*
-	 * free global allocated storage
+	 * Free global allocated storage
 	 */
 	if (state->workDir != NULL) {
 		free(state->workDir);

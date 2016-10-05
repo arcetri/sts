@@ -1,12 +1,18 @@
 // alloc.c - dynamic array of things allocator
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -16,6 +22,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 60 thru 69
 
@@ -31,7 +38,7 @@ extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugg
 
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
 static void zero_chunk(size_t elm_size, long int chunk, void *data);
 static void grow_dyn_array(struct dyn_array *array, int new_chunks);
@@ -42,7 +49,7 @@ static void grow_dyn_array(struct dyn_array *array, int new_chunks);
  *
  * given:
  *      elm_size        // size of a single element
- *      chunk           // number of elements to expand by when allocating
+ *      chunk           // Number of elements to expand by when allocating
  *      data            // pointer to data to zeroize
  *
  * Strictly speaking, zeroizing new chunk data is not needed.  We do it for
@@ -54,7 +61,7 @@ static void
 zero_chunk(size_t elm_size, long int chunk, void *data)
 {
 	/*
-	 * firewall - sanity check args
+	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (elm_size <= 0) {
 		err(60, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
@@ -67,7 +74,7 @@ zero_chunk(size_t elm_size, long int chunk, void *data)
 	}
 
 	/*
-	 * zerosize allocated data according to type
+	 * Zeroize allocated data according to type
 	 */
 	memset(data, 0, elm_size * chunk);
 	return;
@@ -98,7 +105,7 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	long int i;
 
 	/*
-	 * firewall - sanity check args
+	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
 		err(61, __FUNCTION__, "array arg is NULL");
@@ -108,7 +115,7 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	}
 
 	/*
-	 * firewall - sanity check array
+	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
 		err(61, __FUNCTION__, "data for dynamic array is NULL");
@@ -151,7 +158,7 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	    array->chunk, array->elm_size, old_allocated, array->allocated, old_bytes, new_bytes);
 
 	/*
-	 * zerosize new chunks if needed
+	 * Zeroize new chunks if needed
 	 */
 	if (array->zeroize == 1) {
 		for (i = old_allocated, p = (unsigned char *) (array->data) + old_bytes;
@@ -169,8 +176,8 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
  *
  * given:
  *      elm_size        // size of an element
- *      chunk           // number of elements to expand by when allocating
- *      start_chunks    // starting number of chucks to allocate
+ *      chunk           // Number of elements to expand by when allocating
+ *      start_elm_count // starting number of elements to allocate
  *      zeroize         // 1 --> always zero newly allocated chunks, 0 --> don't
  *
  * returns:
@@ -179,12 +186,12 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
  * This function does not return on error.
  */
 struct dyn_array *
-create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zeroize)
+create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int zeroize)
 {
 	struct dyn_array *ret;	// created dynamic array to return
 
 	/*
-	 * firewall - sanity check args
+	 * Check preconditions (firewall) - sanity check args
 	 *
 	 * Also set the byte size.
 	 */
@@ -194,12 +201,12 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	if (chunk <= 0) {
 		err(62, __FUNCTION__, "chunk must be > 0: %ld", chunk);
 	}
-	if (start_chunks <= 0) {
-		err(62, __FUNCTION__, "start_chunks must be > 0: %ld", start_chunks);
+	if (start_elm_count <= 0) {
+		err(62, __FUNCTION__, "start_elm_count must be > 0: %ld", start_elm_count);
 	}
 
 	/*
-	 * allocate new dynamic array
+	 * Allocate new dynamic array
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
@@ -208,23 +215,23 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	}
 
 	/*
-	 * initialize dynamic array
+	 * Initialize dynamic array
 	 *
 	 * Start off with an empty dynamic array of just 1 chunk
 	 */
 	ret->elm_size = elm_size;
 	ret->zeroize = zeroize;
 	ret->count = 0;		// allocated array is empty
-	ret->allocated = start_chunks;
+	ret->allocated = start_elm_count;
 	ret->chunk = chunk;
 	ret->data = malloc(ret->allocated * elm_size);
 	if (ret->data == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", start_chunks,
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", start_elm_count,
 		     elm_size);
 	}
 
 	/*
-	 * zerosize allocated data according to type
+	 * Zeroize allocated data according to type
 	 */
 	if (ret->zeroize == 1) {
 		zero_chunk(elm_size, chunk, ret->data);
@@ -233,7 +240,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_chunks, int zer
 	/*
 	 * return newly allocated array
 	 */
-	dbg(DBG_HIGH, "initalized empty dynamic array of %ld elemets of %ld bytes per element", ret->chunk, ret->elm_size);
+	dbg(DBG_HIGH, "initialized empty dynamic array of %ld elemets of %ld bytes per element", ret->chunk, ret->elm_size);
 	return ret;
 }
 
@@ -258,7 +265,7 @@ append_value(struct dyn_array *array, void *value_p)
 	unsigned char *p;
 
 	/*
-	 * firewall - sanity check args
+	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
 		err(63, __FUNCTION__, "array arg is NULL");
@@ -268,7 +275,7 @@ append_value(struct dyn_array *array, void *value_p)
 	}
 
 	/*
-	 * firewall - sanity check array
+	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
 		err(63, __FUNCTION__, "data in dynamic array");
@@ -301,7 +308,7 @@ append_value(struct dyn_array *array, void *value_p)
 
 
 /*
- * free_dyn_array - free a dynamic array
+ * Free_dyn_array - free a dynamic array
  *
  * given:
  *      array           // pointer to the dynamic array
@@ -310,14 +317,14 @@ void
 free_dyn_array(struct dyn_array *array)
 {
 	/*
-	 * firewall - sanity check args
+	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
 		err(64, __FUNCTION__, "array arg is NULL");
 	}
 
 	/*
-	 * free any storage this dynamic array might have
+	 * Free any storage this dynamic array might have
 	 */
 	if (array->data != NULL) {
 		free(array->data);

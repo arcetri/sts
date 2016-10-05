@@ -1,10 +1,16 @@
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -27,14 +33,14 @@ static const double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(2**1024*
 
 // Use C defined value of PI if available
 #if defined(M_PI)
-#define PI (M_PI)
+#   define PI (M_PI)
 #else
 static const double PI = (double) 3.14159265358979323846264;
 #endif
 
 // Use C defined value of sqrt(2) if available
 #if defined(M_SQRT2)
-#define SQRT2 (M_SQRT2)
+#   define SQRT2 (M_SQRT2)
 #else
 static const double SQRT2 = (double) 1.41421356237309504880;
 #endif
@@ -47,7 +53,7 @@ static int sgngam = 0;
 
 static double cephes_p1evl(double x, double *coef, int N);
 static double cephes_polevl(double x, double *coef, int N);
-#endif /* HAVE_LGAMMA */
+#endif				/* HAVE_LGAMMA */
 
 double
 cephes_igamc(double a, double x)
@@ -198,7 +204,7 @@ static unsigned short C[] = {
 	0xe14a, 0x6a11, 0xce4b, 0xc13e
 };
 
-#define MAXLGM 2.556348e305
+#   define MAXLGM 2.556348e305
 
 /*
  * Logarithm of gamma function
@@ -335,7 +341,7 @@ cephes_p1evl(double x, double *coef, int N)
 
 	return ans;
 }
-#endif /* !HAVE_LGAMMA */
+#endif				/* !HAVE_LGAMMA */
 
 #if 0
 static const double rel_error = 1E-12;

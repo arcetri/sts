@@ -1,14 +1,20 @@
 /*****************************************************************************
-		      L O N G E S T   R U N S   T E S T
+		      L O N G E S T   R U N S	T E S T
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 110 thru 119
 
@@ -33,15 +40,15 @@
 
 
 /*
- * private_stats - stats.txt information for this test
+ * Private stats - stats.txt information for this test
  */
 struct LongestRunOfOnes_private_stats {
-	bool success;		// success or failure of interation test
-	long int N;		// number of M bit substrings
+	bool success;		// Success or failure of iteration test
+	long int N;		// Number of M bit substrings
 	long int M;		// substring length
-	double chi2;		// sum of chi^2 for each interation
+	double chi2;		// Sum of chi^2 for each iteration
 	int runs_table_index;	// index in the runs_table[] being used
-	// count[x] is of times the longest run was min_class-x
+	// Count[x] is of times the longest run was min_class-x
 	// Except when x is 0, odds are when <= min_class
 	// Except when x is LONGEST_RUN_CLASS_COUNT, odds are when >= max_class
 	unsigned long count[LONGEST_RUN_CLASS_COUNT + 1];
@@ -49,15 +56,15 @@ struct LongestRunOfOnes_private_stats {
 
 
 /*
- * static constant variable declarations
+ * Static const variables declarations
  */
-static const enum test test_num = TEST_LONGEST_RUN;	// this test number
+static const enum test test_num = TEST_LONGEST_RUN;	// This test number
 
 /*
- * p_tbl - theoretical pribabiities of the longest run in a bit string
+ * p_tbl - theoretical probabilities of the longest run in a bit string
  *
  * This structure replaces the old if-then-else logic filled
- * with magic constants that once was in the interation code.
+ * with magic constants that once was in the iteration code.
  *
  * The runs_table[] constants were computing using calc:
  *
@@ -88,7 +95,7 @@ static const enum test test_num = TEST_LONGEST_RUN;	// this test number
  * find last the table entry where n > runs_table->min_n and where runs_table->min_n != 0.
  *
  * This runs_table[] array is computed with parameters from SP800-22Rev1a section 2.4.2,
- * (the 1st table) and section 2.4.4 (the 1st and 2nd tables).  In parciular:
+ * (the 1st table) and section 2.4.4 (the 1st and 2nd tables).  In particular:
  *
  *      min_n           Minimum n from 1st table of section 2.4.2
  *      M               M from 1st table of section 2.4.2
@@ -101,7 +108,7 @@ static const enum test test_num = TEST_LONGEST_RUN;	// this test number
  *
  * There are 3 entries in the 1st table found in section 2.4.2.  We use this table
  * to produce the 3 entries of constants found in the runs_table[] array below.
- * The prob_*[] arrays of constants were otained from the following runstbl() calls
+ * The prob_*[] arrays of constants were obtained from the following runstbl() calls
  * to the runs_table.cal calc script:
  *
  *      runstbl(8, 1, 4)
@@ -111,14 +118,14 @@ static const enum test test_num = TEST_LONGEST_RUN;	// this test number
  *      NOTE: For large values of M (such as 10000), this script takes
  *            a very long time to run (as in around 8 CPU days)!
  *
- * where the uncommended floating point values were rounded to 20 decimal digits.
+ * where the uncommented floating point values were rounded to 20 decimal digits.
  *
  * However, we modified the above tables so that the K values is the maximum
  * of those 3 tables.  In other words, we force max_class - min_class to be consistent
  * for all table entries.
  *
  * Fixing K for all tables has the effect of considering even longer runs
- * with lesser probabiliies.  It has the advantage of making the pi_term[]
+ * with lesser probabilities.  It has the advantage of making the pi_term[]
  * arrays all the same length.  Therefore we used the following calls:
  *
  *      runstbl(8, 1, 7)
@@ -133,14 +140,16 @@ static const enum test test_num = TEST_LONGEST_RUN;	// this test number
 struct runs_table {
 	const long int min_n;	// minimum n, use when n >= min_n
 	const long int M;	// substring bit length
-	const int K;		// number of classes + 1 == LONGEST_RUN_CLASS_COUNT = max_class - min_class
+	const int K;		// Number of classes + 1 == LONGEST_RUN_CLASS_COUNT = max_class - min_class
 	const int min_class;	// minimum length to consider (0 < min_class)
-	const int max_class;	// maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT + 1)
-	// odds of that the longest run is x-min_class in an M bit string is pi_term[x]
-	// Except when x is 0 (min_class length), a lower bound,
-	// where odds are when <= min_class
-	// Except when x is LONGEST_RUN_CLASS_COUNT (max_class length), an upper bound,
-	// where odds are when >= max_class
+	const int max_class;	// maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT)
+
+	/*
+	 * When i != 0 and i != M - 1, pi_term[i] contains the odds that the longest run of ones in an M-bit string is equal to
+	 * (min_class + i). When i == 0, pi_term[i] contains the odds that the longest run of ones in an M-bit string is smaller or
+	 * equal to (min_class). When i == (M - 1), pi_term[i] contains the odds that the longest run of ones in an M-bit string is
+	 * bigger or equal to (max_class).
+	 */
 	const double pi_term[LONGEST_RUN_CLASS_COUNT + 1];
 };
 
@@ -238,7 +247,7 @@ static const struct runs_table runs_table[] = {
 	 *       is LONGEST_RUN_CLASS_COUNT (6).
 	 */
 	// K = 6, M = 128, min_class = 4, max_class = 10
-	{6272, 128, 5, LONGEST_RUN_CLASS_COUNT, 10,
+	{6272, 128, LONGEST_RUN_CLASS_COUNT, 4, 10,
 	 {
 	  0.11740357883779323143,	// pi_term[0], v <= 4
 	  0.24295595927745485921,	// pi_term[1], v == 5
@@ -286,7 +295,7 @@ static const struct runs_table runs_table[] = {
 
 
 /*
- * forward static function declarations
+ * Forward static function declarations
  */
 static bool LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRunOfOnes_private_stats *stat,
 					double p_value);
@@ -295,12 +304,12 @@ static void LongestRunOfOnes_metric_print(struct state *state, long int sampleCo
 
 
 /*
- * LongestRunOfOnes_init - initalize the Longest Runs test
+ * LongestRunOfOnes_init - initialize the Longest Runs test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
@@ -310,14 +319,14 @@ LongestRunOfOnes_init(struct state *state)
 	long int n;		// Length of a single bit stream
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(110, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->cSetup != true) {
@@ -330,7 +339,7 @@ LongestRunOfOnes_init(struct state *state)
 	}
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	n = state->tp.n;
 
@@ -345,7 +354,7 @@ LongestRunOfOnes_init(struct state *state)
 	}
 
 	/*
-	 * create working sub-directory if forming files such as results.txt and stats.txt
+	 * Create working sub-directory if forming files such as results.txt and stats.txt
 	 */
 	if (state->resultstxtFlag == true) {
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
@@ -353,17 +362,15 @@ LongestRunOfOnes_init(struct state *state)
 	}
 
 	/*
-	 * allocate dynamic arrays
+	 * Allocate dynamic arrays
 	 */
-	// stats.txt data
-	state->stats[test_num] =
-	    create_dyn_array(sizeof(struct LongestRunOfOnes_private_stats), DEFAULT_CHUNK, state->tp.numOfBitStreams, false);
-
-	// results.txt data
-	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK, state->tp.numOfBitStreams, false);
+	state->stats[test_num] = create_dyn_array(sizeof(struct LongestRunOfOnes_private_stats),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false); // stats.txt data
+	state->p_val[test_num] = create_dyn_array(sizeof(double),
+	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false); // results.txt data
 
 	/*
-	 * determine format of data*.txt filenames based on state->partitionCount[test_num]
+	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
 	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
@@ -372,7 +379,7 @@ LongestRunOfOnes_init(struct state *state)
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
 	/*
-	 * driver initialized - set driver state to DRIVER_INIT
+	 * Set driver state to DRIVER_INIT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
@@ -382,19 +389,19 @@ LongestRunOfOnes_init(struct state *state)
 
 
 /*
- * LongestRunOfOnes_iterate - interate one bit stream for Longest Runs test
+ * LongestRunOfOnes_iterate - iterate one bit stream for Longest Runs test
  *
  * given:
  *      state           // run state to test under
  *
- * This function is called for each and every interation noted in state->tp.numOfBitStreams.
+ * This function is called for each and every iteration noted in state->tp.numOfBitStreams.
  *
  * NOTE: The initialize function must be called first.
  */
 void
 LongestRunOfOnes_iterate(struct state *state)
 {
-	struct LongestRunOfOnes_private_stats stat;	// stats for this interation
+	struct LongestRunOfOnes_private_stats stat;	// Stats for this iteration
 	// odds of that the longest run is x-min_class in an M bit string is pi_term[x]
 	// Except when x is 0 (min_class length), a lower bound,
 	// where odds are when <= min_class
@@ -402,7 +409,7 @@ LongestRunOfOnes_iterate(struct state *state)
 	// where odds are when >= max_class
 	const double *pi_term;
 	long int n;		// Length of a single bit stream
-	double p_value;		// p_value interation test result(s)
+	double p_value;		// p_value iteration test result(s)
 	int min_class;		// minimum length to consider
 	int max_class;		// maximum length to consider
 	long int v_n_obs;	// current maximum run length for current substring
@@ -412,13 +419,13 @@ LongestRunOfOnes_iterate(struct state *state)
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(111, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "interate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
 		return;
 	}
 	if (state->epsilon == NULL) {
@@ -430,14 +437,14 @@ LongestRunOfOnes_iterate(struct state *state)
 	}
 
 	/*
-	 * collect parameters from state
+	 * Collect parameters from state
 	 */
 	n = state->tp.n;
 
 	/*
 	 * setup test parameters
-	 */
-	// find the appropriate runs_table entry that first satifies the min_n requirement
+	 *
+	 * find the appropriate runs_table entry that first satisfies the min_n requirement */
 	memset(&stat, 0, sizeof(stat));
 	stat.runs_table_index = 0;
 	while ((stat.runs_table_index < (sizeof(runs_table) / sizeof(runs_table[0]))) &&
@@ -445,7 +452,9 @@ LongestRunOfOnes_iterate(struct state *state)
 		++stat.runs_table_index;
 	}
 	if (stat.runs_table_index >= (sizeof(runs_table) / sizeof(runs_table[0]))) {
-		// ran off end of table, use the last table entry
+		/*
+		 * ran off end of table, use the last table entry
+		 */
 		stat.runs_table_index = (sizeof(runs_table) / sizeof(runs_table[0])) - 1;
 	}
 	stat.M = runs_table[stat.runs_table_index].M;
@@ -460,14 +469,18 @@ LongestRunOfOnes_iterate(struct state *state)
 	memset(stat.count, 0, sizeof(stat.count));
 
 	/*
-	 * perform the test
+	 * Perform the test
 	 */
 	for (i = 0; i < stat.N; i++) {
-		// determine maximum 1-bit run length for this substring
+		/*
+		 * Determine maximum 1-bit run length for this substring
+		 */
 		v_n_obs = 0;
 		run = 0;
 		for (j = 0; j < stat.M; j++) {
-			// detemine the 1-bit run length
+			/*
+			 * Determine the 1-bit run length
+			 */
 			if (state->epsilon[(i * stat.M) + j] == 1) {
 				run++;
 				if (run > v_n_obs) {
@@ -477,7 +490,9 @@ LongestRunOfOnes_iterate(struct state *state)
 				run = 0;
 			}
 		}
-		// count the class based on the current run length
+		/*
+		 * Count the class based on the current run length
+		 */
 		if (v_n_obs <= min_class) {
 			stat.count[0]++;
 		} else if (v_n_obs <= max_class) {
@@ -486,7 +501,9 @@ LongestRunOfOnes_iterate(struct state *state)
 			stat.count[LONGEST_RUN_CLASS_COUNT]++;
 		}
 	}
-	// compute chi^2 and p_value
+	/*
+	 * Compute chi^2 and p_value
+	 */
 	stat.chi2 = 0.0;
 	for (i = 0; i <= LONGEST_RUN_CLASS_COUNT; i++) {
 		chi_term = stat.count[i] - (stat.N * pi_term[i]);
@@ -495,44 +512,45 @@ LongestRunOfOnes_iterate(struct state *state)
 	p_value = cephes_igamc((double) LONGEST_RUN_CLASS_COUNT / 2.0, stat.chi2 / 2.0);
 
 	/*
-	 * record testable test success or failure
+	 * Record testable test success or failure
 	 */
-	state->count[test_num]++;	// count this test
-	state->valid[test_num]++;	// count this valid test
+	state->count[test_num]++;	// Count this test
+	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
-		state->failure[test_num]++;	// bogus p_value < 0.0 treated as a failure
+		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
-		state->failure[test_num]++;	// bogus p_value > 1.0 treated as a failure
+		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "interation %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
-		state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-		state->failure[test_num]++;	// valid p_value but too low is a failure
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->failure[test_num]++;	// Valid p_value but too low is a failure
 		stat.success = false;	// FAILURE
 	} else {
-		state->valid_p_val[test_num]++;	// valid p_value in [0.0, 1.0] range
-		state->success[test_num]++;	// valid p_value not too low is a success
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->success[test_num]++;	// Valid p_value not too low is a success
 		stat.success = true;	// SUCCESS
 	}
 
 	/*
-	 * results.txt and stats.txt accounting
+	 * Record values computed during this iteration
 	 */
 	append_value(state->stats[test_num], &stat);
 	append_value(state->p_val[test_num], &p_value);
 
 	/*
-	 * driver iterating - set driver state to DRIVER_ITERATE
+	 * Set driver state to DRIVER_ITERATE
 	 */
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -544,7 +562,7 @@ LongestRunOfOnes_iterate(struct state *state)
  *      stream          // open writable FILE stream
  *      state           // run state to test under
  *      stat            // struct LongestRunOfOnes_private_stats for format and print
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -559,7 +577,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(112, __FUNCTION__, "stream arg is NULL");
@@ -588,7 +606,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	max_class = runs_table[stat->runs_table_index].max_class;
 
 	/*
-	 * print stat to a file
+	 * Print stat to a file
 	 */
 	if (state->legacy_output == true) {
 		io_ret = fprintf(stream, "\t\t\t  LONGEST RUNS OF ONES TEST\n");
@@ -625,7 +643,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) Chi^2                = %f\n", stat->chi2);
+	io_ret = fprintf(stream, "\t\t(c) Chi^2		   = %f\n", stat->chi2);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -634,7 +652,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t      F R E Q U E N C Y\n");
+		io_ret = fprintf(stream, "\t\t	    F R E Q U E N C Y\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -663,7 +681,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	if (state->legacy_output == true) {
 
 		/*
-		 * print counter header
+		 * Print counter header
 		 */
 		io_ret = fprintf(stream, "\t\t");
 		if (io_ret <= 0) {
@@ -702,7 +720,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		}
 
 		/*
-		 * print counts
+		 * Print counts
 		 */
 		io_ret = fprintf(stream, "\t\t");
 		if (io_ret <= 0) {
@@ -725,9 +743,9 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	} else {
 
 		/*
-		 * print counter header
+		 * Print counter header
 		 */
-		io_ret = fprintf(stream, "\t\t  ");
+		io_ret = fprintf(stream, "\t\t	");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -764,7 +782,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		}
 
 		/*
-		 * print counts
+		 * Print counts
 		 */
 		io_ret = fprintf(stream, "\t\t");
 		if (io_ret <= 0) {
@@ -783,7 +801,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	}
 
 	/*
-	 * report on success or failure
+	 * Report on success or failure
 	 */
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
@@ -803,7 +821,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
@@ -815,7 +833,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
  * given:
  *      stream          // open writable FILE stream
  *      stat            // struct LongestRunOfOnes_private_stats for format and print
- *      p_value         // p_value interation test result(s)
+ *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
@@ -827,14 +845,14 @@ LongestRunOfOnes_print_p_value(FILE * stream, double p_value)
 	int io_ret;		// I/O return status
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
 		err(103, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
-	 * print p_value to a file
+	 * Print p_value to a file
 	 */
 	if (p_value == NON_P_VALUE) {
 		io_ret = fprintf(stream, "__INVALID__\n");
@@ -849,14 +867,14 @@ LongestRunOfOnes_print_p_value(FILE * stream, double p_value)
 	}
 
 	/*
-	 * all printing successful
+	 * All printing successful
 	 */
 	return true;
 }
 
 
 /*
- * LongestRunOfOnes_print - print to results.txt, data*.txt, stats.txt for all interations
+ * LongestRunOfOnes_print - print to results.txt, data*.txt, stats.txt for all iterations
  *
  * given:
  *      state           // run state to test under
@@ -869,15 +887,15 @@ LongestRunOfOnes_print_p_value(FILE * stream, double p_value)
 void
 LongestRunOfOnes_print(struct state *state)
 {
-	struct LongestRunOfOnes_private_stats *stat;	// pointer to statistics of an interation
-	double p_value;		// p_value interation test result(s)
-	FILE *stats = NULL;	// open stats.txt file
-	FILE *results = NULL;	// open stats.txt file
-	FILE *data = NULL;	// open data*.txt file
-	char *stats_txt = NULL;	// pathname for stats.txt
-	char *results_txt = NULL;	// pathname for results.txt
-	char *data_txt = NULL;	// pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// basebame for a given data*.txt pathname
+	struct LongestRunOfOnes_private_stats *stat;	// pointer to statistics of an iteration
+	double p_value;		// p_value iteration test result(s)
+	FILE *stats = NULL;	// Open stats.txt file
+	FILE *results = NULL;	// Open results.txt file
+	FILE *data = NULL;	// Open data*.txt file
+	char *stats_txt = NULL;	// Pathname for stats.txt
+	char *results_txt = NULL;	// Pathname for results.txt
+	char *data_txt = NULL;	// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
 	bool ok;		// true -> I/O was OK
 	int snprintf_ret;	// snprintf return value
 	int io_ret;		// I/O return status
@@ -885,14 +903,14 @@ LongestRunOfOnes_print(struct state *state)
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(104, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->resultstxtFlag == false) {
@@ -920,36 +938,36 @@ LongestRunOfOnes_print(struct state *state)
 	}
 
 	/*
-	 * open stats.txt file
+	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
-	 * open results.txt file
+	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
 	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
-	 * write results.txt and stats.txt files
+	 * Write results.txt and stats.txt files
 	 */
 	for (i = 0; i < state->stats[test_num]->count; ++i) {
 
 		/*
-		 * locate stat for this interation
+		 * Locate stat for this iteration
 		 */
 		stat = addr_value(state->stats[test_num], struct LongestRunOfOnes_private_stats, i);
 
 		/*
-		 * get p_value for this interation
+		 * Get p_value for this iteration
 		 */
 		p_value = get_value(state->p_val[test_num], double, i);
 
 		/*
-		 * print stat to stats.txt
+		 * Print stat to stats.txt
 		 */
 		errno = 0;	// paranoia
 		ok = LongestRunOfOnes_print_stat(stats, state, stat, p_value);
@@ -958,7 +976,7 @@ LongestRunOfOnes_print(struct state *state)
 		}
 
 		/*
-		 * print p_value to results.txt
+		 * Print p_value to results.txt
 		 */
 		errno = 0;	// paranoia
 		ok = LongestRunOfOnes_print_p_value(results, p_value);
@@ -968,7 +986,7 @@ LongestRunOfOnes_print(struct state *state)
 	}
 
 	/*
-	 * flush and close stats.txt, free pathname
+	 * Flush and close stats.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
@@ -984,7 +1002,7 @@ LongestRunOfOnes_print(struct state *state)
 	stats_txt = NULL;
 
 	/*
-	 * flush and close results.txt, free pathname
+	 * Flush and close results.txt, free pathname
 	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
@@ -1000,17 +1018,13 @@ LongestRunOfOnes_print(struct state *state)
 	results_txt = NULL;
 
 	/*
-	 * write data*.txt if we need to partition results
+	 * Write data*.txt for each data file if we need to partition results
 	 */
 	if (state->partitionCount[test_num] > 1) {
-
-		/*
-		 * for each data file
-		 */
 		for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 			/*
-			 * form the data*.txt basename
+			 * Form the data*.txt basename
 			 */
 			errno = 0;	// paranoia
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
@@ -1021,25 +1035,25 @@ LongestRunOfOnes_print(struct state *state)
 			}
 
 			/*
-			 * form the data*.txt filename
+			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
 			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*
-			 * write this particular data*.txt filename
+			 * Write this particular data*.txt filename
 			 */
 			if (j < state->p_val[test_num]->count) {
 				for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
 					/*
-					 * get p_value for an interation belonging to this data*.txt filename
+					 * Get p_value for an iteration belonging to this data*.txt filename
 					 */
 					p_value = get_value(state->p_val[test_num], double, i);
 
 					/*
-					 * print p_value to results.txt
+					 * Print p_value to results.txt
 					 */
 					errno = 0;	// paranoia
 					ok = LongestRunOfOnes_print_p_value(data, p_value);
@@ -1051,7 +1065,7 @@ LongestRunOfOnes_print(struct state *state)
 			}
 
 			/*
-			 * flush and close data*.txt, free pathname
+			 * Flush and close data*.txt, free pathname
 			 */
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
@@ -1070,7 +1084,7 @@ LongestRunOfOnes_print(struct state *state)
 	}
 
 	/*
-	 * driver print - set driver state to DRIVER_PRINT
+	 * Set driver state to DRIVER_PRINT
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
@@ -1084,25 +1098,25 @@ LongestRunOfOnes_print(struct state *state)
  *
  * given:
  *      state           // run state to test under
- *      sampleCount             // number of bitstreams in which we counted p_values
+ *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // uniformanity frequency bins
+ *      freqPerBin              // Uniformity frequency bins
  */
 static void
 LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
 	long int passCount;	// p_values that pass
 	double p_hat;		// 1 - alpha
-	double proportion_threshold_max;	// when passCount is too high
-	double proportion_threshold_min;	// when passCount is too low
-	double chi2;		// sum of chi^2 for each tenth
-	double uniformity;	// uniformitu of frequency bins
-	double expCount;	// sample size divided by frequency bin count
+	double proportion_threshold_max;	// When passCount is too high
+	double proportion_threshold_min;	// When passCount is too low
+	double chi2;		// Sum of chi^2 for each tenth
+	double uniformity;	// Uniformity of frequency bins
+	double expCount;	// Sample size divided by frequency bin count
 	int io_ret;		// I/O return status
 	long int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(105, __FUNCTION__, "state arg is NULL");
@@ -1112,7 +1126,7 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	}
 
 	/*
-	 * determine the number tests that passed
+	 * Determine the number tests that passed
 	 */
 	if ((sampleCount <= 0) || (sampleCount < toolow)) {
 		passCount = 0;
@@ -1121,22 +1135,22 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	}
 
 	/*
-	 * determine proportion threadholds
+	 * Determine proportion thresholds
 	 */
 	p_hat = 1.0 - state->tp.alpha;
 	proportion_threshold_max = (p_hat + 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 	proportion_threshold_min = (p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 
 	/*
-	 * uniformity failure check
+	 * Check uniformity failure
 	 */
 	chi2 = 0.0;
 	expCount = sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		uniformity = 0.0;
 	} else {
-		// sum chi squared of the frequency bins
+		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
 			/*
 			 * NOTE: Mathematical expression code rewrite, old code commented out below:
@@ -1145,50 +1159,50 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
-		// uniformity threashold level
+		// Uniformity threshold level
 		uniformity = cephes_igamc((state->tp.uniformity_bins - 1.0) / 2.0, chi2 / 2.0);
 	}
 
 	/*
-	 * output uniformity results in trandtional format to finalAnalysisReport.txt
+	 * Output uniformity results in traditional format to finalAnalysisReport.txt
 	 */
 	for (i = 0; i < state->tp.uniformity_bins; ++i) {
 		fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
 	}
 	if (expCount <= 0.0) {
-		// not enough samples for uniformity check
+		// Not enough samples for uniformity check
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
 	} else if (uniformity < state->tp.uniformity_level) {
-		// uniformity failure
+		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;
 		dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
 	} else {
-		// uniformity success
+		// Uniformity success
 		fprintf(state->finalRept, " %8.6f   ", uniformity);
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
 	}
 
 	/*
-	 * output proportional results in trandtional format to finalAnalysisReport.txt
+	 * Output proportional results in traditional format to finalAnalysisReport.txt
 	 */
 	if (sampleCount == 0) {
-		// not enough samples for proportional check
+		// Not enough samples for proportional check
 		fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
 		state->proportional_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
 	} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
-		// proportional failure
+		// Proportional failure
 		state->proportional_failure[test_num] = true;
-		fprintf(state->finalRept, "%4ld/%-4ld *  %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
 	} else {
-		// proportional success
+		// Proportional success
 		state->proportional_failure[test_num] = false;
-		fprintf(state->finalRept, "%4ld/%-4ld    %s\n", passCount, sampleCount, state->testNames[test_num]);
+		fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
 		dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
 	}
 	errno = 0;		// paranoia
@@ -1196,6 +1210,7 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	if (io_ret != 0) {
 		errp(105, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -1206,29 +1221,29 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
  * given:
  *      state           // run state to test under
  *
- * This function is called once to complete the test analysis for all interations.
+ * This function is called once to complete the test analysis for all iterations.
  *
  * NOTE: The initialize and iterate functions must be called before this function is called.
  */
 void
 LongestRunOfOnes_metrics(struct state *state)
 {
-	long int sampleCount;	// number of bitstreams in which we will count p_values
+	long int sampleCount;	// Number of bitstreams in which we will count p_values
 	long int toolow;	// p_values that were below alpha
-	double p_value;		// p_value interation test result(s)
-	long int *freqPerBin;	// uniformanity frequency bins
+	double p_value;		// p_value iteration test result(s)
+	long int *freqPerBin;	// Uniformity frequency bins
 	long int i;
 	long int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(106, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
-		    state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		    test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -1248,7 +1263,7 @@ LongestRunOfOnes_metrics(struct state *state)
 	}
 
 	/*
-	 * allocate uniformanity frequency bins
+	 * Allocate uniformity frequency bins
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
@@ -1257,12 +1272,12 @@ LongestRunOfOnes_metrics(struct state *state)
 	}
 
 	/*
-	 * print for each partition (or the whole set of p_values if partitionCount is 1)
+	 * Print for each partition (or the whole set of p_values if partitionCount is 1)
 	 */
 	for (j = 0; j < state->partitionCount[test_num]; ++j) {
 
 		/*
-		 * zero counters
+		 * Set counters to zero
 		 */
 		toolow = 0;
 		sampleCount = 0;
@@ -1276,36 +1291,36 @@ LongestRunOfOnes_metrics(struct state *state)
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
-		 * p_value tally
+		 * Tally p_value
 		 */
 		for (i = j; i < state->p_val[test_num]->count; i += state->partitionCount[test_num]) {
 
-			// get the intertion p_value
+			// Get the iteration p_value
 			p_value = get_value(state->p_val[test_num], double, i);
 			if (p_value == NON_P_VALUE) {
-				continue;	// the test was not possible for this interation
+				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
-				// random excursion tests only sample > 0 p_values
+				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
 					++sampleCount;
 				} else {
-					// ignore p_value of 0 for random excursion tests
+					// Ignore p_value of 0 for random excursion tests
 					continue;
 				}
-
-				// case: general (non-random excursion) test
-			} else {
-				// all other tests count all p_values
+			}
+			// Case: general (non-random excursion) test
+			else {
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
-			// count the number of p_values below alpha
+			// Count the number of p_values below alpha
 			if (p_value < state->tp.alpha) {
 				++toolow;
 			}
-			// tally the p_value in a uniformity bin
+			// Tally the p_value in a uniformity bin
 			if (p_value >= 1.0) {
 				++freqPerBin[state->tp.uniformity_bins - 1];
 			} else if (p_value >= 0.0) {
@@ -1316,35 +1331,32 @@ LongestRunOfOnes_metrics(struct state *state)
 		}
 
 		/*
-		 * print uniformity and proportional information for a tallied count
+		 * Print uniformity and proportional information for a tallied count
 		 */
 		LongestRunOfOnes_metric_print(state, sampleCount, toolow, freqPerBin);
 
 		/*
-		 * track maximum samples
+		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
-	 * free allocated storage
+	 * Free allocated storage
 	 */
 	free(freqPerBin);
 	freqPerBin = NULL;
 
 	/*
-	 * driver uniformity and proportional analysis - set driver state to DRIVER_METRICS
+	 * Set driver state to DRIVER_METRICS
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
@@ -1366,7 +1378,7 @@ void
 LongestRunOfOnes_destroy(struct state *state)
 {
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(107, __FUNCTION__, "state arg is NULL");
@@ -1377,7 +1389,7 @@ LongestRunOfOnes_destroy(struct state *state)
 	}
 
 	/*
-	 * free dynamic arrays
+	 * Free dynamic arrays
 	 */
 	if (state->stats[test_num] != NULL) {
 		free_dyn_array(state->stats[test_num]);
@@ -1391,7 +1403,7 @@ LongestRunOfOnes_destroy(struct state *state)
 	}
 
 	/*
-	 * free other test storage
+	 * Free other test storage
 	 */
 	if (state->datatxt_fmt[test_num] != NULL) {
 		free(state->datatxt_fmt[test_num]);
@@ -1403,7 +1415,7 @@ LongestRunOfOnes_destroy(struct state *state)
 	}
 
 	/*
-	 * driver state destroyed - set driver state to DRIVER_DESTROY
+	 * Set driver state to DRIVER_DESTROY
 	 */
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);

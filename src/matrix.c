@@ -3,12 +3,18 @@
  *****************************************************************************/
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -18,6 +24,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: 120 thru 129
 
@@ -39,28 +46,32 @@ computeRank(int M, int Q, BitSequence ** matrix)
 	int m = MIN(M, Q);
 
 	/*
-	 * FORWARD APPLICATION OF ELEMENTARY ROW OPERATIONS
+	 * Forward application of elementary row operations
 	 */
 	for (i = 0; i < m - 1; i++) {
 		if (matrix[i][i] == 1) {
 			perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
-		} else {	/* matrix[i][i] = 0 */
+		} else if (matrix[i][i] == 0) {
 			if (find_unit_element_and_swap(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix) == 1) {
 				perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
 			}
+		} else {
+			// TODO add debug message and exit
 		}
 	}
 
 	/*
-	 * BACKWARD APPLICATION OF ELEMENTARY ROW OPERATIONS
+	 * Backward application of elementary row operations
 	 */
 	for (i = m - 1; i > 0; i--) {
 		if (matrix[i][i] == 1) {
 			perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
-		} else {	/* matrix[i][i] = 0 */
+		} else if (matrix[i][i] == 0) {
 			if (find_unit_element_and_swap(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix) == 1) {
 				perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
 			}
+		} else {
+			// TODO add debug message and exit
 		}
 	}
 
@@ -79,7 +90,7 @@ perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** 
 		for (j = i + 1; j < M; j++) {
 			if (A[j][i] == 1) {
 				for (k = i; k < Q; k++) {
-					A[j][k] = (A[j][k] + A[i][k]) % 2;
+					A[j][k] = (BitSequence) ((A[j][k] + A[i][k]) % 2);
 				}
 			}
 		}
@@ -87,7 +98,7 @@ perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** 
 		for (j = i - 1; j >= 0; j--) {
 			if (A[j][i] == 1) {
 				for (k = 0; k < Q; k++) {
-					A[j][k] = (A[j][k] + A[i][k]) % 2;
+					A[j][k] = (BitSequence) ((A[j][k] + A[i][k]) % 2);
 				}
 			}
 		}
@@ -122,15 +133,15 @@ find_unit_element_and_swap(int flag, int i, int M, int Q, BitSequence ** A)
 }
 
 int
-swap_rows(int i, int index, int Q, BitSequence ** A)
+swap_rows(int index_first_row, int index_second_row, int Q, BitSequence ** A)
 {
 	int p;
 	BitSequence temp;
 
 	for (p = 0; p < Q; p++) {
-		temp = A[i][p];
-		A[i][p] = A[index][p];
-		A[index][p] = temp;
+		temp = A[index_first_row][p];
+		A[index_first_row][p] = A[index_second_row][p];
+		A[index_second_row][p] = temp;
 	}
 
 	return 1;
@@ -170,8 +181,8 @@ determine_rank(int m, int M, int Q, BitSequence ** A)
  * create_matrix - allocate a 2D matrix of BitSequence values
  *
  * given:
- *      M       // number of rows in the matrix
- *      Q       // number of columns in each matrix row
+ *      M       // Number of rows in the matrix
+ *      Q       // Number of columns in each matrix row
  *
  * returns:
  *      An allocated 2D matrix of BitSequence values.
@@ -188,17 +199,17 @@ create_matrix(int M, int Q)
 	int i;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (M < 0) {
 		err(120, __FUNCTION__, "number of rows: %d must be > 0", M);
 	}
 	if (Q < 0) {
-		err(120, __FUNCTION__, "number of coolumns per rows: %d must be > 0", Q);
+		err(120, __FUNCTION__, "number of columns per rows: %d must be > 0", Q);
 	}
 
 	/*
-	 * allocate array of matrix rows
+	 * Allocate array of matrix rows
 	 */
 	matrix = malloc(M * sizeof(matrix[0]));
 	if (matrix == NULL) {
@@ -207,7 +218,7 @@ create_matrix(int M, int Q)
 	}
 
 	/*
-	 * allocate the columns for each matrix row
+	 * Allocate the columns for each matrix row
 	 */
 	for (i = 0; i < M; i++) {
 		matrix[i] = malloc(Q * sizeof(matrix[0][0]));
@@ -219,7 +230,16 @@ create_matrix(int M, int Q)
 	return matrix;
 }
 
-
+/*
+ * def_matrix - fills the given matrix m with consecutive bits from the sequence.
+ *              MUST be called after create_matrix function has allocated memory for m.
+ *
+ * given:
+ *      M       // Number of rows in the matrix m
+ *      Q       // Number of columns in each row of the matrix m
+ *      m       // allocated 2D matrix of BitSequence values
+ *      k       // offset for the bits to copy to this matrix (counts the matrices that were already filled)
+ */
 void
 def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 {
@@ -227,13 +247,22 @@ def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 	int j;
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
 		err(121, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
 		err(121, __FUNCTION__, "state->epsilon is NULL");
+	}
+	if (M < 0) {
+		err(121, __FUNCTION__, "number of rows: %d must be > 0", M);
+	}
+	if (Q < 0) {
+		err(121, __FUNCTION__, "number of columns per rows: %d must be > 0", Q);
+	}
+	if (k < 0) {
+		err(121, __FUNCTION__, "offset for the values to copy from the sequence to to m: %d must be > 0", Q);
 	}
 
 	for (i = 0; i < M; i++) {

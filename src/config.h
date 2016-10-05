@@ -1,10 +1,16 @@
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -92,17 +98,17 @@ extern "C" {
 #      undef true
 #      undef false
 #      if defined(__cplusplus)
-#         define bool bool
-#         define true true
-#         define false false
+#         	  define bool bool
+#         	  define true true
+#         	  define false false
 #      else
-#         if __STDC_VERSION__ >= 199901L
-#            define bool _Bool
-#         else
-#            define bool unsigned char
-#         endif
-#         define true 1
-#         define false 0
+#         	  if __STDC_VERSION__ >= 199901L
+#         	     define bool _Bool
+#         	  else
+#         	     define bool unsigned char
+#         	  endif
+#         	  define true 1
+#         	  define false 0
 #      endif
 #      define __bool_true_false_are_defined 1
 #   endif

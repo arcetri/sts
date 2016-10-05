@@ -1,12 +1,18 @@
 // debug.c
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -16,6 +22,7 @@
  *
  * Share and enjoy! :-)
  */
+
 
 // Exit codes: none
 // NOTE: Other code calls err() and errp() with various exit codes that may result in zero or non-zero exits
@@ -55,7 +62,7 @@ msg(char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (fmt == NULL) {
 		warn(__FUNCTION__, "NULL fmt given to debug");
@@ -63,7 +70,7 @@ msg(char const *fmt, ...)
 	}
 
 	/*
-	 * print the message
+	 * Print the message
 	 */
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
@@ -104,7 +111,7 @@ dbg(int level, char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (fmt == NULL) {
 		warn(__FUNCTION__, "NULL fmt given to debug");
@@ -154,7 +161,7 @@ warn(char const *name, char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (name == NULL) {
 		fprintf(stderr, "Warning: %s called with NULL name\n", __FUNCTION__);
@@ -211,7 +218,7 @@ warnp(char const *name, char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (name == NULL) {
 		fprintf(stderr, "Warning: %s called with NULL name\n", __FUNCTION__);
@@ -268,7 +275,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (exitcode >= 256) {
 		warn(__FUNCTION__, "called with exitcode >= 256: %d", exitcode);
@@ -305,7 +312,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
 	va_end(ap);
 
 	/*
-	 * terminate unless exit code is negative
+	 * terminate
 	 */
 	exit(exitcode);
 }
@@ -341,7 +348,7 @@ errp(int exitcode, char const *name, char const *fmt, ...)
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (exitcode >= 256) {
 		warn(__FUNCTION__, "called with exitcode >= 256: %d", exitcode);
@@ -414,7 +421,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (usage == NULL) {
 		warn(__FUNCTION__, "called with NULL usage");
@@ -500,7 +507,7 @@ usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, .
 	va_start(ap, fmt);
 
 	/*
-	 * firewall
+	 * Check preconditions (firewall)
 	 */
 	if (usage == NULL) {
 		warn(__FUNCTION__, "called with NULL usage");

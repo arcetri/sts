@@ -20,12 +20,18 @@
  */
 
 /*
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
- * See the initial comment in assess.c and the file README.txt for more information.
+ * This code has been heavily modified by the following people:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -37,9 +43,9 @@
  */
 
 /********************************************************************
-*                                                                  *
+*								   *
 * THIS FILE IS PART OF THE OggSQUISH SOFTWARE CODEC SOURCE CODE.   *
-*                                                                  *
+*								   *
 ********************************************************************
 
 file: fft.c
@@ -69,7 +75,7 @@ last modification date: Jul 1 1996
 #define STIN static
 
 static void
-drfti1(int n, double *wa, long int *ifac)
+drfti1(long int n, double *wa, long int *ifac)
 {
 	static int ntryh[4] = { 4, 2, 3, 5 };
 	static double tpi = 6.28318530717958647692528676655900577;
@@ -167,7 +173,7 @@ drfti1(int n, double *wa, long int *ifac)
 }
 
 void
-__ogg_fdrffti(int n, double *wsave, long int *ifac)
+__ogg_fdrffti(long int n, double *wsave, long int *ifac)
 {
 	if (n == 1) {
 		return;
@@ -198,7 +204,7 @@ __ogg_fdcosqi(int n, double *wsave, long int *ifac)
 #endif
 
 STIN void
-dradf2(int ido, int l1, double *cc, double *ch, double *wa1)
+dradf2(long int ido, long int l1, double *cc, double *ch, double *wa1)
 {
 	long int i;
 	long int k;
@@ -269,7 +275,7 @@ dradf2(int ido, int l1, double *cc, double *ch, double *wa1)
 }
 
 STIN void
-dradf4(int ido, int l1, double *cc, double *ch, double *wa1, double *wa2, double *wa3)
+dradf4(long int ido, long int l1, double *cc, double *ch, double *wa1, double *wa2, double *wa3)
 {
 	static double hsqt2 = .70710678118654752440084436210485;
 	long int i;
@@ -394,7 +400,8 @@ dradf4(int ido, int l1, double *cc, double *ch, double *wa1, double *wa2, double
 }
 
 STIN void
-dradfg(int ido, int ip, int l1, int idl1, double *cc, double *c1, double *c2, double *ch, double *ch2, double *wa)
+dradfg(long int ido, long int ip, long int l1, long int idl1, double *cc, double *c1, double *c2, double *ch,
+       double *ch2, double *wa)
 {
 	static double tpi = 6.28318530717958647692528676655900577;
 	long int idij;
@@ -706,6 +713,7 @@ dradfg(int ido, int ip, int l1, int idl1, double *cc, double *c1, double *c2, do
 			t9 += ido;
 		}
 	}
+
 	return;
 
       L141:
@@ -739,7 +747,7 @@ dradfg(int ido, int ip, int l1, int idl1, double *cc, double *c1, double *c2, do
 }
 
 STIN void
-drftf1(int n, double *c, double *ch, double *wa, long int *ifac)
+drftf1(long int n, double *c, double *ch, double *wa, long int *ifac)
 {
 	long int i;
 	long int k1;
@@ -827,7 +835,7 @@ drftf1(int n, double *c, double *ch, double *wa, long int *ifac)
 }
 
 void
-__ogg_fdrfftf(int n, double *r, double *wsave, long int *ifac)
+__ogg_fdrfftf(long int n, double *r, double *wsave, long int *ifac)
 {
 	if (n == 1) {
 		return;

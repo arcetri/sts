@@ -34,7 +34,26 @@
  *
  * IMPORTANT NOTE:
  *
- * This code has been heavily modified by Landon Curt Noll (chongo at cisco dot com) and Tom Gilgan (thgilgan at cisco dot com).
+ * This code has been heavily modified by the following people:
+ *
+ *      Landon Curt Noll
+ *      Tom Gilgan
+ *      Riccardo Paccagnella
+ *
+ * See the README.txt and the initial comment in assess.c for more information.
+ *
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ *
+ * Share and enjoy! :-)
  *
  * Our code review identified more than 67 issues (as of 2015 July) in the original code to which we attempted to fix.
  * A fair number of these issues results in incorrect statistical analysis, core dump / process crashing, or permitted an
@@ -44,14 +63,14 @@
  * data sets that approached or exceeded 2^31 bits would completely fail.  And that is just a partial list of some of the
  * significant issues we identified!
  *
- * We (Tom an Landon) attempted to resolve, fix and/or improve as many of these issues as we could.  With this new code, we
+ * We attempted to resolve, fix and/or improve as many of these issues as we could.  With this new code, we
  * compared our new results to results of the original code running on a 32-bit machine.  Due to limitations of the original
  * code we could only reliably compare using data sets of at most 2^30 bits (the original code would crash and/or produce
  * bogus results if the test set was larger).
  *
  * When we fixed the implementation of the mathematics, improved / corrected the constants, and performed general bug fixing,
  * the output of the test changed.  In a number of cases we could not simply compare old and new output: especially when the
- * output difference came as a direct result of a bug fix!  Nevertheless, for all 9 built-in generators the output was
+ * Output difference came as a direct result of a bug fix!  Nevertheless, for all 9 built-in generators the output was
  * equivalent to the old code when the data set was limited to just 2^30 bits, the iteration size was 2^20 bits, the
  * number of iterations were 2^10 and the -O (mimic output format of legacy code) option was used, and result impacting
  * bug fixes were taken into account.
@@ -85,7 +104,7 @@
  *         BSD-style coding style as implemented by the indent tool.  We had to choose to extend the line length
  *         to 132 characters, beyond the usual 80, due to the way the code was originally written.
  *
- *      5) Eliminate we much as possible, the use of global variables
+ *      5) Eliminate as much as possible the use of global variables
  *
  *         The original code relied heavily on variables of global scope.  In some cases those global variables
  *         were used differently by different parts of the test resulting in unexpected side effects based on
@@ -109,9 +128,8 @@
  *         of these data files was too often not very robust.  We modified the code to allocate memory and where
  *         needed, pass pointers to that data via the state structure argument mentioned in (5) above.
  *         We did not attempt to preserve the ability for systems with a tiny amount of memory to perform well.
- *         If you attempt to test a huge amount of data, huge with expect to the amount of RAM on your system
- *         expect this code to page/swap or gracefully about due to malloc being unable to allocate the needed
- *         amount of virtual memory.
+ *         If you attempt to test a huge amount of data (huge in comparison to the amount of RAM on your system),
+ *         expect this code to page/swap or gracefully abort due to malloc failures.
  *
  *      8) Check for errors on return from system functions
  *
@@ -163,8 +181,8 @@
  *      13) Fixed the use of test constants
  *
  *          The original code contained a number test parameter constants that were computed with a naive
- *          level of precision.  We attempted to derive such constants using tools such as mathemtica,
- *          and calc, and update the test constants accordingly.
+ *          level of precision.  We attempted to derive such constants using tools such as Mathematica,
+ *          and Calc, and update the test constants accordingly.
  *
  *      14) Handle improper test conditions better
  *
@@ -219,15 +237,15 @@
  *
  *      20) Fix compiler warnings
  *
- *          Modern compilers report several warnigns with respect to the orignal code.  Some of these
+ *          Modern compilers report several warnings with respect to the original code.  Some of these
  *          warnings hint at more serious flaws in that code.  We fixed these warnings, as extended the
  *          code to using the c99 standard and to be pedantic error and warning free.
  *
- *	21) Fixed memory leaks
+ *      21) Fixed memory leaks
  *
- *	    The original code had arrays that were allocated and lost (data no longer referenced)
- *	    or that were not freed.  We used memory allocation checking tools and cleaned up
- *	    cases where memory leaks were found.
+ *          The original code had arrays that were allocated and lost (data no longer referenced)
+ *          or that were not freed.  We used memory allocation checking tools and cleaned up
+ *          cases where memory leaks were found.
  *
  *      22) other issues not listed
  *
@@ -254,10 +272,10 @@
  *
  *      C) Evaluate test conditions
  *
- *         We need to take another careful pass to determine when the parameters do not well the
- *         SP800-22Rev1a test document.  We also need to take a pass to determine when an iteration
- *         cannot be used to produce a meaningful p_value.  In some cases the sited papers
- *         listed in the SP800-22Rev1a references should be carefully reviewed.
+ *         We need to take another careful pass to determine when the parameters do not agree with
+ *         the test conditions described in the SP800-22Rev1a test document.  We also need to take
+ *         a pass to determine when an iteration cannot be used to produce a meaningful p_value.
+ *         In some cases the sited papers listed in the SP800-22Rev1a references should be reviewed.
  *
  *      D) Improve test statistics
  *
@@ -364,24 +382,21 @@
  *      sts patch request
  */
 
-// Exit codes: 5 thru 9
+
+// Exit codes: 5 to 9
 // NOTE: This code also does an exit(0) on normal completion
 // NOTE: 0-4 is used in Parse_args.c
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <string.h>
 #include <errno.h>
 #include "defs.h"
-#include "cephes.h"
 #include "utilities.h"
-#include "stat_fncs.h"
 #include "externs.h"
 #include "debug.h"
 
 // sts_version-edit_number
-const char *const version = "sts-2.1.2.4.cisco";
+const char *const version = "sts-2.1.2.5.cisco";
 
 // our name
 char *program = "assess";
@@ -394,7 +409,7 @@ int
 main(int argc, char *argv[])
 {
 	struct state run_state;	/* options set and dynamic arrays for this run */
-	int io_ret;		// I/O return status
+	int io_ret;		/* I/O return status */
 
 	/*
 	 * set default test parameters and parse command line
@@ -402,7 +417,7 @@ main(int argc, char *argv[])
 	Parse_args(&run_state, argc, argv);
 
 	/*
-	 * initialize all active tests
+	 * Initialize all active tests
 	 */
 	init(&run_state);
 
@@ -435,7 +450,7 @@ main(int argc, char *argv[])
 	}
 
 	/*
-	 * print results if needed
+	 * Print results if needed
 	 *
 	 * or old code: partition results
 	 */
@@ -464,7 +479,8 @@ main(int argc, char *argv[])
 	if (io_ret <= 0) {
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
-	io_ret = fprintf(run_state.finalRept, " C1  C2  C3  C4  C5  C6  C7  C8  C9 C10  P-VALUE  PROPORTION  STATISTICAL TEST\n");
+	io_ret =
+	    fprintf(run_state.finalRept, " C1	C2  C3	C4  C5	C6  C7	C8  C9 C10  P-VALUE  PROPORTION	 STATISTICAL TEST\n");
 	if (io_ret <= 0) {
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
@@ -472,6 +488,7 @@ main(int argc, char *argv[])
 	if (io_ret <= 0) {
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
+
 	metrics(&run_state);
 	errno = 0;		// paranoia
 	io_ret = fflush(run_state.finalRept);
