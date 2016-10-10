@@ -114,7 +114,7 @@ LinearComplexity_init(struct state *state)
 	M = state->tp.linearComplexitySequenceLength;
 
 	/*
-	 * disable test if conditions do not permit this test from being run
+	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (M < MIN_LINEARCOMPLEXITY) {
 		warn(__FUNCTION__, "-P 6: linear complexity sequence length(M): %ld must be >= %d", M, MIN_LINEARCOMPLEXITY);

@@ -132,7 +132,7 @@ Universal_init(struct state *state)
 	n = state->tp.n;
 
 	/*
-	 * disable test if conditions do not permit this test from being run
+	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (n < MIN_UNIVERSAL) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d for L >= 6",

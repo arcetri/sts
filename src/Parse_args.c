@@ -107,15 +107,15 @@ static struct state const defaultstate = {
 		 DEFAULT_NON_OVERLAPPING,	// -P 2=m, NonOverlapping Template Test - block length
 		 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
 		 DEFAULT_APEN,			// -P 4=m, Approximate Entropy Test - block length
-		 DEFAULT_SERIAL,		    // -P 5=m, Serial Test - block length
+		 DEFAULT_SERIAL,		// -P 5=m, Serial Test - block length
 		 DEFAULT_LINEARCOMPLEXITY,	// -P 6=M, Linear Complexity Test - block length
 		 DEFAULT_ITERATIONS,		// -P 7=iterations (-i iterations)
 		 DEFAULT_UNIFORMITY_BINS,	// -P 8=bins, uniformity test is thru this many bins
-		 DEFAULT_BITCOUNT,		    // -P 9=bitcount, Length of a single bit stream
+		 DEFAULT_BITCOUNT,		// -P 9=bitcount, Length of a single bit stream
 		 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
 		 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
 		},
-		false,					// no -p, prompt for change of parameters if no -b
+		false,			// no -p, prompt for change of parameters if no -b
 
 		// c, cSetup
 		{UNSET_DOUBLE,		// Square root of 2 - used by several tests

@@ -188,6 +188,8 @@
 #   define DEFAULT_UNIFORMITY_LEVEL	(0.0001)	// -P 10=uni_level, uniformity errors have values below this
 #   define DEFAULT_ALPHA		(0.01)		// -P 11=alpha, p_value significance level
 
+#   define MIN_FREQUENCY		(100)		// Input size recommendation for Frequency test specified in section 2.1.7
+
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
 // TODO this is test-dependent. For example 1,2,3 tests require only 100 bits, 4 requires 128, 5 requires 38,912

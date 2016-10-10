@@ -132,7 +132,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 	m = state->tp.overlappingTemplateBlockLength;
 
 	/*
-	 * disable test if conditions do not permit this test from being run
+	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (m < MINTEMPLEN) {
 		warn(__FUNCTION__, "disabling test %s[%d]: -P 3: Overlapping Template Test - block length(m): %ld must be >= %d",

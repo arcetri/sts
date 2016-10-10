@@ -73,6 +73,8 @@ static void Frequency_metric_print(struct state *state, long int sampleCount, lo
 void
 Frequency_init(struct state *state)
 {
+	long int n;		// Length of a single bit stream
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -92,7 +94,21 @@ Frequency_init(struct state *state)
 		err(70, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO n >= 100
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (n < MIN_FREQUENCY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_FREQUENCY);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -204,22 +220,22 @@ Frequency_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;	        // SUCCESS
 	}
 
 	/*
@@ -599,6 +615,7 @@ Frequency_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -857,6 +874,7 @@ Frequency_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -916,5 +934,6 @@ Frequency_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }

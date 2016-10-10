@@ -232,7 +232,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	tbits = state->tp.nonOverlappingTemplateBlockLength;
 
 	/*
-	 * disable test if conditions do not permit this test from being run
+	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (tbits < MINTEMPLEN) {
 		warn(__FUNCTION__, "disabling test %s[%d]: -P 2: NonOverlapping Template Test - "
