@@ -188,7 +188,10 @@
 #   define DEFAULT_UNIFORMITY_LEVEL	(0.0001)	// -P 10=uni_level, uniformity errors have values below this
 #   define DEFAULT_ALPHA		(0.01)		// -P 11=alpha, p_value significance level
 
-#   define MIN_FREQUENCY		(100)		// Input size recommendation for Frequency test specified in section 2.1.7
+#   define MIN_FREQUENCY		(100)		// Input size recommendation of n for Frequency and BlockFrequency tests
+#   define MIN_BLOCK_LENGTH		(20)		// Input size recommendation of M for BlockFrequency test
+#   define MIN_RATIO_M_OVER_n		(0.01)		// Input size recommendation of M for BlockFrequency test
+#   define MAX_BLOCKS_NUMBER		(100)		// Input size recommendation of N for BlockFrequency test
 
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0

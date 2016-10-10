@@ -76,6 +76,10 @@ static void BlockFrequency_metric_print(struct state *state, long int sampleCoun
 void
 BlockFrequency_init(struct state *state)
 {
+	long int M;		// Block Frequency Test - block length
+	long int n;		// Length of a single bit stream
+	long int N;		// Number of non-overlapping blocks
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -95,7 +99,38 @@ BlockFrequency_init(struct state *state)
 		err(20, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO Check that n >= MN. The block size M should be selected such that M >= 20, M > .01n and N < 100.
+
+	/*
+	 * Collect parameters from state
+	 */
+	M = state->tp.blockFrequencyBlockLength;
+	n = state->tp.n;
+	N = n / M;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (n < MIN_FREQUENCY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_FREQUENCY);
+		state->testVector[test_num] = false;
+		return;
+	} else if (M < MIN_BLOCK_LENGTH) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld >= %d",
+		     state->testNames[test_num], test_num, M, MIN_BLOCK_LENGTH);
+		state->testVector[test_num] = false;
+		return;
+	} else if (M <= MIN_RATIO_M_OVER_n * n) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld > %d * n, and here n = %ld",
+		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n, n);
+		state->testVector[test_num] = false;
+		return;
+	} else if (N >= MAX_BLOCKS_NUMBER) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires blocks number(N): %ld < %d",
+		     state->testNames[test_num], test_num, N, MAX_BLOCKS_NUMBER);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -128,6 +163,7 @@ BlockFrequency_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -148,7 +184,7 @@ BlockFrequency_iterate(struct state *state)
 	struct BlockFrequency_private_stats stat;	// Stats for this iteration
 	long int M;		// Block Frequency Test - block length
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of substring blocks
+	long int N;		// Number of non-overlapping blocks
 	long int blockSum;
 	long int i;
 	long int j;
@@ -183,23 +219,35 @@ BlockFrequency_iterate(struct state *state)
 	N = n / M;
 
 	/*
-	 * Perform the test
+	 * Step 1: partition the sequence into N non-overlapping blocks
 	 */
 	sum = 0.0;
 	for (i = 0; i < N; i++) {
+
+		/*
+		 * Step 2: determine the proportion of ones in each M-bit block
+		 */
 		blockSum = 0;
 		for (j = 0; j < M; j++) {
-			if (long_will_overflow(blockSum, state->epsilon[j + i * M])) {
-				// TODO add debug message and mark the test as invalid
-			}
-
 			blockSum += state->epsilon[j + i * M];
 		}
 		pi = (double) blockSum / (double) M;
+
+		/*
+        	 * Step 3a: prepare values required for computing the test statistic
+		 */
 		v = pi - 0.5;
 		sum += v * v;
 	}
+
+	/*
+	 * Step 3: compute the test statistic
+	 */
 	stat.chi_squared = 4.0 * M * sum;
+
+	/*
+	 * Step 4: compute the test P-value
+	 */
 	p_value = cephes_igamc(N / 2.0, stat.chi_squared / 2.0);
 
 	/*
@@ -209,22 +257,22 @@ BlockFrequency_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;	        // FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;	        // SUCCESS
 	}
 
 	/*
@@ -241,6 +289,7 @@ BlockFrequency_iterate(struct state *state)
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -263,7 +312,7 @@ BlockFrequency_print_stat(FILE * stream, struct state *state, struct BlockFreque
 {
 	long int M;		// Block Frequency Test - block length
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of substring blocks
+	long int N;		// Number of non-overlapping blocks
 	int io_ret;		// I/O return status
 
 	/*
@@ -632,6 +681,7 @@ BlockFrequency_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -753,6 +803,7 @@ BlockFrequency_metric_print(struct state *state, long int sampleCount, long int 
 	if (io_ret != 0) {
 		errp(25, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -842,7 +893,7 @@ BlockFrequency_metrics(struct state *state)
 			if (p_value == NON_P_VALUE) {
 				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
 				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
@@ -851,10 +902,10 @@ BlockFrequency_metrics(struct state *state)
 					// Ignore p_value of 0 for random excursion tests
 					continue;
 				}
-
-				// case: general (non-random excursion) test
-			} else {
-				// all other tests count all p_values
+			}
+			// Case: general (non-random excursion) test
+			else {
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
@@ -880,18 +931,15 @@ BlockFrequency_metrics(struct state *state)
 		/*
 		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
@@ -906,6 +954,7 @@ BlockFrequency_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -965,5 +1014,6 @@ BlockFrequency_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }

@@ -208,7 +208,7 @@ Frequency_iterate(struct state *state)
 	s_obs = fabs((double) stat.S_n) / state->c.sqrtn;
 
 	/*
-	 * Step 3: compute P-value
+	 * Step 3: compute the test P-value
 	 */
 	f = s_obs / state->c.sqrt2;
 	p_value = erfc(f);

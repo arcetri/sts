@@ -900,7 +900,7 @@ DiscreteFourierTransform_metrics(struct state *state)
 			if (p_value == NON_P_VALUE) {
 				continue;	// the test was not possible for this iteration
 			}
-			// case: random excursion test
+			// Case: random excursion test
 			if (state->is_excursion[test_num] == true) {
 				// Random excursion tests only sample > 0 p_values
 				if (p_value > 0.0) {
@@ -910,9 +910,9 @@ DiscreteFourierTransform_metrics(struct state *state)
 					continue;
 				}
 
-				// case: general (non-random excursion) test
+				// Case: general (non-random excursion) test
 			} else {
-				// all other tests count all p_values
+				// All other tests count all p_values
 				++sampleCount;
 			}
 
@@ -938,18 +938,15 @@ DiscreteFourierTransform_metrics(struct state *state)
 		/*
 		 * Track maximum samples
 		 */
-		// case: random excursion test
 		if (state->is_excursion[test_num] == true) {
 			if (sampleCount > state->maxRandomExcursionSampleSize) {
 				state->maxRandomExcursionSampleSize = sampleCount;
 			}
-			// case: general (non-random excursion) test
 		} else {
 			if (sampleCount > state->maxGeneralSampleSize) {
 				state->maxGeneralSampleSize = sampleCount;
 			}
 		}
-
 	}
 
 	/*
