@@ -78,6 +78,8 @@ static void Runs_metric_print(struct state *state, long int sampleCount, long in
 void
 Runs_init(struct state *state)
 {
+	long int n;		// Length of a single bit stream
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -96,6 +98,21 @@ Runs_init(struct state *state)
 	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
 		err(180, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
+	}
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (n < MIN_LENGTH_RUNS) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_RUNS);
+		state->testVector[test_num] = false;
+		return;
 	}
 
 	/*
@@ -129,6 +146,7 @@ Runs_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -148,9 +166,9 @@ Runs_iterate(struct state *state)
 {
 	struct Runs_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
-	long int S;
-	long int k;
+	long int S;		// Number of 1 bits in the sequence
 	double p_value;		// p_value iteration test result(s)
+	long int k;
 
 	/*
 	 * Check preconditions (firewall)
@@ -180,7 +198,7 @@ Runs_iterate(struct state *state)
 	n = state->tp.n;
 
 	/*
-	 * Count 1's in for this iteration
+	 * Step 1: determine the proportion of ones in the input sequence
 	 */
 	S = 0;
 	for (k = 0; k < n; k++) {
@@ -191,32 +209,28 @@ Runs_iterate(struct state *state)
 	stat.pi = (double) S / (double) n;
 
 	/*
-	 * Determine if we can test
+	 * Step 2: determine if the prerequisite Frequency test is passed
 	 */
-	stat.test_possible = (fabs(stat.pi - 0.5) > state->c.two_over_sqrtn) ? false : true;
+	stat.test_possible = (fabs(stat.pi - 0.5) >= state->c.two_over_sqrtn) ? false : true;
 
 	/*
-	 * Perform and record the test if it is possible to test
+	 * Move on if it is possible to test
 	 */
 	if (stat.test_possible == true) {
 
 		/*
-		 * Perform the test
-		 *
-		 * [Large values for V_n are indicative of an oscillation in the string which is too fast;
-		 * small values are indicative of an oscillation which is too slow. An oscillation is considered
-		 * to be a change from a one to a zero or vice versa.]
+		 * Step 3: compute the test statistic
 		 */
 		stat.V_n = 1;
 		for (k = 1; k < n; k++) {
 			if (state->epsilon[k] != state->epsilon[k - 1]) {
-				if (long_will_overflow(stat.V_n, 1)) {
-					// TODO add debug message and exit? Actually this never overflows, and also the others...
-				}
-
 				stat.V_n++;
 			}
 		}
+
+		/*
+		 * Step 4: compute the test P-value
+		 */
 		stat.erfc_arg = fabs(stat.V_n - 2.0 * (double) n * stat.pi * (1.0 - stat.pi)) /
 		    (2.0 * stat.pi * (1.0 - stat.pi) * state->c.sqrt2n);
 		p_value = erfc(stat.erfc_arg);
@@ -228,22 +242,22 @@ Runs_iterate(struct state *state)
 		state->valid[test_num]++;	// Count this valid test
 		if (isNegative(p_value)) {
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-			stat.success = false;	// FAILURE
+			stat.success = false;		// FAILURE
 			warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 			     state->curIteration, state->testNames[test_num], test_num, p_value);
 		} else if (isGreaterThanOne(p_value)) {
 			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-			stat.success = false;	// FAILURE
+			stat.success = false;		// FAILURE
 			warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 			     state->curIteration, state->testNames[test_num], test_num, p_value);
 		} else if (p_value < state->tp.alpha) {
 			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 			state->failure[test_num]++;	// Valid p_value but too low is a failure
-			stat.success = false;	// FAILURE
+			stat.success = false;		// FAILURE
 		} else {
 			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 			state->success[test_num]++;	// Valid p_value not too low is a success
-			stat.success = true;	// SUCCESS
+			stat.success = true;		// SUCCESS
 		}
 
 		/*
@@ -251,16 +265,17 @@ Runs_iterate(struct state *state)
 		 */
 		append_value(state->stats[test_num], &stat);
 		append_value(state->p_val[test_num], &p_value);
+	}
 
-		/*
-		 * accounting for tests that cannot be performed
-		 */
-	} else {
+	/*
+	 * Record values for tests that cannot be performed
+	 */
+	else {
 
 		state->count[test_num]++;	// Count this test, which happens to be invalid
 
 		/*
-		 * stats.txt accounting
+		 * Record predefined values to stats.txt
 		 */
 		stat.pi = UNSET_DOUBLE;
 		stat.V_n = 0;
@@ -269,7 +284,7 @@ Runs_iterate(struct state *state)
 		append_value(state->stats[test_num], &stat);
 
 		/*
-		 * results.txt accounting
+		 * Record predefined p-value to results.txt
 		 */
 		p_value = NON_P_VALUE;
 		append_value(state->p_val[test_num], &p_value);
@@ -346,7 +361,7 @@ Runs_print_stat(FILE * stream, struct state *state, struct Runs_private_stats *s
 	}
 
 	/*
-	 * case: test was not possible for this iteration
+	 * Case: test was not possible for this iteration
 	 */
 	if (stat->test_possible == false) {
 		if (state->legacy_output == true) {
@@ -365,11 +380,12 @@ Runs_print_stat(FILE * stream, struct state *state, struct Runs_private_stats *s
 				return false;
 			}
 		}
+	}
 
-		/*
-		 * case: test was possible for this iteration
-		 */
-	} else {
+	/*
+	 * Case: test was possible for this iteration
+	 */
+	else {
 		if (state->legacy_output == true) {
 			io_ret = fprintf(stream, "\t\tCOMPUTATIONAL INFORMATION:\n");
 			if (io_ret <= 0) {
@@ -426,7 +442,10 @@ Runs_print_stat(FILE * stream, struct state *state, struct Runs_private_stats *s
 			return false;
 		}
 	}
-	// report SUCCESS or FAILURE
+
+	/*
+	 * Report success or failure
+	 */
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {
@@ -512,17 +531,17 @@ void
 Runs_print(struct state *state)
 {
 	struct Runs_private_stats *stat;	// pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -713,6 +732,7 @@ Runs_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -900,13 +920,6 @@ Runs_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -980,6 +993,7 @@ Runs_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1039,5 +1053,6 @@ Runs_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }

@@ -654,13 +654,13 @@ RandomExcursions_print_stat(FILE * stream, struct state *state, struct RandomExc
 	}
 
 	/*
-	 * case: test was not possible for this iteration
+	 * Case: test was not possible for this iteration
 	 */
 	if (stat->test_possible == false) {
 		if (state->legacy_output == true) {
 
 			/*
-			 * note that in this cycle, this test is not applicable
+			 * Note that in this cycle, this test is not applicable
 			 */
 			io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
 			if (io_ret <= 0) {
@@ -716,7 +716,7 @@ RandomExcursions_print_stat(FILE * stream, struct state *state, struct RandomExc
 		}
 
 		/*
-		 * case: test was possible for this iteration
+		 * Case: test was possible for this iteration
 		 */
 	} else {
 		if (state->legacy_output == true) {

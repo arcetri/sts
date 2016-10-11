@@ -103,9 +103,9 @@ Frequency_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (n < MIN_FREQUENCY) {
+	if (n < MIN_LENGTH_FREQUENCY) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
-		     state->testNames[test_num], test_num, n, MIN_FREQUENCY);
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -329,6 +329,10 @@ Frequency_print_stat(FILE * stream, struct state *state, struct Frequency_privat
 	if (io_ret <= 0) {
 		return false;
 	}
+
+	/*
+	 * Report success or failure
+	 */
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {

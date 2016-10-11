@@ -456,7 +456,7 @@ openTruncate(char *filename)
 		warnp(__FUNCTION__, "could not create/open for writing/truncation: %s", filename);
 		return NULL;
 	}
-	dbg(DBG_MED, "created/opened for writing/truncation: %s", filename);
+	dbg(DBG_HIGH, "created/opened for writing/truncation: %s", filename);
 	return stream;
 }
 

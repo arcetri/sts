@@ -110,9 +110,9 @@ BlockFrequency_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (n < MIN_FREQUENCY) {
+	if (n < MIN_LENGTH_FREQUENCY) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
-		     state->testNames[test_num], test_num, n, MIN_FREQUENCY);
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
 	} else if (M < MIN_BLOCK_LENGTH) {
@@ -185,13 +185,13 @@ BlockFrequency_iterate(struct state *state)
 	long int M;		// Block Frequency Test - block length
 	long int n;		// Length of a single bit stream
 	long int N;		// Number of non-overlapping blocks
-	long int blockSum;
+	long int blockSum;      // Number of ones in a block
+	double p_value;		// p_value iteration test result(s)
+	double sum;             // Term of the chi squared formula
+	double pi;              // Proportion of ones in a block
+	double v;               // Value used in chi squared formula
 	long int i;
 	long int j;
-	double p_value;		// p_value iteration test result(s)
-	double sum;
-	double pi;
-	double v;
 
 	/*
 	 * Check preconditions (firewall)
@@ -229,7 +229,9 @@ BlockFrequency_iterate(struct state *state)
 		 */
 		blockSum = 0;
 		for (j = 0; j < M; j++) {
-			blockSum += state->epsilon[j + i * M];
+			if (state->epsilon[j + i * M]) {
+				blockSum++;
+			}
 		}
 		pi = (double) blockSum / (double) M;
 
@@ -241,7 +243,7 @@ BlockFrequency_iterate(struct state *state)
 	}
 
 	/*
-	 * Step 3: compute the test statistic
+	 * Step 3b: compute the test statistic
 	 */
 	stat.chi_squared = 4.0 * M * sum;
 
@@ -391,6 +393,10 @@ BlockFrequency_print_stat(FILE * stream, struct state *state, struct BlockFreque
 	if (io_ret <= 0) {
 		return false;
 	}
+
+	/*
+	 * Report success or failure
+	 */
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {
@@ -529,14 +535,14 @@ BlockFrequency_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_MED, "about to open/truncate: %s", stats_txt); // TODO make the level of all these debug statements to HIGH
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_MED, "about to open/truncate: %s", results_txt); // TODO make the level of all these debug statements to HIGH
 	results = openTruncate(results_txt);
 
 	/*

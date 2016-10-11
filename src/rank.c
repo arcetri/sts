@@ -391,7 +391,7 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 	}
 
 	/*
-	 * case: test was not possible for this iteration
+	 * Case: test was not possible for this iteration
 	 */
 	if (stat->test_possible == false) {
 		io_ret = fprintf(stream, "\t\tError: Insuffucient # of bits to define a (%dx%d) Matrix\n", RANK_ROWS, RANK_COLS);
@@ -400,7 +400,7 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 		}
 
 		/*
-		 * case: test was possible for this iteration
+		 * Case: test was possible for this iteration
 		 */
 	} else {
 		io_ret = fprintf(stream, "\t\t---------------------------------------------\n");

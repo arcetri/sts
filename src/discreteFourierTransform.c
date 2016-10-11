@@ -389,11 +389,11 @@ DiscreteFourierTransform_print_stat(FILE * stream, struct state *state, struct D
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) N_l	 = %ld\n", stat->N_1);
+	io_ret = fprintf(stream, "\t\t(b) N_1	 = %ld\n", stat->N_1);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) N_o	 = %f\n", stat->N_0);
+	io_ret = fprintf(stream, "\t\t(c) N_0	 = %f\n", stat->N_0);
 	if (io_ret <= 0) {
 		return false;
 	}
