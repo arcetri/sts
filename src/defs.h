@@ -188,11 +188,12 @@
 #   define DEFAULT_UNIFORMITY_LEVEL	(0.0001)	// -P 10=uni_level, uniformity errors have values below this
 #   define DEFAULT_ALPHA		(0.01)		// -P 11=alpha, p_value significance level
 
-#   define MIN_LENGTH_FREQUENCY		(100)		// Input size recommendation of n for Frequency and BlockFrequency tests
-#   define MIN_BLOCK_LENGTH		(20)		// Input size recommendation of M for BlockFrequency test
-#   define MIN_RATIO_M_OVER_n		(0.01)		// Input size recommendation of M for BlockFrequency test
-#   define MAX_BLOCKS_NUMBER		(100)		// Input size recommendation of N for BlockFrequency test
-#   define MIN_LENGTH_RUNS		(100)		// Input size recommendation of N for Runs test
+#   define MIN_LENGTH_FREQUENCY		(100)		// Minimum n for TEST_FREQUENCY and TEST_BLOCK_FREQUENCY
+#   define MIN_BLOCK_LENGTH		(20)		// Minimum M for TEST_BLOCK_FREQUENCY
+#   define MIN_RATIO_M_OVER_n		(0.01)		// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
+#   define MAX_BLOCKS_NUMBER		(100)		// Maximum blocks number N for TEST_BLOCK_FREQUENCY
+
+#   define MIN_LENGTH_RUNS		(100)		// Minimum n for TEST_RUNS
 
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
@@ -204,9 +205,10 @@
 
 #   define RANK_ROWS			(32)		// Number of rows in the rank_matrix used by TEST_RANK
 #   define RANK_COLS			(32)		// Number of columns in the rank_matrix used by TEST_RANK
+#   define MIN_NUMBER_OF_MATRICES	(38)		// Minimum number of matrices required for TEST_RANK
 
 #   define MAX_EXCURSION_VAR		(9)		// excursion states: -MAX_EXCURSION_VAR to -1,
-//     and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
+							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
 #   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
 
 #   define OVERLAP_M_SUBSTRING		(1032)		// bit length of tested substring (set in SP800-22Rev1a section 2.8.2)
@@ -214,7 +216,7 @@
 
 #   define LINEARCOMPLEXITY_K_DEGREES	(6)		// degrees of freedom (set in SP800-22Rev1a section 2.10.2)
 
-#   define MIN_LONGESTRUN		(128)		// minimum n for a Longest Runs test for TEST_LONGEST_RUN
+#   define MIN_LENGTH_LONGESTRUN	(128)		// Minimum n for a Longest Runs test for TEST_LONGEST_RUN
 #   define LONGEST_RUN_CLASS_COUNT	(6)		// Number of classes == max_len - min_len + 1 for TEST_LONGEST_RUN
 
 #   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
@@ -387,12 +389,12 @@ typedef struct _const {
 	double p_30;		// Probability of rank < RANK_ROWS-1 - used by RANK_TEST
 	double logn;		// log(n) - used by many tests
 	long int excursion_constraint;	// Number of crossings required to complete the test -
-	//    used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
+					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION //TODO move?
 	long int matrix_count;	// Total possible matrix for a given bit stream length - used by RANK_TEST
 } T_CONST;
 
 #   define UNSET_DOUBLE		((double)(0.0))		// unitialized floating point constant
-#   define NON_P_VALUE	((double)(-99999999.0))	// never a valid p_value
+#   define NON_P_VALUE	((double)(-99999999.0))		// never a valid p_value
 
 
 /*
@@ -404,17 +406,17 @@ struct state {
 
 	bool testVectorFlag;			// if and -t test1[,test2].. was given
 	bool testVector[NUMOFTESTS + 1];	// -t test1[,test2]..: tests to invoke
-	// -t 0 is a historical alias for all tests
+						// -t 0 is a historical alias for all tests
 
 	bool generatorFlag;		// if -g num was given
 	enum gen generator;		// -g num: RNG to test
 
 	bool iterationFlag;		// if -i iterations was given
-	// iterations is the same as numOfBitStreams, so this value is in tp.numOfBitStreams
+					// iterations is the same as numOfBitStreams, so this value is in tp.numOfBitStreams
 
 	bool reportCycleFlag;		// if -I reportCycle was given
 	long int reportCycle;		// -I reportCycle: Report after completion of reportCycle iterations
-	//		   (def: 0: do not report)
+					//		   (def: 0: do not report)
 	bool runModeFlag;		// if -m mode was given
 	enum run_mode runMode;		// -m mode: whether gather state files, process state files or both
 
@@ -423,10 +425,10 @@ struct state {
 
 	bool subDirsFlag;		// if -c was given
 	bool subDirs;			// -c: false -> don't create any directories needed for creating files
-	//		(def: do create)
+					//		(def: do create)
 
 	bool resultstxtFlag;		// -n: false -> don't create result.txt, data*.txt, nor stats.txt
-	//		(def: do create)
+					//		(def: do create)
 
 	bool randomDataFlag;		// if -f randdata was given
 	char *randomDataPath;		// -f randdata: path to a random data file
@@ -461,7 +463,7 @@ struct state {
 	struct dyn_array *freq;			// dynamic array frequency results on data for each iteration
 	struct dyn_array *stats[NUMOFTESTS + 1];// per test dynamic array of per iteration data (for stats.txt unless -n)
 	struct dyn_array *p_val[NUMOFTESTS + 1];// per test dynamic array of p_values and unless -n for results.txt
-	// NOTE: NonOverlapping Template Test uses array of struct nonover_stats
+						// NOTE: NonOverlapping Template Test uses array of struct nonover_stats
 
 	bool is_excursion[NUMOFTESTS + 1];	// true --> test is a form of random excursion
 
@@ -480,7 +482,7 @@ struct state {
 	long int maxGeneralSampleSize;		// largest sample size for a non-excursion test
 	long int maxRandomExcursionSampleSize;	// largest sample size for a general (non-random excursion) test
 
-	struct dyn_array *nonovTemplates;		// array of non-overlapping template words for TEST_NONPERIODIC
+	struct dyn_array *nonovTemplates;	// array of non-overlapping template words for TEST_NONPERIODIC
 
 	double *fft_m;				// test m array for TEST_FFT
 	double *fft_X;				// test X array for TEST_FFT

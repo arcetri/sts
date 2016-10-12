@@ -44,13 +44,18 @@
  */
 struct LongestRunOfOnes_private_stats {
 	bool success;		// Success or failure of iteration test
-	long int N;		// Number of M bit substrings
-	long int M;		// substring length
+	long int N;		// Number of M bit blocks
+	long int M;		// Block length
 	double chi2;		// Sum of chi^2 for each iteration
-	int runs_table_index;	// index in the runs_table[] being used
-	// Count[x] is of times the longest run was min_class-x
-	// Except when x is 0, odds are when <= min_class
-	// Except when x is LONGEST_RUN_CLASS_COUNT, odds are when >= max_class
+	int runs_table_index;	// Index in the runs_table[] being used
+
+	/*
+	 * When 0 < i < LONGEST_RUN_CLASS_COUNT, count[i] contains the number of times that the longest run of ones in an
+	 * M-bit block is equal to (min_class + i). When i == 0, count[i] contains the number of times that the longest run
+	 * of ones in an M-bit block is smaller or equal to (min_class). When i >= LONGEST_RUN_CLASS_COUNT,
+	 * count[LONGEST_RUN_CLASS_COUNT] contains the number of times that the longest run of ones in an M-bit
+	 * block is bigger or equal to (max_class).
+	 */
 	unsigned long count[LONGEST_RUN_CLASS_COUNT + 1];
 };
 
@@ -74,22 +79,22 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
  *
  *      ../tools/runs_table.cal
  *
- * For a given subscript bit length M, and where K = max_class - min_class - 1:
+ * For a given block of length M, and where K = max_class - min_class:
  *
  *   For 0 < i <= min_class:
  *
- *      pi_term[0] is the probability that the length of the longest run
- *      in a M-bit substring will be <= min_class.
+ *      pi_term[0] is the probability that the length of the longest run of ones
+ *      in a M-bit block will be <= min_class.
  *
  *   For min_class < i < max_class:
  *
- *      pi_term[i-min_class] is the probability that length of the the longest run
- *      in a M-bit substring will be = i-min_class.
+ *      pi_term[i - min_class] is the probability that length of the the longest run of ones
+ *      in a M-bit block will be = i.
  *
  *   For max_class <= i <= M:
  *
- *      pi_term[i-min_class] is the probability that length of the the longest run
- *      in a M-bit substring will be >= max_class.
+ *      pi_term[K] is the probability that length of the the longest run of ones
+ *      in a M-bit block will be >= max_class.
  *
  * The runs_table[] array is sorted by min_n.  For n (bitcount, Length of a single bit stream)
  * find last the table entry where n > runs_table->min_n and where runs_table->min_n != 0.
@@ -135,22 +140,18 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
  *      NOTE: For large values of M (such as 10000), this script takes
  *            a very long time to run (as in around 8 CPU days)!
  *
- * NOTE: MIN_LONGESTRUN <= n <= ULONG_MAX
+ * NOTE: MIN_LENGTH_LONGESTRUN <= n <= ULONG_MAX
  */
 struct runs_table {
-	const long int min_n;	// minimum n, use when n >= min_n
-	const long int M;	// substring bit length
+	const long int min_n;	// Minimum n from test table
+	const long int M;	// Block bit length
 	const int K;		// Number of classes + 1 == LONGEST_RUN_CLASS_COUNT = max_class - min_class
-	const int min_class;	// minimum length to consider (0 < min_class)
-	const int max_class;	// maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT)
+	const int min_class;	// Minimum length to consider (0 < min_class)
+	const int max_class;	// Maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT)
+	const double pi_term[LONGEST_RUN_CLASS_COUNT + 1]; // Theoretical probabilities (see comment above)
 
-	/*
-	 * When i != 0 and i != M - 1, pi_term[i] contains the odds that the longest run of ones in an M-bit string is equal to
-	 * (min_class + i). When i == 0, pi_term[i] contains the odds that the longest run of ones in an M-bit string is smaller or
-	 * equal to (min_class). When i == (M - 1), pi_term[i] contains the odds that the longest run of ones in an M-bit string is
-	 * bigger or equal to (max_class).
-	 */
-	const double pi_term[LONGEST_RUN_CLASS_COUNT + 1];
+	/* TODO when we do this we are saying that we expect LONGEST_RUN_CLASS_COUNT classes. This happens all
+	 * the time in this test, so why do we still need K in this struct? It's just a legacy thing and it's never used anyway */
 };
 
 static const struct runs_table runs_table[] = {
@@ -161,7 +162,7 @@ static const struct runs_table runs_table[] = {
 	 *
 	 * K = 3, M = 8, min_class = 1, max_class = 4
 	 */
-	{MIN_LONGESTRUN, 8, 4, 1, 4,
+	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
 	 {
 	  0.2148,		// pi_term[0], v <= 1
 	  0.3672,		// pi_term[1], v == 2
@@ -177,7 +178,7 @@ static const struct runs_table runs_table[] = {
 	 *
 	 * K = 3, M = 8, min_class = 1, max_class = 4
 	 */
-	{MIN_LONGESTRUN, 8, 4, 1, 4,
+	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
 	 {
 	  0.21484375,		// pi_term[0], v <= 1
 	  0.3671875,		// pi_term[1], v == 2
@@ -188,20 +189,26 @@ static const struct runs_table runs_table[] = {
 #endif
 
 	/*
-	 * NOTE: The K = 3, M = 8 case where the max_class has
-	 *       been extended so that max_class - min_class
+	 * NOTE: The K = 3, M = 8 case where the max_class was 4
+	 * 	 has been extended so that max_class - min_class
 	 *       is LONGEST_RUN_CLASS_COUNT (6).
 	 */
-	// M = 8 K = 6 min_class = 1 max_class = 7
-	{MIN_LONGESTRUN, 8, LONGEST_RUN_CLASS_COUNT, 1, 7,
+
+	{
+	 MIN_LENGTH_LONGESTRUN, 	// min_n
+	 8, 				// M
+	 LONGEST_RUN_CLASS_COUNT, 	// K
+	 1, 				// min_class
+	 7,				// max_class
+
 	 {
-	  0.21484375,		// pi_term[0], v <= 1
-	  0.3671875,		// pi_term[1], v == 2
-	  0.23046875,		// pi_term[2], v == 3
-	  0.109375,		// pi_term[3], v == 4
-	  0.046875,		// pi_term[4], v == 5
-	  0.01953125,		// pi_term[5], v == 6
-	  0.01171875,		// pi_term[6], v >= 7
+	  0.21484375,			// pi_term[0], v <= 1
+	  0.3671875,			// pi_term[1], v == 2
+	  0.23046875,			// pi_term[2], v == 3
+	  0.109375,			// pi_term[3], v == 4
+	  0.046875,			// pi_term[4], v == 5
+	  0.01953125,			// pi_term[5], v == 6
+	  0.01171875,			// pi_term[6], v >= 7
 	  },
 	 },
 
@@ -211,7 +218,7 @@ static const struct runs_table runs_table[] = {
 	 *
 	 * K = 5, M = 128, min_class = 4, max_class = 9
 	 */
-	{MIN_LONGESTRUN, 8, 4, 1, 4,
+	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
 	 {
 	  0.1174,		// pi_term[0], v <= 4
 	  0.2430,		// pi_term[1], v == 5
@@ -242,12 +249,18 @@ static const struct runs_table runs_table[] = {
 #endif
 
 	/*
-	 * NOTE: The K = 6, M = 128 case where the max_class has
-	 *       been extended so that max_class - min_class
+	 * NOTE: The K = 6, M = 128 case where the max_class was 9
+	 * 	 has been extended so that max_class - min_class
 	 *       is LONGEST_RUN_CLASS_COUNT (6).
 	 */
-	// K = 6, M = 128, min_class = 4, max_class = 10
-	{6272, 128, LONGEST_RUN_CLASS_COUNT, 4, 10,
+
+	{
+	 6272,				// min_n
+	 128,				// M
+	 LONGEST_RUN_CLASS_COUNT,	// K
+	 4,				// min_class
+	 10,				// max_class
+
 	 {
 	  0.11740357883779323143,	// pi_term[0], v <= 4
 	  0.24295595927745485921,	// pi_term[1], v == 5
@@ -266,7 +279,7 @@ static const struct runs_table runs_table[] = {
 	 *
 	 * K = 6, M = 10000, min_class = 10, max_class = 16
 	 */
-	{MIN_LONGESTRUN, 8, 4, 1, 4,
+	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
 	 {
 	  0.0882,		// pi_term[0], v <= 10
 	  0.2092,		// pi_term[1], v == 11
@@ -279,8 +292,13 @@ static const struct runs_table runs_table[] = {
 	 },
 #endif
 
-	// K = 6, M = 10000, min_class = 10, max_class = 16
-	{750000, 10000, LONGEST_RUN_CLASS_COUNT, 10, 16,
+	{
+	 750000, 			// min_n
+	 10000,				// M
+	 LONGEST_RUN_CLASS_COUNT,	// K
+	 10,				// min_class
+	 16,				// max_class
+
 	 {
 	  0.08663231107995278587,	// pi_term[0], v <= 10
 	  0.20820064838760340198,	// pi_term[1], v == 11
@@ -346,9 +364,9 @@ LongestRunOfOnes_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (n < MIN_LONGESTRUN) {
+	if (n < MIN_LENGTH_LONGESTRUN) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
-		     state->testNames[test_num], test_num, n, MIN_LONGESTRUN);
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_LONGESTRUN);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -384,6 +402,7 @@ LongestRunOfOnes_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -402,19 +421,14 @@ void
 LongestRunOfOnes_iterate(struct state *state)
 {
 	struct LongestRunOfOnes_private_stats stat;	// Stats for this iteration
-	// odds of that the longest run is x-min_class in an M bit string is pi_term[x]
-	// Except when x is 0 (min_class length), a lower bound,
-	// where odds are when <= min_class
-	// Except when x is LONGEST_RUN_CLASS_COUNT (max_class length), an upper bound,
-	// where odds are when >= max_class
-	const double *pi_term;
+	const double *pi_term;	// Theoretical probabilities (see runs_table struct above)
 	long int n;		// Length of a single bit stream
 	double p_value;		// p_value iteration test result(s)
-	int min_class;		// minimum length to consider
-	int max_class;		// maximum length to consider
-	long int v_n_obs;	// current maximum run length for current substring
-	double chi_term;	// chi^2 = chi_term * chi_term
-	long int run;
+	int min_class;		// Minimum length to consider
+	int max_class;		// Maximum length to consider
+	long int v_obs;		// Current maximum run length for current block
+	double chi_term;	// Term for the statistic formula: chi^2 = chi_term * chi_term
+	long int run;		// Counter used to find longest run of ones
 	long int i;
 	long int j;
 
@@ -442,21 +456,21 @@ LongestRunOfOnes_iterate(struct state *state)
 	n = state->tp.n;
 
 	/*
-	 * setup test parameters
-	 *
-	 * find the appropriate runs_table entry that first satisfies the min_n requirement */
-	memset(&stat, 0, sizeof(stat));
+	 * Find the appropriate runs_table entry that first satisfies the min_n requirement
+	 */
 	stat.runs_table_index = 0;
 	while ((stat.runs_table_index < (sizeof(runs_table) / sizeof(runs_table[0]))) &&
 	       (n > runs_table[stat.runs_table_index].min_n)) {
 		++stat.runs_table_index;
 	}
 	if (stat.runs_table_index >= (sizeof(runs_table) / sizeof(runs_table[0]))) {
-		/*
-		 * ran off end of table, use the last table entry
-		 */
+		// ran off end of table, use the last table entry
 		stat.runs_table_index = (sizeof(runs_table) / sizeof(runs_table[0])) - 1;
 	}
+
+	/*
+	 * Setup test parameters
+	 */
 	stat.M = runs_table[stat.runs_table_index].M;
 	pi_term = runs_table[stat.runs_table_index].pi_term;
 	min_class = runs_table[stat.runs_table_index].min_class;
@@ -464,51 +478,55 @@ LongestRunOfOnes_iterate(struct state *state)
 	stat.N = n / stat.M;
 
 	/*
-	 * clear counters
+	 * Clear counters
 	 */
 	memset(stat.count, 0, sizeof(stat.count));
 
 	/*
-	 * Perform the test
+	 * Step 1: partition the sequence into N M-bit blocks
 	 */
 	for (i = 0; i < stat.N; i++) {
+
 		/*
-		 * Determine maximum 1-bit run length for this substring
+		 * Step 2a: determine maximum 1-bit run length for this block
 		 */
-		v_n_obs = 0;
+		v_obs = 0;
 		run = 0;
 		for (j = 0; j < stat.M; j++) {
-			/*
-			 * Determine the 1-bit run length
-			 */
 			if (state->epsilon[(i * stat.M) + j] == 1) {
 				run++;
-				if (run > v_n_obs) {
-					v_n_obs = run;
+				if (run > v_obs) {
+					v_obs = run;
 				}
 			} else {
 				run = 0;
 			}
 		}
+
 		/*
-		 * Count the class based on the current run length
+		 * Step 2b: count the class based on the current run length
 		 */
-		if (v_n_obs <= min_class) {
+		if (v_obs <= min_class) {
 			stat.count[0]++;
-		} else if (v_n_obs <= max_class) {
-			stat.count[v_n_obs - min_class]++;
+		} else if (v_obs <= max_class) {
+			stat.count[v_obs - min_class]++;
 		} else {
 			stat.count[LONGEST_RUN_CLASS_COUNT]++;
 		}
 	}
+
 	/*
-	 * Compute chi^2 and p_value
+	 * Step 3: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
 	for (i = 0; i <= LONGEST_RUN_CLASS_COUNT; i++) {
 		chi_term = stat.count[i] - (stat.N * pi_term[i]);
 		stat.chi2 += chi_term * chi_term / (stat.N * pi_term[i]);
 	}
+
+	/*
+	 * Step 4: compute the test P-value
+	 */
 	p_value = cephes_igamc((double) LONGEST_RUN_CLASS_COUNT / 2.0, stat.chi2 / 2.0);
 
 	/*
@@ -518,22 +536,22 @@ LongestRunOfOnes_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;		// SUCCESS
 	}
 
 	/*
@@ -600,7 +618,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	}
 
 	/*
-	 * note class minimum
+	 * Note class minimum
 	 */
 	min_class = runs_table[stat->runs_table_index].min_class;
 	max_class = runs_table[stat->runs_table_index].max_class;
@@ -635,11 +653,11 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 			return false;
 		}
 	}
-	io_ret = fprintf(stream, "\t\t(a) N (# of substrings)  = %ld\n", stat->N);
+	io_ret = fprintf(stream, "\t\t(a) N (# of blocks)  = %ld\n", stat->N);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) M (Substring Length) = %ld\n", stat->M);
+	io_ret = fprintf(stream, "\t\t(b) M (block length) = %ld\n", stat->M);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -676,7 +694,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	}
 
 	/*
-	 * legacy output: header and nu counts
+	 * Legacy output: header and nu counts
 	 */
 	if (state->legacy_output == true) {
 
@@ -689,24 +707,26 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		}
 		for (i = 0; i <= LONGEST_RUN_CLASS_COUNT; ++i) {
 
-			// print class type
+			/*
+			 * Print class type
+			 */
 			switch (i) {
 			case 0:
-				// class is a <= class
+				// Class is a <= class
 				io_ret = fprintf(stream, "<=%2d", min_class);
 				if (io_ret <= 0) {
 					return false;
 				}
 				break;
 			case LONGEST_RUN_CLASS_COUNT:
-				// class is a >= class
+				// Class is a >= class
 				io_ret = fprintf(stream, " >=%2d", max_class);
 				if (io_ret <= 0) {
 					return false;
 				}
 				break;
 			default:
-				// class is a == class
+				// Class is a == class
 				io_ret = fprintf(stream, " %3d", i + min_class);
 				if (io_ret <= 0) {
 					return false;
@@ -736,11 +756,12 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		if (io_ret <= 0) {
 			return false;
 		}
+	}
 
-		/*
-		 * new output: header and nu counts
-		 */
-	} else {
+	/*
+	 * New output: header and nu counts
+	 */
+	else {
 
 		/*
 		 * Print counter header
@@ -751,24 +772,26 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		}
 		for (i = 0; i <= LONGEST_RUN_CLASS_COUNT; ++i) {
 
-			// print class type
+			/*
+			 * Print class type
+			 */
 			switch (i) {
 			case 0:
-				// class is a <= class
+				// Class is a <= class
 				io_ret = fprintf(stream, "<= %-5d", min_class);
 				if (io_ret <= 0) {
 					return false;
 				}
 				break;
 			case LONGEST_RUN_CLASS_COUNT:
-				// class is a >= class
+				// Class is a >= class
 				io_ret = fprintf(stream, ">= %-5d", max_class);
 				if (io_ret <= 0) {
 					return false;
 				}
 				break;
 			default:
-				// class is a == class
+				// Class is a == class
 				io_ret = fprintf(stream, " = %-5d", i + min_class);
 				if (io_ret <= 0) {
 					return false;
@@ -1089,6 +1112,7 @@ LongestRunOfOnes_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -1152,11 +1176,6 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -1281,13 +1300,6 @@ LongestRunOfOnes_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1361,6 +1373,7 @@ LongestRunOfOnes_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1420,5 +1433,6 @@ LongestRunOfOnes_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }

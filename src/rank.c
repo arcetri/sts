@@ -45,7 +45,6 @@
  */
 struct Rank_private_stats {
 	bool success;		// Success or failure of iteration test
-	bool test_possible;	// true --> test is possible for this iteration
 	double chi_squared;	// Chi squared for rank frequencies
 	long int F_M;		// Frequency of rank RANK_ROWS fpr this iteration
 	long int F_M_minus_one;	// Frequency of rank RANK_ROWS-1 fpr this iteration
@@ -80,6 +79,8 @@ static void Rank_metric_print(struct state *state, long int sampleCount, long in
 void
 Rank_init(struct state *state)
 {
+	long int matrix_count;		// Length of a single bit stream
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -101,8 +102,19 @@ Rank_init(struct state *state)
 	}
 
 	/*
-	 * TODO The sequence to be tested should consist of a minimum of 38,912 bits
+	 * Collect parameters from state
 	 */
+	matrix_count = state->c.matrix_count;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (matrix_count < MIN_NUMBER_OF_MATRICES) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires number of matrixes(matrix_count): %ld >= %d",
+		     state->testNames[test_num], test_num, matrix_count, MIN_NUMBER_OF_MATRICES);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Allocate the special Rank test matrix
@@ -140,6 +152,7 @@ Rank_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -158,10 +171,10 @@ void
 Rank_iterate(struct state *state)
 {
 	struct Rank_private_stats stat;	// Stats for this iteration
-	BitSequence **matrix;	// state->rank_matrix
-	BitSequence *row;	// a row of state->rank_matrix
-	int R;			// rank of a given RANK_ROWS by RANK_COLS matrix
-	double p_value;		// p_value iteration test result(s)
+	BitSequence **matrix;		// The matrix state->rank_matrix
+	BitSequence *row;		// A row of the matrix state->rank_matrix
+	int R;				// Rank of a given RANK_ROWS by RANK_COLS matrix
+	double p_value;			// p_value iteration test result(s)
 	long int k;
 	long int i;
 
@@ -196,133 +209,104 @@ Rank_iterate(struct state *state)
 	for (i = 0; i < RANK_ROWS; ++i) {
 
 		/*
-		 * find the row
+		 * Find the row
 		 */
 		row = state->rank_matrix[i];
 		if (row == NULL) {	// paranoia
 			err(171, __FUNCTION__, "row pointer %ld of rank_matrix is NULL", i);
 		}
+
 		/*
-		 * Zeroize the row
+		 * Zeroize the full row
 		 */
 		memset(row, 0, RANK_COLS * sizeof(row[0]));
 	}
+
+	/*
+	 * Setup test parameters
+	 */
 	matrix = state->rank_matrix;
+	stat.F_M = 0;
+	stat.F_M_minus_one = 0;
 
 	/*
-	 * Determine if we can test
+	 * Step 1a: divide the sequence into disjoint blocks of RANK_ROWS * RANK_COLS bits
 	 */
-	stat.test_possible = (state->c.matrix_count == 0) ? false : true;
-
-	/*
-	 * Perform and record the test if it is possible to test
-	 */
-	if (stat.test_possible == true) {
+	for (k = 0; k < state->c.matrix_count; k++) {
 
 		/*
-		 * Perform the test
-		 *
-		 * tally the ranks for each matrix
-		 *
-		 * We tally the number of times a rank found for for our RANK_ROWS by RANK_COLS matrix.
-		 * We tally for rank RANK_ROWS, RANK_ROWS-1 and for ranks < RANK_ROWS-1.
-		 */
-		stat.F_M = 0;
-		stat.F_M_minus_one = 0;
+	 	 * Step 1b: copy bits of each block into a RANK_ROWS * RANK_COLS matrix
+	 	 */
+		def_matrix(state, RANK_ROWS, RANK_COLS, matrix, k);
 
 		/*
-		 * For each RANK_ROWS by RANK_COLS matrix
-		 */
-		for (k = 0; k < state->c.matrix_count; k++) {
-			def_matrix(state, RANK_ROWS, RANK_COLS, matrix, k);
+	 	 * Step 2: determine the binary rank of each matrix
+	 	 */
+		R = computeRank(RANK_ROWS, RANK_COLS, matrix);
 
-			R = computeRank(RANK_ROWS, RANK_COLS, matrix);
-			if (R == RANK_ROWS) {
-				stat.F_M++;	// rank RANK_ROWS found
-			}
-			if (R == (RANK_ROWS - 1)) {
-				stat.F_M_minus_one++;	// rank RANK_ROWS-1 found
-			}
+		/*
+		 * Step 3a: count the number of matrices with rank = (full rank) and rank = (full rank - 1)
+		 */
+		if (R == RANK_ROWS) {
+			stat.F_M++;	// rank RANK_ROWS found
+		} else if (R == (RANK_ROWS - 1)) {
+			stat.F_M_minus_one++;	// rank RANK_ROWS-1 found
 		}
-		stat.F_remaining = state->c.matrix_count - (stat.F_M + stat.F_M_minus_one);	// Number of ranks < RANK_ROWS-1
-												// found
-
-		/*
-		 * Compute the p_value for this iteration given the rank tally counts
-		 */
-		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * chi_squared = (pow(F_M - N*p_32, 2)/(double)(N*p_32) +
-		 * pow(F_M_minus_one - N*p_31, 2)/(double)(N*p_31) +
-		 * pow(F_remaining - N*p_30, 2)/(double)(N*p_30));
-		 */
-		stat.chi_squared = (((stat.F_M - state->c.matrix_count * state->c.p_32) *
-				     (stat.F_M - state->c.matrix_count * state->c.p_32) /
-				     (double) (state->c.matrix_count * state->c.p_32)) +
-				    ((stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) *
-				     (stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) /
-				     (double) (state->c.matrix_count * state->c.p_31)) +
-				    ((stat.F_remaining - state->c.matrix_count * state->c.p_30) *
-				     (stat.F_remaining - state->c.matrix_count * state->c.p_30) /
-				     (double) (state->c.matrix_count * state->c.p_30)));
-		p_value = exp(-stat.chi_squared / 2.0);
-
-		/*
-		 * Record testable test success or failure
-		 */
-		state->count[test_num]++;	// Count this test
-		state->valid[test_num]++;	// Count this valid test
-		if (isNegative(p_value)) {
-			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-			stat.success = false;	// FAILURE
-			warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-			     state->curIteration, state->testNames[test_num], test_num, p_value);
-		} else if (isGreaterThanOne(p_value)) {
-			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-			stat.success = false;	// FAILURE
-			warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-			     state->curIteration, state->testNames[test_num], test_num, p_value);
-		} else if (p_value < state->tp.alpha) {
-			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
-			state->failure[test_num]++;	// Valid p_value but too low is a failure
-			stat.success = false;	// FAILURE
-		} else {
-			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
-			state->success[test_num]++;	// Valid p_value not too low is a success
-			stat.success = true;	// SUCCESS
-		}
-
-		/*
-		 * Record values computed during this iteration
-		 */
-		append_value(state->stats[test_num], &stat);
-		append_value(state->p_val[test_num], &p_value);
-
-		/*
-		 * accounting for tests that cannot be performed
-		 */
-	} else {
-
-		// Count this test, which happens to be invalid
-		state->count[test_num]++;
-
-		/*
-		 * stats.txt accounting
-		 */
-		stat.F_M = 0;
-		stat.F_M_minus_one = 0;
-		stat.F_remaining = 0;
-		stat.chi_squared = UNSET_DOUBLE;
-		stat.success = false;	// FAILURE
-		append_value(state->stats[test_num], &stat);
-
-		/*
-		 * results.txt accounting
-		 */
-		p_value = NON_P_VALUE;
-		append_value(state->p_val[test_num], &p_value);
 	}
+
+	/*
+	 * Step 3b: count the number of matrices with rank less than (full rank - 1)
+	 */
+	stat.F_remaining = state->c.matrix_count - (stat.F_M + stat.F_M_minus_one);
+
+	/*
+	 * Step 4: compute the test statistic
+	 */
+	stat.chi_squared = (((stat.F_M - state->c.matrix_count * state->c.p_32) *
+			     (stat.F_M - state->c.matrix_count * state->c.p_32) /
+			     (state->c.matrix_count * state->c.p_32)) +
+			    ((stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) *
+			     (stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) /
+			     (state->c.matrix_count * state->c.p_31)) +
+			    ((stat.F_remaining - state->c.matrix_count * state->c.p_30) *
+			     (stat.F_remaining - state->c.matrix_count * state->c.p_30) /
+			     (state->c.matrix_count * state->c.p_30)));
+
+	/*
+	 * Step 5: compute the test P-value
+	 */
+	p_value = exp(-stat.chi_squared / 2.0);
+
+	/*
+	 * Record testable test success or failure
+	 */
+	state->count[test_num]++;	// Count this test
+	state->valid[test_num]++;	// Count this valid test
+	if (isNegative(p_value)) {
+		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
+		stat.success = false;		// FAILURE
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value);
+	} else if (isGreaterThanOne(p_value)) {
+		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
+		stat.success = false;		// FAILURE
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value);
+	} else if (p_value < state->tp.alpha) {
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->failure[test_num]++;	// Valid p_value but too low is a failure
+		stat.success = false;		// FAILURE
+	} else {
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->success[test_num]++;	// Valid p_value not too low is a success
+		stat.success = true;		// SUCCESS
+	}
+
+	/*
+	 * Record values computed during this iteration
+	 */
+	append_value(state->stats[test_num], &stat);
+	append_value(state->p_val[test_num], &p_value);
 
 	/*
 	 * Set driver state to DRIVER_ITERATE
@@ -389,82 +373,71 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 			return false;
 		}
 	}
-
-	/*
-	 * Case: test was not possible for this iteration
-	 */
-	if (stat->test_possible == false) {
-		io_ret = fprintf(stream, "\t\tError: Insuffucient # of bits to define a (%dx%d) Matrix\n", RANK_ROWS, RANK_COLS);
+	io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
+	if (io_ret <= 0) {
+		return false;
+	}
+	if (state->legacy_output == true) {
+		io_ret = fprintf(stream, "\t\tCOMPUTATIONAL INFORMATION:\n");
 		if (io_ret <= 0) {
 			return false;
-		}
-
-		/*
-		 * Case: test was possible for this iteration
-		 */
-	} else {
-		io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
-		if (io_ret <= 0) {
-			return false;
-		}
-		if (state->legacy_output == true) {
-			io_ret = fprintf(stream, "\t\tCOMPUTATIONAL INFORMATION:\n");
-			if (io_ret <= 0) {
-				return false;
-			}
-			io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
-			if (io_ret <= 0) {
-				return false;
-			}
-		}
-		io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", RANK_ROWS, state->c.p_32);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(b)	      P_%d = %f\n", RANK_ROWS - 1, state->c.p_31);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(c)	      P_%d = %f\n", RANK_ROWS - 2, state->c.p_30);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(d) Frequency   F_%d = %ld\n", RANK_ROWS, stat->F_M);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(e)	      F_%d = %ld\n", RANK_ROWS - 1, stat->F_M_minus_one);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(f)	      F_%d = %ld\n", RANK_ROWS - 2, stat->F_remaining);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(g) # of matrices	   = %ld\n", state->c.matrix_count);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t(h) Chi^2		   = %f\n", stat->chi_squared);
-		if (io_ret <= 0) {
-			return false;
-		}
-		if (state->legacy_output == true) {
-			io_ret = fprintf(stream, "\t\t(i) NOTE: %ld BITS WERE DISCARDED.\n", state->tp.n % (RANK_ROWS * RANK_COLS));
-			if (io_ret <= 0) {
-				return false;
-			}
-		} else {
-			io_ret = fprintf(stream, "\t\t(i) %ld bits were discarded\n", state->tp.n % (RANK_ROWS * RANK_COLS));
-			if (io_ret <= 0) {
-				return false;
-			}
 		}
 		io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
 		if (io_ret <= 0) {
 			return false;
 		}
 	}
+	io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", RANK_ROWS, state->c.p_32);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(b)	      P_%d = %f\n", RANK_ROWS - 1, state->c.p_31);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(c)	      P_%d = %f\n", RANK_ROWS - 2, state->c.p_30);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(d) Frequency   F_%d = %ld\n", RANK_ROWS, stat->F_M);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(e)	      F_%d = %ld\n", RANK_ROWS - 1, stat->F_M_minus_one);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(f)	      F_%d = %ld\n", RANK_ROWS - 2, stat->F_remaining);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(g) # of matrices	   = %ld\n", state->c.matrix_count);
+	if (io_ret <= 0) {
+		return false;
+	}
+	io_ret = fprintf(stream, "\t\t(h) Chi^2		   = %f\n", stat->chi_squared);
+	if (io_ret <= 0) {
+		return false;
+	}
+	if (state->legacy_output == true) {
+		io_ret = fprintf(stream, "\t\t(i) NOTE: %ld BITS WERE DISCARDED.\n", state->tp.n % (RANK_ROWS * RANK_COLS));
+		if (io_ret <= 0) {
+			return false;
+		}
+	} else {
+		io_ret = fprintf(stream, "\t\t(i) %ld bits were discarded\n", state->tp.n % (RANK_ROWS * RANK_COLS));
+		if (io_ret <= 0) {
+			return false;
+		}
+	}
+	io_ret = fprintf(stream, "\t\t---------------------------------------------\n");
+	if (io_ret <= 0) {
+		return false;
+	}
+
+	/*
+	 * Report success or failure
+	 */
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {
@@ -751,6 +724,7 @@ Rank_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -759,7 +733,7 @@ Rank_print(struct state *state)
  * Rank_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
+ *      state           	// run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
  *      freqPerBin              // Uniformity frequency bins
@@ -938,13 +912,6 @@ Rank_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1018,6 +985,7 @@ Rank_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1095,5 +1063,6 @@ Rank_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }
