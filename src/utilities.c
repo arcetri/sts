@@ -1268,7 +1268,7 @@ fixParameters(struct state *state)
 			printf("	[%d] Block Frequency Test - block length(M):	     %ld\n",
 			       PARAM_blockFrequencyBlockLength, state->tp.blockFrequencyBlockLength);
 		}
-		if (state->testVector[TEST_NONPERIODIC] == true) {
+		if (state->testVector[TEST_NON_OVERLAPPING] == true) {
 			printf("	[%d] NonOverlapping Template Test - block length(m): %ld\n",
 			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateBlockLength);
 		}

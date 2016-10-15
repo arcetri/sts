@@ -55,7 +55,7 @@ static void grow_dyn_array(struct dyn_array *array, int new_chunks);
  * Strictly speaking, zeroizing new chunk data is not needed.  We do it for
  * debugging purposes and as a firewall against going beyond array bounds.
  *
- * This function does not retun on error.
+ * This function does not return on error.
  */
 static void
 zero_chunk(size_t elm_size, long int chunk, void *data)
@@ -88,7 +88,7 @@ zero_chunk(size_t elm_size, long int chunk, void *data)
  *      array           pointer to the dynamic array
  *      new_chunks      number of chunks to increase
  *
- * The dynanmic array allocation will be expanded by chunks.  That data will
+ * The dynamic array allocation will be expanded by chunks.  That data will
  * be zeroized according to the type.
  *
  * This function does not return on error.
@@ -210,7 +210,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array", // TODO 1 why not in the string?
 		     (long int) 1, sizeof(struct dyn_array));
 	}
 
@@ -240,7 +240,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	/*
 	 * return newly allocated array
 	 */
-	dbg(DBG_HIGH, "initialized empty dynamic array of %ld elemets of %ld bytes per element", ret->chunk, ret->elm_size);
+	dbg(DBG_HIGH, "initialized empty dynamic array of %ld elements of %ld bytes per element", ret->chunk, ret->elm_size);
 	return ret;
 }
 

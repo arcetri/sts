@@ -123,7 +123,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 	 DiscreteFourierTransform_destroy,
 	 },
 
-	{			// TEST_NONPERIODIC = 8, Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
+	{			// TEST_NON_OVERLAPPING = 8, Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
 	 NonOverlappingTemplateMatchings_init,
 	 NonOverlappingTemplateMatchings_iterate,
 	 NonOverlappingTemplateMatchings_print,

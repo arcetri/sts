@@ -46,135 +46,67 @@
  *****************************************************************************/
 
 /*
- * NOTE: This code was designed to support a MAXTEMPLEN of up to 31.  Going beyond
- *       31 is likely excessive and will cause you to run into signed 32 bit issues
- *       as well as 64 bit issues.
+ * NOTE: This code was designed to support a MAXTEMPLEN of up to 15.
  *
- *       A MAXTEMPLEN of 15 may be more sane value.  Normal DEFAULT_NON_OVERLAPPING and
- *       DEFAULT_OVERLAPPING are both 9 and the PDF documentation suggests 8 or 9
- *       is common.
+ * 	 However the number of templates per template length was computed also for
+ * 	 higher lengths, up to 31 (see nonOverlappingTemplateMatchings.c).
+ *
+ * 	 We stopped there because a MAXTEMPLEN bigger than 31 would
+ * 	 cause overflow in the code of nonOverlappingTemplateMatchings
+ * 	 where the templates are computed starting from their 32-bit
+ * 	 ULONG integer value.
+ *
+ * 	 Thus, going beyond 31 is likely excessive. It will cause you
+ * 	 to run into signed 32 bit issues as well as 64 bit issues.
+ * 	 Moreover, the memory requirements and CPU cycles needed
+ * 	 for even MAXTEMPLEN of 31 borders on the absurd.
+ *
+ *       A MAXTEMPLEN of 15 is used here to prevent errors in the code of
+ *       nonOverlappingTemplateMatchings. In fact, in computing the variance
+ *       sigma_squared, the term 2^(2m) might overflow in those architectures where
+ *       long int is 32 bits and m is bigger than 15.
  *
  *       The absolute minimum for MINTEMPLEN is 2.  However for practical purposes
  *       such a small value is likely to be next to useless.  Since the PDF documentation
  *       suggests a value of 8 or 9, setting MINTEMPLEN to 8 may be a more sane minimum.
+ *
+ * FYI: To get the number of templates for a given template_length, try:
+ *
+ *	cd src				# i.e., cd to source code directory
+ *	make mkapertemplate
+ *
+ *	rm -f dataInfo; ./mkapertemplate template_length /dev/null dataInfo; cat dataInfo
+ *
+ *	      where template_length is an integer > 0
+ *
+ *    From the dataInfo file, use the "# of nonperiodic templates =" line to determine NUMOFTEMPLATES.
+ *
+ * NOTE: Running ./mkapertemplate with a non-trivial template_length can take a long time to run!
+ *	    For example, a UCS C240 M4 tool almost 27 CPU minutes to calculate the value for 31.
+ *
+ *    FYI: The compile line below should also work in place of the above make rule:
+ *
+ *	cd src				# i.e., cd to source code directory
+ *	cc ../tools/mkapertemplate.c debug.c -o mkapertemplate -O3 -I . --std=c99
  */
 
 /* *INDENT-OFF* */
 
-#   define MINTEMPLEN			(8)		// minimum template length supported
-#   define MAXTEMPLEN			(15)		// maximum template length supported // TODO why not 32?
-
+#   define MINTEMPLEN			(8)		// Minimum template length supported
+#   define MAXTEMPLEN			(15)		// Maximum template length supported
 #   if MINTEMPLEN > MAXTEMPLEN
 // force syntax error if MINTEMPLEN vs. MAXTEMPLEN is bogus
 -=*#@#*=- ERROR: MAXTEMPLEN must be >= MINTEMPLEN -=*#@#*=-
-#endif
-
-#   if MAXTEMPLEN < 2
-// force syntax error if MAXTEMPLEN is too small
--=*#@#*=- ERROR: MAXTEMPLEN must be at least 2, we recommend at least 9 such as perhaps 15 -=*#@#*=-
-#   elif MAXTEMPLEN == 2
-#      define MAXNUMOFTEMPLATES		(2)		// APERIODIC TEMPLATES: for template length 2
-#   elif MAXTEMPLEN == 3
-#      define MAXNUMOFTEMPLATES		(4)		// APERIODIC TEMPLATES: for template length 3
-#   elif MAXTEMPLEN == 4
-#      define MAXNUMOFTEMPLATES		(6)		// APERIODIC TEMPLATES: for template length 4
-#   elif MAXTEMPLEN == 5
-#      define MAXNUMOFTEMPLATES		(12)		// APERIODIC TEMPLATES: for template length 5
-#   elif MAXTEMPLEN == 6
-#      define MAXNUMOFTEMPLATES		(20)		// APERIODIC TEMPLATES: for template length 6
-#   elif MAXTEMPLEN == 7
-#      define MAXNUMOFTEMPLATES		(40)		// APERIODIC TEMPLATES: for template length 7
-#   elif MAXTEMPLEN == 8
-#      define MAXNUMOFTEMPLATES		(74)		// APERIODIC TEMPLATES: for template length 8
-#   elif MAXTEMPLEN == 9
-#      define MAXNUMOFTEMPLATES		(148)		// APERIODIC TEMPLATES: for template length 9
-#   elif MAXTEMPLEN == 10
-#      define MAXNUMOFTEMPLATES		(284)		// APERIODIC TEMPLATES: for template length 10
-#   elif MAXTEMPLEN == 11
-#      define MAXNUMOFTEMPLATES		(568)		// APERIODIC TEMPLATES: for template length 11
-#   elif MAXTEMPLEN == 12
-#      define MAXNUMOFTEMPLATES		(1116)		// APERIODIC TEMPLATES: for template length 12
-#   elif MAXTEMPLEN == 13
-#      define MAXNUMOFTEMPLATES		(2232)		// APERIODIC TEMPLATES: for template length 13
-#   elif MAXTEMPLEN == 14
-#      define MAXNUMOFTEMPLATES		(4424)		// APERIODIC TEMPLATES: for template length 14
-#   elif MAXTEMPLEN == 15
-#      define MAXNUMOFTEMPLATES		(8848)		// APERIODIC TEMPLATES: for template length 15 // TODO change
-#   elif MAXTEMPLEN == 16
-#      define MAXNUMOFTEMPLATES		(17622)		// APERIODIC TEMPLATES: for template length 16
-#   elif MAXTEMPLEN == 17
-#      define MAXNUMOFTEMPLATES		(35244)		// APERIODIC TEMPLATES: for template length 17
-#   elif MAXTEMPLEN == 18
-#      define MAXNUMOFTEMPLATES		(70340)		// APERIODIC TEMPLATES: for template length 18
-#   elif MAXTEMPLEN == 19
-#      define MAXNUMOFTEMPLATES		(140680)	// APERIODIC TEMPLATES: for template length 19
-#   elif MAXTEMPLEN == 20
-#      define MAXNUMOFTEMPLATES		(281076)	// APERIODIC TEMPLATES: for template length 20
-#   elif MAXTEMPLEN == 21
-#      define MAXNUMOFTEMPLATES		(562152)	// APERIODIC TEMPLATES: for template length 21
-#   elif MAXTEMPLEN == 22
-#      define MAXNUMOFTEMPLATES		(1123736)	// APERIODIC TEMPLATES: for template length 22
-#   elif MAXTEMPLEN == 23
-#      define MAXNUMOFTEMPLATES		(2247472)	// APERIODIC TEMPLATES: for template length 23
-#   elif MAXTEMPLEN == 24
-#      define MAXNUMOFTEMPLATES		(4493828)	// APERIODIC TEMPLATES: for template length 24
-#   elif MAXTEMPLEN == 25
-#      define MAXNUMOFTEMPLATES		(8987656)	// APERIODIC TEMPLATES: for template length 25
-#   elif MAXTEMPLEN == 26
-#      define MAXNUMOFTEMPLATES		(17973080)	// APERIODIC TEMPLATES: for template length 26
-#   elif MAXTEMPLEN == 27
-#      define MAXNUMOFTEMPLATES		(35946160)	// APERIODIC TEMPLATES: for template length 27
-#   elif MAXTEMPLEN == 28
-#      define MAXNUMOFTEMPLATES		(71887896)	// APERIODIC TEMPLATES: for template length 28
-#   elif MAXTEMPLEN == 29
-#      define MAXNUMOFTEMPLATES		(143775792)	// APERIODIC TEMPLATES: for template length 29
-#   elif MAXTEMPLEN == 30
-#      define MAXNUMOFTEMPLATES		(287542736)	// APERIODIC TEMPLATES: for template length 30
-#   elif MAXTEMPLEN == 31
-#      define MAXNUMOFTEMPLATES		(575085472)	// APERIODIC TEMPLATES: for template length 31
-#   else
-      // force syntax error if MAXTEMPLEN is too large
-      -=*#@#*=-
-      ERROR: MAXNUMOFTEMPLATES is not known for this bit_count!
-
-      To get the MAXNUMOFTEMPLATES for a given template_length, try:
-
-	cd src				# i.e., cd to source code directory
-	make mkapertemplate
-
-	rm -f dataInfo; ./mkapertemplate template_length /dev/null dataInfo; cat dataInfo
-
-	      where template_length is an integer > 0
-
-      From the dataInfo file, use the "# of nonperiodic templates =" line to determine MAXNUMOFTEMPLATES.
-
-      WARNING: If you extend MAXTEMPLEN beyond 31, you will have to deal
-	 with signed 32-bit issues and then 64-bit issue in the computig of
-	 templates of the nonOverlappingTemplateMatchings.c code.
-	 For example, you will have to at least change, in the file
-	 nonOverlappingTemplateMatchings.c, the use of ULONG with uint64_t.
-
-	 On the other hand, the memory requirements and CPU cycles
-	 needed for even MAXTEMPLEN of 31 borders on the asburd.
-
-      NOTE: Running ./mkapertemplate with a non-trivial template_length can take a long time to run!
-	    For example, a UCS C240 M4 tool almost 27 CPU minutes to calculate the value for 31.
-
-      FYI: The compile line below should also work in place of the above make rule:
-
-	cd src				# i.e., cd to source code directory
-	cc ../tools/mkapertemplate.c debug.c -o mkapertemplate -O3 -I . --std=c99
-      -=*#@#*=-
 #   endif
+#   define MAXNUMOFTEMPLATES		(8848)		// Maximum possible number of templates (see TEST_NON_OVERLAPPING)
 
-#   define BITS_N_BYTE			(8)		// Number of bits in a byte
-#   define BITS_N_INT			(BITS_N_BYTE * sizeof(int))		// bits in an int
-#   define BITS_N_LONGINT		(BITS_N_BYTE * sizeof(long int))	// bits in a long int
-#   define MAX_DATA_DIGITS		(21)		// decimal digits in (2^64)-1
+#   define BITS_N_BYTE			(8)					// Number of bits in a byte
+#   define BITS_N_INT			(BITS_N_BYTE * sizeof(int))		// Number of bits in an int
+#   define BITS_N_LONGINT		(BITS_N_BYTE * sizeof(long int))	// Number of bits in a long int
+#   define MAX_DATA_DIGITS		(21)					// Decimal digits in (2^64)-1
 
 #   define NUMOFTESTS			(15)		// MAX TESTS DEFINED - must match max enum test value below
 #   define NUMOFGENERATORS		(10)		// MAX PRNGs
-#   define MAXFILESPERMITTEDFORPARTITION (MAXNUMOFTEMPLATES)	// maximum value in default struct state.partitionCount[i]
 
 #   define DEFAULT_BLOCK_FREQUENCY	(128)		// -P 1=M, Block Frequency Test - block length
 #   define DEFAULT_NON_OVERLAPPING	(9)		// -P 2=m, NonOverlapping Template Test - block length
@@ -190,14 +122,16 @@
 
 #   define MIN_LENGTH_FREQUENCY		(100)		// Minimum n for TEST_FREQUENCY and TEST_BLOCK_FREQUENCY
 #   define MIN_BLOCK_LENGTH		(20)		// Minimum M for TEST_BLOCK_FREQUENCY
-#   define MIN_RATIO_M_OVER_n		(0.01)		// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
+#   define MIN_RATIO_M_OVER_n_BLOCK	(0.01)		// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
 #   define MAX_BLOCKS_NUMBER		(100)		// Maximum blocks number N for TEST_BLOCK_FREQUENCY
 
 #   define MIN_LENGTH_RUNS		(100)		// Minimum n for TEST_RUNS
 
+#   define MIN_LENGTH_FFT		(1000)		// Minimum n for TEST_FFT
+
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
-// TODO this is test-dependent. For example 1,2,3 tests require only 100 bits, 4 requires 128, 5 requires 38,912
+// TODO check this requirement in the paper
 #   define MAX_BITCOUNT			(10000000)	// Section 2.0 max recommended length of a single bit stream
 
 #   define MIN_LINEARCOMPLEXITY		(500)		// Section 2.10.5 input size recommendation
@@ -210,6 +144,9 @@
 #   define MAX_EXCURSION_VAR		(9)		// excursion states: -MAX_EXCURSION_VAR to -1,
 							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
 #   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
+
+#   define BLOCKS_NON_OVERLAPPING	(8)		// Number of blocks used by TEST_NON_OVERLAPPING, should be <= 100
+#   define MIN_RATIO_M_OVER_n_NON_OVERLAPPING	(0.01)	// Minimum ratio of M over n for TEST_NON_OVERLAPPING
 
 #   define OVERLAP_M_SUBSTRING		(1032)		// bit length of tested substring (set in SP800-22Rev1a section 2.8.2)
 #   define OVERLAP_K_DEGREES		(5)		// degrees of freedom (set in SP800-22Rev1a section 2.8.2)
@@ -281,7 +218,7 @@ enum test {
 	TEST_LONGEST_RUN = 5,		// Longest Runs test (longestRunOfOnes.c)
 	TEST_RANK = 6,			// Rank test (rank.c)
 	TEST_FFT = 7,			// Discrete Fourier Transform test (discreteFourierTransform.c)
-	TEST_NONPERIODIC = 8,		// Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
+	TEST_NON_OVERLAPPING = 8,	// Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
 	TEST_OVERLAPPING = 9,		// Overlapping Template test (overlappingTemplateMatchings.c)
 	TEST_UNIVERSAL = 10,		// Universal test (universal.c)
 	TEST_APEN = 11,			// Approximate Entropy test (approximateEntropy.c)
@@ -482,7 +419,7 @@ struct state {
 	long int maxGeneralSampleSize;		// largest sample size for a non-excursion test
 	long int maxRandomExcursionSampleSize;	// largest sample size for a general (non-random excursion) test
 
-	struct dyn_array *nonovTemplates;	// array of non-overlapping template words for TEST_NONPERIODIC
+	struct dyn_array *nonovTemplates;	// array of non-overlapping template words for TEST_NON_OVERLAPPING
 
 	double *fft_m;				// test m array for TEST_FFT
 	double *fft_X;				// test X array for TEST_FFT
@@ -504,7 +441,7 @@ struct state {
 	long int *serial_P;			// Frequency count for TEST_SERIAL
 	long int serial_p_len;			// Number of long ints in serial_P for TEST_SERIAL
 
-	BitSequence *nonper_seq;		// special BitSequence for TEST_NONPERIODIC
+	BitSequence *nonper_seq;		// special BitSequence for TEST_NON_OVERLAPPING
 
 	long int universal_L;			// Length of each block for TEST_UNIVERSAL
 	long int *universal_T;			// working Universal template

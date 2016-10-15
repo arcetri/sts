@@ -164,7 +164,7 @@ static struct state const defaultstate = {
 		 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
 		 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
 		 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
-		 "NonOverlappingTemplate",	// TEST_NONPERIODIC = 8,
+		 "NonOverlappingTemplate",	// TEST_NON_OVERLAPPING = 8,
 						//    Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
 		 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
 		 "Universal",			// TEST_UNIVERSAL = 10, Universal test (universal.c)
@@ -191,8 +191,8 @@ static struct state const defaultstate = {
 		 1,			// TEST_LONGEST_RUN = 5
 		 1,			// TEST_RANK = 6
 		 1,			// TEST_FFT = 7
-		 MAXNUMOFTEMPLATES,	// TEST_NONPERIODIC = 8
-				// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
+		 MAXNUMOFTEMPLATES,	// TEST_NON_OVERLAPPING = 8
+					// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
 		 1,			// TEST_OVERLAPPING = 9
 		 1,			// TEST_UNIVERSAL = 10
 		 1,			// TEST_APEN = 11

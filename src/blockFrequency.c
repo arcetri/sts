@@ -120,9 +120,9 @@ BlockFrequency_init(struct state *state)
 		     state->testNames[test_num], test_num, M, MIN_BLOCK_LENGTH);
 		state->testVector[test_num] = false;
 		return;
-	} else if (M <= MIN_RATIO_M_OVER_n * n) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld > %d * n, and here n = %ld",
-		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n, n);
+	} else if (M <= MIN_RATIO_M_OVER_n_BLOCK * n) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld > %f * n, and here n = %ld",
+		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n_BLOCK, n);
 		state->testVector[test_num] = false;
 		return;
 	} else if (N >= MAX_BLOCKS_NUMBER) {

@@ -39,44 +39,40 @@
 #include "debug.h"
 
 
-#define BASE_BITS (BITS_N_BYTE*sizeof(ULONG))	// bits in a template word - was B
-
-
 /*
  * Private stats - stats.txt information for this test
  */
 struct NonOverlappingTemplateMatchings_private_stats {
-	double mu;		// theoretical mean
-	long int M;		// length in bits of the substring to be tested
-	long int N;		// Number of independent blocks (fixed to BITS_N_BYTE)
-	long int template_cnt;	// actual number of templates processed per iteration
+	double mu;		// Theoretical mean under an assumption of randomness
+	double sigma_squared;	// Theoretical variance under an assumption of randomness
+	long int M;		// Length in bits of the blocks to be tested
 };
 
 
 /*
- * special data for each template of each iteration in p_val (instead of just p_value doubles)
+ * Special data for each template of each iteration in p_val (instead of just p_value doubles)
  */
 struct nonover_stats {
-	double p_value;		// p_value for iteration test for a given template
-	bool success;		// Success or failure forward of iteration test for a given template
-	double chi2;		// how well the observed number of template hits matches expectations
-	ULONG template_val;	// current template value as a ULONG
-	long int template_index;	// template number of a given template
-	unsigned int Wj[BITS_N_BYTE];	// times that m-bit template occurs within a block
+	double p_value;			// Test p_value for a given template
+	bool success;			// Success or failure for a given template
+	double chi2;			// Test statistic for a given template
+	long int template_index;	// Template number of a given template
+	unsigned int Wj[BLOCKS_NON_OVERLAPPING]; // Number of times that m-bit template occurs within each block
 };
 
 
 /*
  * Static const variables declarations
  */
-static const enum test test_num = TEST_NONPERIODIC;	// This test number
-
+static const enum test test_num = TEST_NON_OVERLAPPING;	// This test number
 
 /*
- * length of non-overlapping templates
+ * Expected number of non-overlapping templates for each possible template length
  *
  * These values were derived from the mkapertemplate utility.  We keep only
  * enough words to hold the size of the largest template allowed by MAXTEMPLEN.
+ *
+ * Read NOTE in defs.h for an additional explanation.
  */
 static const long int numOfTemplates[MAXTEMPLEN + 1] = {
 #if MAXTEMPLEN >= 2
@@ -173,19 +169,19 @@ static const long int numOfTemplates[MAXTEMPLEN + 1] = {
 #endif
 };
 
+
 /*
  * Forward static function declarations
  */
-static void appendTemplate(struct state *state, ULONG value, long int count);
+static void appendTemplate(struct state *state, ULONG value, long int m);
 static bool NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 						       struct NonOverlappingTemplateMatchings_private_stats *stat,
 						       struct dyn_array *nonover_stats, long int nonstat_index);
 static bool NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value);
 
 
-
 /*
- * NonOverlappingTemplateMatchings_init - initialize the Nonoverlapping Template test
+ * NonOverlappingTemplateMatchings_init - initialize the NonOverlapping Template test
  *
  * given:
  *      state           // run state to test under
@@ -197,11 +193,10 @@ static bool NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double 
 void
 NonOverlappingTemplateMatchings_init(struct state *state)
 {
-	long int tbits;		// Number of significant bits in a template word
-	ULONG num;		// integer for which a template word is being considered
-	long int SKIP;		// how often do we skip templates
-	long int template_use;	// Number of templates that could be used
-	long int template_cnt;	// actual number of templates processed per iteration
+	long int n;		// Length of a single bit stream
+	long int M;		// Length of each block to be tested
+	long int m;		// Length of a template
+	ULONG max_num;		// Max decimal value of a template
 	ULONG i;
 
 	/*
@@ -223,38 +218,30 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 		err(130, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO N should be chosen such that N <= 100 to be assured that the P-values are valid.
-	// Additionally, be sure that M > 0.01 * n and N = floor(n/M).
 
 	/*
 	 * Collect parameters from state
 	 */
-	tbits = state->tp.nonOverlappingTemplateBlockLength;
+	n = state->tp.n;
+	M = state->tp.n / BLOCKS_NON_OVERLAPPING;
+	m = state->tp.nonOverlappingTemplateBlockLength; // Default value = 9
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (tbits < MINTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: -P 2: NonOverlapping Template Test - "
-		     "block length(m): %ld < MINTEMPLEN: %d", state->testNames[test_num], test_num, tbits, MINTEMPLEN);
+	if (M <= MIN_RATIO_M_OVER_n_NON_OVERLAPPING * n) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld > %f * n, and here n = %ld",
+		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n_NON_OVERLAPPING, n);
 		state->testVector[test_num] = false;
 		return;
-	} else if (tbits > MAXTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: -P 2: NonOverlapping Template Test - "
-		     "block length(m): %ld > MAXTEMPLEN: %d", state->testNames[test_num], test_num, tbits, MAXTEMPLEN);
+	} else if (m < MINTEMPLEN) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld >= MINTEMPLEN: %d",
+		     state->testNames[test_num], test_num, m, MINTEMPLEN);
 		state->testVector[test_num] = false;
 		return;
-	}
-	if (tbits > sizeof(numOfTemplates) / sizeof(numOfTemplates[0])) {
-		warn(__FUNCTION__, "disabling test %s[%d]: -P 2: NonOverlapping Template Test - "
-		     "block length(m): %ld would go beyond end of numOfTemplates[%ld] array",
-		     state->testNames[test_num], test_num, tbits, sizeof(numOfTemplates) / sizeof(numOfTemplates[0]));
-		state->testVector[test_num] = false;
-		return;
-	}
-	if (numOfTemplates[tbits] < 1) {
-		warn(__FUNCTION__, "disabling test %s[%d]: numOfTemplates[%ld]: %ld < 1",
-		     state->testNames[test_num], test_num, tbits, numOfTemplates[tbits]);
+	} else if (m > MAXTEMPLEN) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld <= MAXTEMPLEN: %d",
+		     state->testNames[test_num], test_num, m, MAXTEMPLEN);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -270,30 +257,17 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * Allocate special BitSequence
 	 */
-	state->nonper_seq = malloc(tbits * sizeof(state->nonper_seq[0]));
+	state->nonper_seq = malloc(m * sizeof(state->nonper_seq[0]));
 	if (state->nonper_seq == NULL) {
 		errp(130, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->nonper_seq",
-		     tbits, sizeof(BitSequence));
+		     m, sizeof(BitSequence));
 	}
 
 	/*
-	 * set the proper partitionCount value for this test
+	 * Set the proper partitionCount value for this test [there will be more data*.txt for each iteration]
 	 */
-	state->partitionCount[test_num] = (int) numOfTemplates[tbits];
-	dbg(DBG_HIGH, "partitionCount for %s[%d] is now %ld", state->testNames[test_num], test_num, numOfTemplates[tbits]);
-
-	/*
-	 * Determine how we will seek through the template
-	 */
-	if (numOfTemplates[tbits] < MAXNUMOFTEMPLATES) {
-		SKIP = 1;
-	} else {
-		SKIP = (long int) (numOfTemplates[tbits] / MAXNUMOFTEMPLATES);
-	}
-	template_use = (long int) numOfTemplates[tbits] / SKIP;
-	template_cnt = MIN(MAXNUMOFTEMPLATES, template_use);
-	state->partitionCount[test_num] = (int) template_cnt;
-	dbg(DBG_HIGH, "partitionCount for %s[%d] finalized at %ld", state->testNames[test_num], test_num, numOfTemplates[tbits]);
+	state->partitionCount[test_num] = (int) numOfTemplates[m];
+	dbg(DBG_HIGH, "partitionCount for %s[%d] is %ld", state->testNames[test_num], test_num, numOfTemplates[m]);
 
 	/*
 	 * Allocate dynamic arrays
@@ -303,44 +277,41 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	state->stats[test_num] = create_dyn_array(sizeof(struct NonOverlappingTemplateMatchings_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
 	state->p_val[test_num] = create_dyn_array(sizeof(struct nonover_stats), DEFAULT_CHUNK,
-	                                          template_use * state->tp.numOfBitStreams, false);	// results.txt
-
-	// TODO check if BITS_N_BYTES * sizeof(ULONG) <= tbits
+						  numOfTemplates[m] * state->tp.numOfBitStreams, false);	// results.txt
 
 	/*
-	 * generate nonovTemplates - array of non-overlapping template words
+	 * Generate nonovTemplates - array of non-overlapping templates
 	 *
 	 * We will generate, in the style of mkapertemplate.c, an array
-	 * of 32-bit (ULONG) non-overlapping template words for use in
+	 * of 32-bit (ULONG) non-overlapping templates for use in
 	 * in this test.  Generating them once here is usually much faster
 	 * than reading them from a pre-computed file as the old code did.
 	 */
-	dbg(DBG_LOW, "about to form a %ld bit non-overlapping template of %ld words of %ld bytes each",
-	    tbits, numOfTemplates[tbits], sizeof(ULONG));
-	state->nonovTemplates = create_dyn_array(sizeof(ULONG), numOfTemplates[tbits], numOfTemplates[tbits], false);
-	num = (ULONG) 1 << tbits;	// This is one reason why MAXTEMPLEN cannot be 32 for a 32-bit ULONG
+	dbg(DBG_LOW, "forming an array of %ld non-overlapping templates of %ld bytes each", numOfTemplates[m], m);
+	state->nonovTemplates = create_dyn_array((size_t) m * sizeof(BitSequence), numOfTemplates[m], numOfTemplates[m], false);
 
 	/*
-	 * non-overlapping word template
+	 * Append to nonovTemplates each non-overlapping template found among all the 32bits natural numbers.
+	 * NOTE: The fact that templates are created from 32-bit values is one reason why MAXTEMPLEN cannot be greater than 31.
 	 */
-	for (i = 1; i < num; i++) {
-		appendTemplate(state, i, tbits);
+	max_num = (ULONG) 1 << m;
+	for (i = 1; i < max_num; i++) {
+		appendTemplate(state, i, m);
 	}
 
 	/*
-	 * verify size of nonovTemplates
+	 * Verify that the size of nonovTemplates is as expected
 	 */
-	if (state->nonovTemplates->count != numOfTemplates[tbits]) {
+	if (state->nonovTemplates->count != numOfTemplates[m]) {
 		err(130, __FUNCTION__, "nonovTemplates->count: %ld != numOfTemplates[%ld]: %ld", state->nonovTemplates->count,
-		    tbits, numOfTemplates[tbits]);
+		    m, numOfTemplates[m]);
 	}
-	dbg(DBG_MED, "formed a %ld bit non-overlapping template of %ld words of %ld bytes each",
-	    tbits, numOfTemplates[tbits], sizeof(ULONG));
+	dbg(DBG_LOW, "formed an array of %ld non-overlapping templates of %ld bytes each", numOfTemplates[m], m);
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
 	 */
-	state->datatxt_fmt[test_num] = data_filename_format(template_cnt);
+	state->datatxt_fmt[test_num] = data_filename_format((int) numOfTemplates[m]);
 	dbg(DBG_HIGH, "%s[%d] will form data*.txt filenames with the following format: %s",
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
@@ -350,6 +321,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -360,7 +332,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
  * given:
  *      state           // run state to test under
  *      value           // value being test if it is non-periodic
- *      tbits           // significant bit count of value
+ *      m           	// significant bit count of value
  *
  * NOTE: This function was based on, in part, code from NIST Special Publication 800-22 Revision 1a:
  *
@@ -368,17 +340,15 @@ NonOverlappingTemplateMatchings_init(struct state *state)
  *
  * In particular see section F.2 (page F-4) of the document revised April 2010.  See mkapertemplate.c
  * in this source directory.  This function uses ULONG (32-bit) instead of uint64_t (64-bit) as
- * found in the mkapertemplate.c source file.  Moreover it appends a template word as a ULONG to
+ * found in the mkapertemplate.c source file.  Moreover it appends each periodic template to
  * a dynamic array instead of writing ASCII bits to a file.
  */
 static void
-appendTemplate(struct state *state, ULONG value, long int tbits)
+appendTemplate(struct state *state, ULONG value, long int m)
 {
-	// TODO make A[] only tbits long (like in iterate function)
-	unsigned int A[BASE_BITS];	// bit values for each bit in a template word
-	ULONG test_value;	// copy of value being bit-tested
-	ULONG displayMask;	// template top of word mask
-	bool overlap = true;	// if potential template word overlaps
+	BitSequence A[m];	// Array of the bit values of a template
+	ULONG displayMask;	// Bit mask used to convert value to its binary representation
+	bool overlap = true;	// Indicator if potential template overlaps
 	int c;
 	int i;
 
@@ -393,35 +363,30 @@ appendTemplate(struct state *state, ULONG value, long int tbits)
 	}
 
 	/*
-	 * Setup and convert value into an array of binary values.
-	 * The array A has BASE_BITS size (although are only interested in the last tbits values).
-	 * Bits are stored in a big-endian way, with the least significant bit last.
+	 * Setup display mask
 	 */
-	displayMask = (ULONG) 1 << (BASE_BITS - 1);
-	test_value = value;
-	for (c = 1; c <= BASE_BITS; c++) {
-		if (test_value & displayMask) {
-			A[c - 1] = 1;
-		} else {
-			A[c - 1] = 0;
-		}
-		test_value <<= 1;
+	displayMask = (ULONG) 1 << (m - 1);
+
+	/*
+	 * Convert value into an array of binary values.
+	 * Bits are stored to A in a big-endian way, with the least significant bit last.
+	 */
+	for (c = 0; c < m; c++) {
+		A[c] = (BitSequence) ((value & displayMask) ? 1 : 0);
+		value <<= 1;
 	}
 
 	/*
 	 * Determine if value is non-periodic.
-	 * NOTE: Because value is smaller than 2^tbits, only the last tbits of the array are of interest for the check.
-	 * All the other bits will be zero anyway (that's why we check only the final part of the array).
 	 */
-	for (i = 1; i < tbits; i++) {
+	for (i = 1; i < m; i++) {
 		overlap = true;
 
 		/*
 		 * Check if the sequence is non-periodic considering the current stride i
 		 */
-		if ((A[BASE_BITS - tbits] != A[BASE_BITS - 1]) &&
-		    ((A[BASE_BITS - tbits] != A[BASE_BITS - 2]) || (A[BASE_BITS - tbits + 1] != A[BASE_BITS - 1]))) {
-			for (c = BASE_BITS - tbits; c <= (BASE_BITS - 1) - i; c++) {
+		if ((A[0] != A[m - 1]) && ((A[0] != A[m - 2]) || (A[1] != A[m - 1]))) {
+			for (c = 0; c < m - i; c++) {
 				if (A[c] != A[c + i]) {
 					overlap = false;
 					break;
@@ -438,10 +403,10 @@ appendTemplate(struct state *state, ULONG value, long int tbits)
 	}
 
 	/*
-	 * value is non-overlapping, append it
+	 * If the value is non-periodic, append it to nonovTemplates
 	 */
 	if (overlap == false) {
-		append_value(state->nonovTemplates, &value);	// TODO make it so that A is appended instead of value
+		append_value(state->nonovTemplates, &A);
 	}
 
 	return;
@@ -463,19 +428,15 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 {
 	struct NonOverlappingTemplateMatchings_private_stats stat;	// Stats for this iteration
 	struct nonover_stats nonover_stat;	// Stats for a template of this iteration
-	long int n;		// Length of a single bit stream
-	long int m;		// NonOverlapping Template Test - block length
-	long int template_use;	// Number of templates that could be used
-	unsigned int W_obs;
-	double sigma_squared;
+	long int n;			// Length of a single bit stream
+	long int m;			// NonOverlapping Template Test - block length
+	unsigned int W_obs;		// Counter of the number of occurrences of a template in a block
+	double chi2_term;		// Term used to get chi squared
+	bool match;			// Indicator of a match of a template in a block
 	long int i;
 	long int j;
 	long int jj;
 	int k;
-	bool match;
-	long int SKIP;		// how often do we skip templates
-	long int temp_index;	// index in template nonovTemplates dynamic array
-	double chi2_term;	// per template term whose square is sumed to get chi squared for this iteration
 
 	/*
 	 * Check preconditions (firewall)
@@ -503,117 +464,106 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	}
 
 	/*
-	 * Collect parameters from state
+	 * Collect parameters
 	 */
 	m = state->tp.nonOverlappingTemplateBlockLength;
 	if ((m * 2) > (BITS_N_LONGINT - 1)) {	// firewall
 		err(132, __FUNCTION__, "(m*2): %ld is too large, 1 << (m:%ld * 2) > %ld bits long", m * 2, m, BITS_N_LONGINT - 1);
 	}
 	n = state->tp.n;
-	m = state->tp.nonOverlappingTemplateBlockLength;
+	stat.M = n / BLOCKS_NON_OVERLAPPING;
 
 	/*
-	 * Determine octets in sequence bit length
-	 */
-	stat.N = BITS_N_BYTE;	// Number of independent blocks, fixed by STS
-	stat.M = n / BITS_N_BYTE;	// length in bits of the sub-sequences to be tested
-	memset(nonover_stat.Wj, 0, sizeof(nonover_stat.Wj));
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * stat.lambda = (stat.M - m + 1) / pow(2, m);
-	 * varWj = stat.M * (1.0 / pow(2.0, m) - (2.0 * m - 1.0) / pow(2.0, 2.0 * m));
+	 * Step 3: compute the theoretical mean mu and variance sigma_squared
+	 * NOTE: The presence of the term [ 2^(2m) == 1 << m * 2 ] is the reason why MAXTEMPLEN
+	 * 	 cannot be greater than 15 in architectures where long int is 32 bits.
 	 */
 	stat.mu = (stat.M - m + 1) / ((double) ((long int) 1 << m));
-	sigma_squared = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
-	if (sigma_squared < 0.0) {
-		err(132, __FUNCTION__, "sigma_squared: %f < 0.0", sigma_squared);
+	stat.sigma_squared = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
+	if (stat.sigma_squared < 0.0) {
+		err(132, __FUNCTION__, "sigma_squared: %f < 0.0", stat.sigma_squared);
 	}
-
-	/*
-	 * mu must be > 0.0
-	 */
+	// TODO: Fix this checks so that they terminate the iteration properly before returning
 	if (isNegative(stat.mu)) {
 		warn(__FUNCTION__, "aborting %s, Lambda < 0.0: %f", state->testNames[test_num], stat.mu);
 		return;
-	}
-	if (isZero(stat.mu)) {
+	} else if (isZero(stat.mu)) {
 		warn(__FUNCTION__, "aborting %s, Lambda == 0.0: %f", state->testNames[test_num], stat.mu);
 		return;
 	}
 
 	/*
-	 * Zeroize our special BitSequence
+	 * Process all template values
 	 */
-	memset(state->nonper_seq, 0, m * sizeof(BitSequence));
-
-	/*
-	 * Determine how we will seek through the template
-	 */
-	if (numOfTemplates[m] < MAXNUMOFTEMPLATES) {
-		SKIP = 1;
-	} else {
-		SKIP = (long int) (numOfTemplates[m] / MAXNUMOFTEMPLATES);
-	}
-	template_use = (long int) numOfTemplates[m] / SKIP;
-	stat.template_cnt = template_use;
-
-	/*
-	 * process all template values
-	 */
-	temp_index = 0;		// start at the beginning of the index
-	for (jj = 0; jj < template_use; jj++) {
+	for (jj = 0; jj < numOfTemplates[m]; jj++) {
 
 		/*
-		 * Determine current template bits
+		 * Get the next template from the pool of precomputed ones
 		 */
+		state->nonper_seq = get_value(state->nonovTemplates, BitSequence*, jj);
 
 		/*
-		 * Check preconditions (firewall)
+		 * Zeroize the occurrences counters for this template
 		 */
-		if (temp_index >= state->nonovTemplates->count) {
-			err(132, __FUNCTION__, "attempt to seek to nonovTemplates[%ld] which >= last index: %ld",
-			    temp_index, state->nonovTemplates->count - 1);
-		}
-		// TODO if instead of storing the value we store directly the array of bits, here we can avoid reconverting
-		nonover_stat.template_val = get_value(state->nonovTemplates, ULONG, temp_index);
-		for (k = 0; k < m; k++) {
-			state->nonper_seq[k] =
-			    (BitSequence) (((nonover_stat.template_val & ((ULONG) 1 << (m - k - 1))) == 0) ? 0 : 1);
-		}
+		memset(nonover_stat.Wj, 0, sizeof(nonover_stat.Wj));
 
 		/*
-		 * Perform the test
-		 */
-		for (i = 0; i < stat.N; i++) {
+	 	 * Step 2: count the number of times that this template occurs within each block
+	 	 */
+		for (i = 0; i < BLOCKS_NON_OVERLAPPING; i++) {
 			W_obs = 0;
+
+			/*
+			 * Count occurrences of the current template in block i
+			 */
 			for (j = 0; j < stat.M - m + 1; j++) {
 				match = true;
+
+				/*
+				 * Check if all the m bits of the template match the bits being
+				 * considered in the block.
+				 */
 				for (k = 0; k < m; k++) {
 					if ((int) state->nonper_seq[k] != (int) state->epsilon[i * stat.M + j + k]) {
 						match = false;
 						break;
 					}
 				}
+
+				/*
+				 * If all the bits match, count one occurrence of this template and
+				 * slide the window over m bits.
+				 */
 				if (match == true) {
 					W_obs++;
 					j += m - 1;
 				}
 			}
+
+			/*
+			 * Store the count of occurrences found in this block
+			 */
 			nonover_stat.Wj[i] = W_obs;
 		}
-		nonover_stat.chi2 = 0.0;	/* Compute Chi Square */
-		for (i = 0; i < stat.N; i++) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * nonover_stat.chi2 += pow(((double) nonover_stat.Wj[i] - stat.mu) / pow(sigma_squared, 0.5), 2);
-			 */
-			chi2_term = ((double) nonover_stat.Wj[i] - stat.mu) / sqrt(sigma_squared);
+
+		/*
+		 * Step 4: compute the test statistic
+		 */
+		nonover_stat.chi2 = 0.0;
+		for (i = 0; i < BLOCKS_NON_OVERLAPPING; i++) {
+			chi2_term = ((double) nonover_stat.Wj[i] - stat.mu) / sqrt(stat.sigma_squared);
 			nonover_stat.chi2 += (chi2_term * chi2_term);
 		}
+
+		/*
+		 * Step 5: compute the test p-value
+		 */
+		nonover_stat.p_value = cephes_igamc(BLOCKS_NON_OVERLAPPING / 2.0, nonover_stat.chi2 / 2.0);
+
+		/*
+		 * Store the index of the template just tested in the stats
+		 */
 		nonover_stat.template_index = jj;
-		nonover_stat.p_value = cephes_igamc(stat.N / 2.0, nonover_stat.chi2 / 2.0);
 
 		/*
 		 * Record testable test success or failure
@@ -624,13 +574,13 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
 			warn(__FUNCTION__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f < 0.0\n",
-			     state->curIteration, nonover_stat.template_index, state->testNames[test_num], test_num,
+			     state->curIteration, jj, state->testNames[test_num], test_num,
 			     nonover_stat.p_value);
 		} else if (isGreaterThanOne(nonover_stat.p_value)) {
 			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
 			warn(__FUNCTION__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f > 1.0\n",
-			     state->curIteration, nonover_stat.template_index, state->testNames[test_num], test_num,
+			     state->curIteration, jj, state->testNames[test_num], test_num,
 			     nonover_stat.p_value);
 		} else if (nonover_stat.p_value < state->tp.alpha) {
 			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
@@ -643,29 +593,19 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		}
 
 		/*
-		 * if we are not using every template value, skip to the next value
-		 */
-		if (SKIP > 1) {
-			temp_index += SKIP;
-		} else {
-			++temp_index;
-		}
-
-		/*
 		 * Record values computed during this iteration
 		 */
 		append_value(state->p_val[test_num], &nonover_stat);
 	}
 
 	/*
-	 * special stat accounting
+	 * Record special values computed during this iteration
 	 *
-	 * Unlike other tests, we have one stat for an iteration
-	 * and multiple nonover_stat (one for each template) per iteration.
+	 * Unlike other tests, we have one stat but multiple nonover_stat
+	 * (one for each template) per iteration.
 	 *
-	 * NOTE: The number of nonover_stat values in state->p_val is found in stat.template_cnt.
+	 * NOTE: The number of nonover_stat values in state->p_val is numOfTemplates[m].
 	 */
-
 	append_value(state->stats[test_num], &stat);
 
 	/*
@@ -695,7 +635,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
  *      true --> no errors
  *      false --> an I/O error occurred
  *
- * NOTE: This function prints the initial header for an internation to the stats.txt file.
+ * NOTE: This function prints the initial header for an iteration to the stats.txt file.
  *       Finally the nonover_stats dynamic array is used to print the results from each
  *       template to stats.txt for this iteration.
  */
@@ -704,8 +644,8 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 					   struct NonOverlappingTemplateMatchings_private_stats *stat,
 					   struct dyn_array *nonover_stats, long int nonstat_index)
 {
-	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
-	int io_ret;		// I/O return status
+	struct nonover_stats *nonover_stat;	// Current nonover_stats for a given iteration
+	int io_ret;				// I/O return status
 	long int i;
 	long int j;
 
@@ -752,8 +692,8 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 			return false;
 		}
 		io_ret =
-		    fprintf(stream, "\tLAMBDA = %f\tM = %ld\tN = %ld\tm = %ld\tn = %ld\n", stat->mu, stat->M, stat->N,
-			    state->tp.nonOverlappingTemplateBlockLength, state->tp.n);
+		    fprintf(stream, "\tMean = %f\tVariance = %f\tM = %ld\tm = %ld\tn = %ld\n", stat->mu, stat->sigma_squared,
+			    stat->M, state->tp.nonOverlappingTemplateBlockLength, state->tp.n);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -782,15 +722,15 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Lambda = %f\n", stat->mu);
+		io_ret = fprintf(stream, "Mean = %f\n", stat->mu);
+		if (io_ret <= 0) {
+			return false;
+		}
+		io_ret = fprintf(stream, "Variance = %f\n", stat->sigma_squared);
 		if (io_ret <= 0) {
 			return false;
 		}
 		io_ret = fprintf(stream, "M = %ld\n", stat->M);
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "N = %ld\n", stat->N);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -823,10 +763,10 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	/*
 	 * Print values for each template of this iteration
 	 */
-	for (i = 0; i < stat->template_cnt; ++i, ++nonstat_index) {
+	for (i = 0; i < numOfTemplates[state->tp.nonOverlappingTemplateBlockLength]; ++i, ++nonstat_index) {
 
 		/*
-		 * find address of the current nonover_stats element
+		 * Find address of the current nonover_stats element
 		 */
 		if (nonstat_index >= nonover_stats->count) {
 			warn(__FUNCTION__, "nonstat_index: %ld went beyond nonover_stats dyn_array count: %ld",
@@ -843,9 +783,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		 * Print template bits
 		 */
 		for (j = 0; j < state->tp.nonOverlappingTemplateBlockLength; j++) {
-			io_ret = fprintf(stream, "%1d",
-					 (((nonover_stat->template_val &
-					    ((ULONG) 1 << (state->tp.nonOverlappingTemplateBlockLength - j - 1))) == 0) ? 0 : 1));
+			io_ret = fprintf(stream, "%1d", (state->nonper_seq[j]));
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -893,7 +831,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	}
 
 	/*
-	 * final newline for this iteration
+	 * Final newline for this iteration
 	 */
 	io_ret = fputc('\n', stream);
 	if (io_ret == EOF) {
@@ -1054,10 +992,10 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 		/*
 		 * Print p_value to results.txt
 		 */
-		for (j = 0; j < stat->template_cnt; ++j, ++nonstat_index) {
+		for (j = 0; j < numOfTemplates[state->tp.nonOverlappingTemplateBlockLength]; ++j, ++nonstat_index) {
 
 			/*
-			 * find address of the current nonover_stats element
+			 * Find address of the current nonover_stats element
 			 */
 			if (nonstat_index >= state->p_val[test_num]->count) {
 				err(135, __FUNCTION__, "nonstat_index: %ld went beyond p_val count: %ld",
@@ -1184,6 +1122,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -1373,13 +1312,6 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1454,6 +1386,7 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1522,5 +1455,6 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }
