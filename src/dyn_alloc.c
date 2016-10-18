@@ -40,69 +40,30 @@ extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugg
 /*
  * Forward static function declarations
  */
-static void zero_chunk(size_t elm_size, long int chunk, void *data);
-static void grow_dyn_array(struct dyn_array *array, int new_chunks);
+static void grow_dyn_array(struct dyn_array *array, long int elms_to_allocate);
 
 
 /*
- * zero_chunk - zeroize a chunk of dynamic array elements
+ * grow_dyn_array - grow the allocation of a dynamic array by a specified number of elements
  *
  * given:
- *      elm_size        // size of a single element
- *      chunk           // Number of elements to expand by when allocating
- *      data            // pointer to data to zeroize
+ *      array           		pointer to the dynamic array
+ *      elms_to_allocate	       	number of elements to allocate space for
  *
- * Strictly speaking, zeroizing new chunk data is not needed.  We do it for
- * debugging purposes and as a firewall against going beyond array bounds.
- *
- * This function does not return on error.
- */
-static void
-zero_chunk(size_t elm_size, long int chunk, void *data)
-{
-	/*
-	 * Check preconditions (firewall) - sanity check args
-	 */
-	if (elm_size <= 0) {
-		err(60, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
-	}
-	if (chunk <= 0) {
-		err(60, __FUNCTION__, "chunk must be > 0: %ld", chunk);
-	}
-	if (data == NULL) {
-		err(60, __FUNCTION__, "data arg is NULL");
-	}
-
-	/*
-	 * Zeroize allocated data according to type
-	 */
-	memset(data, 0, elm_size * chunk);
-	return;
-}
-
-
-/*
- * grow_dyn_array - grow the allocation of a dynamic array by a number of chunks
- *
- * given:
- *      array           pointer to the dynamic array
- *      new_chunks      number of chunks to increase
- *
- * The dynamic array allocation will be expanded by chunks.  That data will
+ * The dynamic array allocation will be expanded by new_elem elements.  That data will
  * be zeroized according to the type.
  *
  * This function does not return on error.
  */
 static void
-grow_dyn_array(struct dyn_array *array, int new_chunks)
+grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 {
-	void *data;		// reallocated chunks
-	long int old_allocated;	// old number elements allocated
-	long int new_allocated;	// new number elements allocated
-	size_t old_bytes;	// old size of data in dynamic array
-	size_t new_bytes;	// new size of data in dynamic array after allocation
-	unsigned char *p;
-	long int i;
+	void *data;			// Reallocated array
+	long int old_allocated;		// Old number of elements allocated
+	long int new_allocated;		// New number of elements allocated
+	size_t old_bytes;		// Old size of data in dynamic array
+	size_t new_bytes;		// New size of data in dynamic array after allocation
+	unsigned char *p;		// Pointer to the beginning of the new allocated space
 
 	/*
 	 * Check preconditions (firewall) - sanity check args
@@ -110,8 +71,8 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	if (array == NULL) {
 		err(61, __FUNCTION__, "array arg is NULL");
 	}
-	if (new_chunks <= 0) {
-		err(61, __FUNCTION__, "chunks arg must be > 0: %d", new_chunks);
+	if (elms_to_allocate <= 0) {
+		err(61, __FUNCTION__, "elms_to_allocate arg must be > 0: %d", elms_to_allocate);
 	}
 
 	/*
@@ -133,39 +94,44 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
 	/*
 	 * reallocate array
 	 */
+
 	// firewall - partial check for overflow
 	old_allocated = array->allocated;
-	new_allocated = old_allocated + (new_chunks * array->chunk);
+	new_allocated = old_allocated + elms_to_allocate;
 	if (new_allocated <= old_allocated) {
-		err(61, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: allocated: %ld to %ld",
-		    new_chunks, array->chunk, old_allocated, new_allocated);
+		err(61, __FUNCTION__, "allocating %d new elements would overflow the allocated counter of the dynamic array:"
+				    "allocated would end up going from %ld to %ld",
+		    elms_to_allocate, old_allocated, new_allocated);
 	}
+
 	// firewall - partial check for size overflow
 	old_bytes = old_allocated * array->elm_size;
 	new_bytes = new_allocated * array->elm_size;
 	if (new_bytes <= old_bytes) {
-		err(61, __FUNCTION__, "adding %d new chunks of %ld elements would overflow dynamic array: octet size: %ld to %ld",
-		    new_chunks, array->chunk, old_bytes, new_bytes);
+		err(61, __FUNCTION__, "the number of bytes required with %d new allocated elements would overflow the counter", // TODO Understand
+		    elms_to_allocate, old_bytes, new_bytes);
 	}
+
 	data = realloc(array->data, new_bytes);
 	if (data == NULL) {
-		errp(61, __FUNCTION__, "failed to add %d new chunks of %ld elements to dynamic array: octet size %ld to %ld",
-		     new_chunks, array->chunk, old_bytes, new_bytes);
+		errp(61, __FUNCTION__, "failed to reallocate the dynamic array from a size of %ld bytes to a size of %ld bytes",
+		     old_bytes, new_bytes);
 	}
+
 	array->data = data;
 	array->allocated = new_allocated;
-	dbg(DBG_VHIGH, "expanded dynamic array of %ld elemets of size %lu bytes: from %ld to %ld octet size %ld to %ld",
-	    array->chunk, array->elm_size, old_allocated, array->allocated, old_bytes, new_bytes);
+	dbg(DBG_VHIGH, "expanded dynamic array with %ld new allocated elements of %lu bytes: the number of allocated elements "
+			    "went from %ld to %ld and the size went from %ld to %ld",
+	    elms_to_allocate, array->elm_size, old_allocated, array->allocated, old_bytes, new_bytes);
 
 	/*
-	 * Zeroize new chunks if needed
+	 * Zeroize new elements if needed
 	 */
 	if (array->zeroize == 1) {
-		for (i = old_allocated, p = (unsigned char *) (array->data) + old_bytes;
-		     i < new_allocated; i += array->chunk, p += (array->elm_size * array->chunk)) {
-			zero_chunk(array->elm_size, array->chunk, p);
-		}
+		p = (unsigned char *) (array->data) + old_bytes;
+		memset(p, 0, elms_to_allocate * array->elm_size);
 	}
+
 	return;
 }
 
@@ -176,9 +142,9 @@ grow_dyn_array(struct dyn_array *array, int new_chunks)
  *
  * given:
  *      elm_size        // size of an element
- *      chunk           // Number of elements to expand by when allocating
+ *      chunk           // fixed number of elements to expand by when allocating
  *      start_elm_count // starting number of elements to allocate
- *      zeroize         // 1 --> always zero newly allocated chunks, 0 --> don't
+ *      zeroize         // 1 --> always zeroize newly allocated elements, 0 --> don't
  *
  * returns:
  *      initialized (to zero) empty dynamic array
@@ -192,8 +158,6 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 
 	/*
 	 * Check preconditions (firewall) - sanity check args
-	 *
-	 * Also set the byte size.
 	 */
 	if (elm_size <= 0) {
 		err(62, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
@@ -210,23 +174,22 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array", // TODO 1 why not in the string?
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array", // TODO how can I improve this debug message?
 		     (long int) 1, sizeof(struct dyn_array));
 	}
 
 	/*
-	 * Initialize dynamic array
-	 *
-	 * Start off with an empty dynamic array of just 1 chunk
+	 * Initialize empty dynamic array
+	 * Start with a dynamic array with allocated enough chunks to hold at least start_elm_count elements
 	 */
 	ret->elm_size = elm_size;
 	ret->zeroize = zeroize;
-	ret->count = 0;		// allocated array is empty
-	ret->allocated = start_elm_count;
+	ret->count = 0;		// Allocated array is empty
+	ret->allocated = chunk * ((start_elm_count + (chunk - 1)) / chunk); // Allocate a number of elements multiple of chunk
 	ret->chunk = chunk;
 	ret->data = malloc(ret->allocated * elm_size);
 	if (ret->data == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", start_elm_count,
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", ret->allocated,
 		     elm_size);
 	}
 
@@ -234,25 +197,26 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 * Zeroize allocated data according to type
 	 */
 	if (ret->zeroize == 1) {
-		zero_chunk(elm_size, chunk, ret->data);
+		memset(ret->data, 0, ret->allocated * ret->elm_size);
 	}
 
 	/*
-	 * return newly allocated array
+	 * Return newly allocated array
 	 */
-	dbg(DBG_HIGH, "initialized empty dynamic array of %ld elements of %ld bytes per element", ret->chunk, ret->elm_size);
+	dbg(DBG_HIGH, "initialized empty dynamic array of %ld elements of %ld bytes per element", ret->allocated, ret->elm_size);
+
 	return ret;
 }
 
 
 /*
- * append_value - append a value of a given type onto the end of a dynamic array
+ * append_value - append a value of a given type onto the end of the dynamic array
  *
  * given:
  *      array           // pointer to the dynamic array
- *      value_p         // pointer value to add to the end of the dynamic array
+ *      value_to_add    // pointer to the value to add to the end of the dynamic array
  *
- * We will add a value of a given type onto the end of a dynamic array.
+ * We will add a value of a given type onto the end of the dynamic array.
  * We will grow the dynamic array if all allocated values are used.
  * If after adding the value, all allocated values are used, we will grow
  * the dynamic array as a firewall.
@@ -260,7 +224,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
  * This function does not return on error.
  */
 void
-append_value(struct dyn_array *array, void *value_p)
+append_value(struct dyn_array *array, void *value_to_add)
 {
 	unsigned char *p;
 
@@ -270,8 +234,8 @@ append_value(struct dyn_array *array, void *value_p)
 	if (array == NULL) {
 		err(63, __FUNCTION__, "array arg is NULL");
 	}
-	if (value_p == NULL) {
-		err(63, __FUNCTION__, "value_p arg is NULL");
+	if (value_to_add == NULL) {
+		err(63, __FUNCTION__, "value_to_add arg is NULL");
 	}
 
 	/*
@@ -291,18 +255,87 @@ append_value(struct dyn_array *array, void *value_p)
 	}
 
 	/*
-	 * expand dynamic array if needed
+	 * Expand dynamic array if needed
 	 */
 	if (array->count == array->allocated) {
-		grow_dyn_array(array, 1);
+		grow_dyn_array(array, array->chunk);
 	}
 
 	/*
 	 * We know the dynamic array has enough room to append, so append the value
 	 */
 	p = (unsigned char *) (array->data) + (array->count * array->elm_size);
-	memcpy(p, value_p, array->elm_size);
+	memcpy(p, value_to_add, array->elm_size);
 	++array->count;
+
+	return;
+}
+
+
+/*
+ * append_array - append the values of a given array (which are of a given type) onto the end of the dynamic array
+ *
+ * given:
+ *      array           	// pointer to the dynamic array
+ *      array_to_add_p 		// pointer to the array to add to the end of the dynamic array
+ *      array_to_add_size 	// size of the array to add to the end of the dynamic array
+ *
+ * We will add the values of the given array (which are of a given type) onto the
+ * end of the dynamic array. We will grow the dynamic array if all allocated values are used.
+ * If after adding the values of the array, all allocated values are used, we will grow
+ * the dynamic array as a firewall.
+ *
+ * This function does not return on error.
+ */
+void
+append_array(struct dyn_array *array, void *array_to_add_p, long int total_elements_to_add)
+{
+	long int available_empty_elements;
+	long int required_elements_to_allocate;
+	unsigned char *p;
+
+	/*
+	 * Check preconditions (firewall) - sanity check args
+	 */
+	if (array == NULL) {
+		err(63, __FUNCTION__, "array arg is NULL");
+	}
+	if (array_to_add_p == NULL) {
+		err(63, __FUNCTION__, "array_to_add_p arg is NULL");
+	}
+
+	/*
+	 * Check preconditions (firewall) - sanity check array
+	 */
+	if (array->data == NULL) {
+		err(63, __FUNCTION__, "data in dynamic array");
+	}
+	if (array->elm_size <= 0) {
+		err(63, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+	}
+	if (array->chunk <= 0) {
+		err(63, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+	}
+	if (array->count > array->allocated) {
+		err(63, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+	}
+
+	/*
+	 * Expand dynamic array if needed
+	 */
+	available_empty_elements = array->allocated - array->count;
+	required_elements_to_allocate = array->chunk * ((total_elements_to_add - available_empty_elements + (array->chunk - 1)) / array->chunk);
+	if (available_empty_elements <= total_elements_to_add) {
+		grow_dyn_array(array, required_elements_to_allocate);
+	}
+
+	/*
+	 * We know the dynamic array has enough room to append, so append the new array
+	 */
+	p = (unsigned char *) (array->data) + (array->count * array->elm_size);
+	memcpy(p, array_to_add_p, array->elm_size * total_elements_to_add);
+	array->count += total_elements_to_add;
+
 	return;
 }
 
@@ -332,7 +365,7 @@ free_dyn_array(struct dyn_array *array)
 	}
 
 	/*
-	 * zero the count and allocation
+	 * Zero the count and allocation
 	 */
 	array->elm_size = 0;
 	array->count = 0;

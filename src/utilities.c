@@ -1270,11 +1270,11 @@ fixParameters(struct state *state)
 		}
 		if (state->testVector[TEST_NON_OVERLAPPING] == true) {
 			printf("	[%d] NonOverlapping Template Test - block length(m): %ld\n",
-			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateBlockLength);
+			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateLength);
 		}
 		if (state->testVector[TEST_OVERLAPPING] == true) {
 			printf("	[%d] Overlapping Template Test - block length(m):    %ld\n",
-			       PARAM_overlappingTemplateBlockLength, state->tp.overlappingTemplateBlockLength);
+			       PARAM_overlappingTemplateBlockLength, state->tp.overlappingTemplateLength);
 		}
 		if (state->testVector[TEST_APEN] == true) {
 			printf("	[%d] Approximate Entropy Test - block length(m):     %ld\n",
@@ -1337,43 +1337,43 @@ fixParameters(struct state *state)
 				fflush(stdout);
 
 				// read number
-				state->tp.nonOverlappingTemplateBlockLength = getNumber(stdin, stdout);
+				state->tp.nonOverlappingTemplateLength = getNumber(stdin, stdout);
 				putchar('\n');
 
 				// error range check
-				if (state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN) {
+				if (state->tp.nonOverlappingTemplateLength < MINTEMPLEN) {
 					printf("	NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
-					       state->tp.nonOverlappingTemplateBlockLength, MINTEMPLEN);
+					       state->tp.nonOverlappingTemplateLength, MINTEMPLEN);
 				}
-				if (state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN) {
+				if (state->tp.nonOverlappingTemplateLength > MAXTEMPLEN) {
 					printf("	NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
-					       state->tp.nonOverlappingTemplateBlockLength, MAXTEMPLEN);
+					       state->tp.nonOverlappingTemplateLength, MAXTEMPLEN);
 				}
-			} while ((state->tp.nonOverlappingTemplateBlockLength < MINTEMPLEN) ||
-				 (state->tp.nonOverlappingTemplateBlockLength > MAXTEMPLEN));
+			} while ((state->tp.nonOverlappingTemplateLength < MINTEMPLEN) ||
+				 (state->tp.nonOverlappingTemplateLength > MAXTEMPLEN));
 			break;
 
-		case PARAM_overlappingTemplateBlockLength:
+		case PARAM_overlappingTemplateBlockLength: // TODO this number is fixed in the code, so either we fix it or we change the way probabilities are computed
 			do {
 				// prompt
 				printf("   Enter Overlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);
 				fflush(stdout);
 
 				// read number
-				state->tp.overlappingTemplateBlockLength = getNumber(stdin, stdout);
+				state->tp.overlappingTemplateLength = getNumber(stdin, stdout);
 				putchar('\n');
 
 				// error range check
-				if (state->tp.overlappingTemplateBlockLength < MINTEMPLEN) {
+				if (state->tp.overlappingTemplateLength < MINTEMPLEN) {
 					printf("	Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
-					       state->tp.overlappingTemplateBlockLength, MINTEMPLEN);
+					       state->tp.overlappingTemplateLength, MINTEMPLEN);
 				}
-				if (state->tp.overlappingTemplateBlockLength > MAXTEMPLEN) {
+				if (state->tp.overlappingTemplateLength > MAXTEMPLEN) {
 					printf("	Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
-					       state->tp.overlappingTemplateBlockLength, MAXTEMPLEN);
+					       state->tp.overlappingTemplateLength, MAXTEMPLEN);
 				}
-			} while ((state->tp.overlappingTemplateBlockLength < MINTEMPLEN) ||
-				 (state->tp.overlappingTemplateBlockLength > MAXTEMPLEN));
+			} while ((state->tp.overlappingTemplateLength < MINTEMPLEN) ||
+				 (state->tp.overlappingTemplateLength > MAXTEMPLEN));
 			break;
 
 		case PARAM_approximateEntropyBlockLength:

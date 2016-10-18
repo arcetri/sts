@@ -683,7 +683,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	if ((state->tp.n % 8) != 0) {
 		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must be a multiple of 8", state->tp.n);
 	}
-	if (state->tp.n < MIN_BITCOUNT) {
+	if (state->tp.n < MIN_BITCOUNT) { // TODO double-check
 		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, MIN_BITCOUNT);
 	} else if (state->tp.n > MAX_BITCOUNT) {
 		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must <= %d", state->tp.n, MAX_BITCOUNT);
@@ -822,10 +822,10 @@ change_params(struct state *state, long int parameter, long int value, double d_
 		state->tp.blockFrequencyBlockLength = value;
 		break;
 	case PARAM_nonOverlappingTemplateBlockLength:
-		state->tp.nonOverlappingTemplateBlockLength = value;
+		state->tp.nonOverlappingTemplateLength = value;
 		break;
 	case PARAM_overlappingTemplateBlockLength:
-		state->tp.overlappingTemplateBlockLength = value;
+		state->tp.overlappingTemplateLength = value;
 		break;
 	case PARAM_approximateEntropyBlockLength:
 		state->tp.approximateEntropyBlockLength = value;
@@ -1146,8 +1146,8 @@ print_option_summary(struct state *state, char *where)
 	}
 	dbg(DBG_MED, "\tSingleBitStreamLength = %ld", state->tp.n);
 	dbg(DBG_MED, "\tblockFrequencyBlockLength = %ld", state->tp.blockFrequencyBlockLength);
-	dbg(DBG_MED, "\tnonOverlappingTemplateBlockLength = %ld", state->tp.nonOverlappingTemplateBlockLength);
-	dbg(DBG_MED, "\toverlappingTemplateBlockLength = %ld", state->tp.overlappingTemplateBlockLength);
+	dbg(DBG_MED, "\tnonOverlappingTemplateBlockLength = %ld", state->tp.nonOverlappingTemplateLength);
+	dbg(DBG_MED, "\toverlappingTemplateBlockLength = %ld", state->tp.overlappingTemplateLength);
 	dbg(DBG_MED, "\tserialBlockLength = %ld", state->tp.serialBlockLength);
 	dbg(DBG_MED, "\tlinearComplexitySequenceLength = %ld", state->tp.linearComplexitySequenceLength);
 	dbg(DBG_MED, "\tapproximateEntropyBlockLength = %ld", state->tp.approximateEntropyBlockLength);

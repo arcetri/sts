@@ -178,7 +178,8 @@ static bool NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct sta
 						       struct NonOverlappingTemplateMatchings_private_stats *stat,
 						       struct dyn_array *nonover_stats, long int nonstat_index);
 static bool NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value);
-
+static void NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCount, long int toolow,
+							 long int *freqPerBin);
 
 /*
  * NonOverlappingTemplateMatchings_init - initialize the NonOverlapping Template test
@@ -224,7 +225,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	 */
 	n = state->tp.n;
 	M = state->tp.n / BLOCKS_NON_OVERLAPPING;
-	m = state->tp.nonOverlappingTemplateBlockLength; // Default value = 9
+	m = state->tp.nonOverlappingTemplateLength; // Default value = 9
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
@@ -288,7 +289,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	 * than reading them from a pre-computed file as the old code did.
 	 */
 	dbg(DBG_LOW, "forming an array of %ld non-overlapping templates of %ld bytes each", numOfTemplates[m], m);
-	state->nonovTemplates = create_dyn_array((size_t) m * sizeof(BitSequence), numOfTemplates[m], numOfTemplates[m], false);
+	state->nonovTemplates = create_dyn_array(sizeof(BitSequence), DEFAULT_CHUNK, numOfTemplates[m], false);
 
 	/*
 	 * Append to nonovTemplates each non-overlapping template found among all the 32bits natural numbers.
@@ -302,9 +303,9 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * Verify that the size of nonovTemplates is as expected
 	 */
-	if (state->nonovTemplates->count != numOfTemplates[m]) {
-		err(130, __FUNCTION__, "nonovTemplates->count: %ld != numOfTemplates[%ld]: %ld", state->nonovTemplates->count,
-		    m, numOfTemplates[m]);
+	if (state->nonovTemplates->count / 9 != numOfTemplates[m]) {
+		err(130, __FUNCTION__, "nonovTemplates->count / 9: %ld != numOfTemplates[%ld]: %ld",
+		    state->nonovTemplates->count / 9, m, numOfTemplates[m]);
 	}
 	dbg(DBG_LOW, "formed an array of %ld non-overlapping templates of %ld bytes each", numOfTemplates[m], m);
 
@@ -406,7 +407,7 @@ appendTemplate(struct state *state, ULONG value, long int m)
 	 * If the value is non-periodic, append it to nonovTemplates
 	 */
 	if (overlap == false) {
-		append_value(state->nonovTemplates, &A);
+		append_array(state->nonovTemplates, &A, m);
 	}
 
 	return;
@@ -466,7 +467,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	/*
 	 * Collect parameters
 	 */
-	m = state->tp.nonOverlappingTemplateBlockLength;
+	m = state->tp.nonOverlappingTemplateLength;
 	if ((m * 2) > (BITS_N_LONGINT - 1)) {	// firewall
 		err(132, __FUNCTION__, "(m*2): %ld is too large, 1 << (m:%ld * 2) > %ld bits long", m * 2, m, BITS_N_LONGINT - 1);
 	}
@@ -500,14 +501,14 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		/*
 		 * Get the next template from the pool of precomputed ones
 		 */
-		state->nonper_seq = get_value(state->nonovTemplates, BitSequence*, jj);
+		memcpy(state->nonper_seq, addr_value(state->nonovTemplates, BitSequence, m * jj), m * sizeof(BitSequence));
 
 		/*
 		 * Zeroize the occurrences counters for this template
 		 */
 		memset(nonover_stat.Wj, 0, sizeof(nonover_stat.Wj));
 
-		/*
+		/*dd
 	 	 * Step 2: count the number of times that this template occurs within each block
 	 	 */
 		for (i = 0; i < BLOCKS_NON_OVERLAPPING; i++) {
@@ -524,7 +525,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 				 * considered in the block.
 				 */
 				for (k = 0; k < m; k++) {
-					if ((int) state->nonper_seq[k] != (int) state->epsilon[i * stat.M + j + k]) {
+					if (state->nonper_seq[k] != state->epsilon[i * stat.M + j + k]) {
 						match = false;
 						break;
 					}
@@ -693,7 +694,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		}
 		io_ret =
 		    fprintf(stream, "\tMean = %f\tVariance = %f\tM = %ld\tm = %ld\tn = %ld\n", stat->mu, stat->sigma_squared,
-			    stat->M, state->tp.nonOverlappingTemplateBlockLength, state->tp.n);
+			    stat->M, state->tp.nonOverlappingTemplateLength, state->tp.n);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -734,7 +735,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "m = %ld\n", state->tp.nonOverlappingTemplateBlockLength);
+		io_ret = fprintf(stream, "m = %ld\n", state->tp.nonOverlappingTemplateLength);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -763,7 +764,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	/*
 	 * Print values for each template of this iteration
 	 */
-	for (i = 0; i < numOfTemplates[state->tp.nonOverlappingTemplateBlockLength]; ++i, ++nonstat_index) {
+	for (i = 0; i < numOfTemplates[state->tp.nonOverlappingTemplateLength]; ++i, ++nonstat_index) {
 
 		/*
 		 * Find address of the current nonover_stats element
@@ -782,8 +783,9 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		/*
 		 * Print template bits
 		 */
-		for (j = 0; j < state->tp.nonOverlappingTemplateBlockLength; j++) {
-			io_ret = fprintf(stream, "%1d", (state->nonper_seq[j]));
+		for (j = 0; j < state->tp.nonOverlappingTemplateLength; j++) {
+			io_ret = fprintf(stream, "%1d", (get_value(state->nonovTemplates, BitSequence,
+								   state->tp.nonOverlappingTemplateLength * i + j)));
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -992,7 +994,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 		/*
 		 * Print p_value to results.txt
 		 */
-		for (j = 0; j < numOfTemplates[state->tp.nonOverlappingTemplateBlockLength]; ++j, ++nonstat_index) {
+		for (j = 0; j < numOfTemplates[state->tp.nonOverlappingTemplateLength]; ++j, ++nonstat_index) {
 
 			/*
 			 * Find address of the current nonover_stats element

@@ -148,8 +148,9 @@
 #   define BLOCKS_NON_OVERLAPPING	(8)		// Number of blocks used by TEST_NON_OVERLAPPING, should be <= 100
 #   define MIN_RATIO_M_OVER_n_NON_OVERLAPPING	(0.01)	// Minimum ratio of M over n for TEST_NON_OVERLAPPING
 
-#   define OVERLAP_M_SUBSTRING		(1032)		// bit length of tested substring (set in SP800-22Rev1a section 2.8.2)
-#   define OVERLAP_K_DEGREES		(5)		// degrees of freedom (set in SP800-22Rev1a section 2.8.2)
+#   define BLOCK_LENGTH_OVERLAPPING	(1032)		// Length in bits of each block to be tested for TEST_OVERLAPPING
+#   define OVERLAP_K_DEGREES		(5)		// Degrees of freedom for TEST_OVERLAPPING
+#   define MIN_PROD_N_min_pi_OVERLAPPING	(5)	// Minimum product N times min_pi for TEST_OVERLAPPING
 
 #   define LINEARCOMPLEXITY_K_DEGREES	(6)		// degrees of freedom (set in SP800-22Rev1a section 2.10.2)
 
@@ -286,8 +287,8 @@ enum param {
 
 typedef struct _testParameters {
 	long int blockFrequencyBlockLength;		// -P 1=M, Block Frequency Test - block length
-	long int nonOverlappingTemplateBlockLength;	// -P 2=m, NonOverlapping Template Test - block length
-	long int overlappingTemplateBlockLength;	// -P 3=m, Overlapping Template Test - block length
+	long int nonOverlappingTemplateLength;		// -P 2=m, NonOverlapping Template Test - block length
+	long int overlappingTemplateLength;		// -P 3=m, Overlapping Template Test - block length
 	long int approximateEntropyBlockLength;		// -P 4=m, Approximate Entropy Test - block length
 	long int serialBlockLength;			// -P 5=m, Serial Test - block length
 	long int linearComplexitySequenceLength;	// -P 6=M, Linear Complexity Test - block length

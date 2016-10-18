@@ -46,10 +46,9 @@
 struct OverlappingTemplateMatchings_private_stats {
 	bool success;		// Success or failure of iteration test
 	long int N;		// Number of independent blocks
-	long int M;		// length in bits of substring bring tested
-	long int v[OVERLAP_K_DEGREES + 1];	// occurrences of B in each block
+	long int v[OVERLAP_K_DEGREES + 1];	// Occurrences of B in each block
 	double chi2;		// chi^2 value for this iteration
-	double lambda;		// used to compute theoretical properties (2*eta)
+	double lambda;		// Term used to to compute theoretical properties (2*eta)
 };
 
 
@@ -63,16 +62,20 @@ static const enum test test_num = TEST_OVERLAPPING;	// This test number
  *
  *      ../tools/pi_term.txt
  *
- * Or the mathematica notebook:
+ * Or the Mathematica notebook:
  *
  *      ../tools/pi_term.nb
+ *
+ * Refer to them for more details about the computation of these probabilities.
+ *
+ * // TODO: these numbers are computed for m = 9, so m has to be fixed too !!!
  */
 static const double pi_term[OVERLAP_K_DEGREES + 1] = {
 	0.36409105321672786245,	// T0[[M]]/2^1032 // N (was 0.364091)
 	0.18565890010624038178,	// T1[[M]]/2^1032 // N (was 0.185659)
 	0.13938113045903269914,	// T2[[M]]/2^1032 // N (was 0.139381)
 	0.10057114399877811497,	// T3[[M]]/2^1032 // N (was 0.100571)
-	0.070432326346398449744,	// T4[[M]]/2^1032 // N (was 0.0704323)
+	0.070432326346398449744,// T4[[M]]/2^1032 // N (was 0.0704323)
 	0.13986544587282249192,	// 1 - previous terms (was 0.1398657)
 };
 
@@ -80,9 +83,6 @@ static const double pi_term[OVERLAP_K_DEGREES + 1] = {
 /*
  * Forward static function declarations
  */
-#if 0
-static double Pr(int u, double eta, double log2);
-#endif
 static bool OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 						    struct OverlappingTemplateMatchings_private_stats *stat, double p_value);
 static bool OverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value);
@@ -103,7 +103,11 @@ static void OverlappingTemplateMatchings_metric_print(struct state *state, long 
 void
 OverlappingTemplateMatchings_init(struct state *state)
 {
+	long int n;		// Length of a single bit stream
 	long int m;		// Overlapping Template Test - block length
+	long int N;		// Number of blocks used
+	double min_pi;		// Minimum pi term used for an input check
+	int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -124,24 +128,38 @@ OverlappingTemplateMatchings_init(struct state *state)
 		err(140, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO Check recommended inputs on page 41 of paper
 
 	/*
-	 * Collect parameters from state
+	 * Collect parameters
 	 */
-	m = state->tp.overlappingTemplateBlockLength;
+	n = state->tp.n;
+	m = state->tp.overlappingTemplateLength;
+	N = n / BLOCK_LENGTH_OVERLAPPING;
+
+	/*
+	 * Get minimum pi from the pi_term array
+	 */
+	min_pi = 1;
+	for (i = 0; i < OVERLAP_K_DEGREES + 1; i++) {
+		min_pi = fmin(pi_term[i], min_pi);
+	}
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (m < MINTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: -P 3: Overlapping Template Test - block length(m): %ld must be >= %d",
+	if (N * min_pi <= 5) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires number of blocks (N) * min_pi: %f > %d. "
+				     "In order to run this test, please choose a bigger n.",
+		     state->testNames[test_num], test_num, N * min_pi, MIN_PROD_N_min_pi_OVERLAPPING);
+		state->testVector[test_num] = false;
+		return;
+	} else if (m < MINTEMPLEN) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld >= MINTEMPLEN: %d",
 		     state->testNames[test_num], test_num, m, MINTEMPLEN);
 		state->testVector[test_num] = false;
 		return;
-	}
-	if (m > MAXTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: -P 3: Overlapping Template Test - block length(m): %ld must be <= %d",
+	} else if (m > MAXTEMPLEN) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld <= MAXTEMPLEN: %d",
 		     state->testNames[test_num], test_num, m, MAXTEMPLEN);
 		state->testVector[test_num] = false;
 		return;
@@ -178,6 +196,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -200,9 +219,9 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	long int n;		// Length of a single bit stream
 	bool match;		// 1 ==> template match
 	double W_obs;
-	double chi2_term;	// a term whose square is used to compute chi squared for this iteration
+	double chi2_term;	// Term whose square is used to compute chi squared for this iteration
 	double p_value;		// p_value iteration test result(s)
-	long int K;		// degress of freedom
+	long int K;		// Degrees of freedom
 	long int i;
 	long int j;
 	long int k;
@@ -226,72 +245,22 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	}
 
 	/*
-	 * Collect parameters from state
+	 * Collect parameters
 	 */
-	m = state->tp.overlappingTemplateBlockLength;
-	if (state->tp.overlappingTemplateBlockLength > (BITS_N_LONGINT - 1)) {	// firewall
-		err(141, __FUNCTION__, "state->tp.overlappingTemplateBlockLength: %ld is too large, "
-		    "1 << m:%ld > %ld bits long", state->tp.overlappingTemplateBlockLength, m, BITS_N_LONGINT - 1);
-	}
+	m = state->tp.overlappingTemplateLength;
 	n = state->tp.n;
 	K = OVERLAP_K_DEGREES;
-	stat.M = OVERLAP_M_SUBSTRING;
-	stat.N = n / stat.M;
+	stat.N = n / BLOCK_LENGTH_OVERLAPPING;
 
 	/*
-	 * NOTE: Logical code rewrite, old code commented out below:
-	 *
-	 * sequence = calloc(m, sizeof(BitSequence));
-	 * if (sequence == NULL) {
-	 * errp(141, __FUNCTION__, "cannot calloc for sequence: %ld elements of %lu bytes each", m, sizeof(BitSequence));
-	 * } else
-	 * for (i = 0; i < m; i++)
-	 * sequence[i] = 1;
-	 *
-	 * Observe and note that the sequence array is set to 1 and never altered, so
-	 * we compare with the constant B_VALUE (which is 1) instead.
+	 * Step 3: compute values
 	 */
-
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * mu = (double) (M - m + 1) / pow(2, m);
-	 *
-	 * NOTE: Logical code rewrite, old code commented out below:
-	 *
-	 * mu = (double) (M - m + 1) / ((double) ((long int) 1 << m));
-	 * eta = mu / 2.0;
-	 * for (i = 0; i < K; i++) { // Compute Probabilities
-	 * pi_term[i] = Pr(i, eta, state->c.log2);
-	 * sum += pi_term[i];
-	 * }
-	 * pi_term[K] = 1 - sum;
-	 *
-	 * The paper:
-	 *
-	 * K. Hamano and T. Kaneko, The Correction of the Overlapping Template Matching Test
-	 * Included in NIST Randomness Test Suite, IEICE Transactions of Electronics,
-	 * Communications and Computer Sciences 2007, E90-A(9), pp 1788-1792.
-	 *
-	 * http://www.researchgate.net/publication/
-	 * 220241122_Correction_of_Overlapping_Template_Matching_Test_Included_in_NIST_Randomness_Test_Suite
-	 *
-	 * Computes the correct values for the pi_term array.  So the use of the Pr() function,
-	 * mu, and eta are no longer needed.
-	 */
-	stat.lambda = (double) (stat.M - state->tp.overlappingTemplateBlockLength + 1) /
-	    (double) ((long int) 1 << state->tp.overlappingTemplateBlockLength);
+	stat.lambda = (double) (BLOCK_LENGTH_OVERLAPPING - m + 1) / (double) ((long int) 1 << m);
 
 	/*
 	 * Perform the test
-	 */
-
-	/*
-	 * NOTE: Logical code rewrite, old code commented out below:
-	 *
-	 * for (i = 0; i < K + 1; i++) {
-	 *      stat.nu[i] = 0;
-	 * }
+	 * Because the template we are checking is made only of ones, we don't need to allocate any array for it.
+	 * We compare with the constant B_VALUE (which is 1) instead.
 	 */
 	memset(stat.v, 0, sizeof(stat.v));	// initialize the counters
 
@@ -300,10 +269,10 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 */
 	for (i = 0; i < stat.N; i++) {
 		W_obs = 0;
-		for (j = 0; j < stat.M - m + 1; j++) {
+		for (j = 0; j < BLOCK_LENGTH_OVERLAPPING - m + 1; j++) {
 			match = true;
 			for (k = 0; k < m; k++) {
-				if (B_VALUE != state->epsilon[i * stat.M + j + k]) {
+				if (B_VALUE != state->epsilon[i * BLOCK_LENGTH_OVERLAPPING + j + k]) {
 					match = false;
 					break;
 				}
@@ -312,13 +281,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 				W_obs++;
 			}
 		}
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * if (W_obs <= 5) {
-		 * ...
-		 * }
-		 */
+
 		if (W_obs < K) {
 			stat.v[(int) W_obs]++;
 		} else {
@@ -331,11 +294,6 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 */
 	stat.chi2 = 0.0;
 	for (i = 0; i < K + 1; i++) {
-		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * chi2 += pow((double) nu[i] - (double) N * pi_term[i], 2) / ((double) N * pi_term[i]);
-		 */
 		chi2_term = (double) stat.v[i] - (double) stat.N * pi_term[i];
 		stat.chi2 += chi2_term * chi2_term / ((double) stat.N * pi_term[i]);
 	}
@@ -482,11 +440,7 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) m (block length of 1s)   = %ld\n", state->tp.overlappingTemplateBlockLength);
-	if (io_ret <= 0) {
-		return false;
-	}
-	io_ret = fprintf(stream, "\t\t(c) M (length of substring)  = %ld\n", stat->M);
+	io_ret = fprintf(stream, "\t\t(b) m (block length of 1s)   = %ld\n", state->tp.overlappingTemplateLength);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -844,6 +798,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -1115,6 +1070,7 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1174,5 +1130,6 @@ OverlappingTemplateMatchings_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }
