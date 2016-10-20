@@ -245,6 +245,11 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 		     state->testNames[test_num], test_num, m, MAXTEMPLEN);
 		state->testVector[test_num] = false;
 		return;
+	} else if (m > M) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld <= M: %d",
+		     state->testNames[test_num], test_num, m, M);
+		state->testVector[test_num] = false;
+		return;
 	}
 
 	/*
@@ -483,14 +488,6 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	stat.sigma_squared = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
 	if (stat.sigma_squared < 0.0) {
 		err(132, __FUNCTION__, "sigma_squared: %f < 0.0", stat.sigma_squared);
-	}
-	// TODO: Fix this checks so that they terminate the iteration properly before returning
-	if (isNegative(stat.mu)) {
-		warn(__FUNCTION__, "aborting %s, Lambda < 0.0: %f", state->testNames[test_num], stat.mu);
-		return;
-	} else if (isZero(stat.mu)) {
-		warn(__FUNCTION__, "aborting %s, Lambda == 0.0: %f", state->testNames[test_num], stat.mu);
-		return;
 	}
 
 	/*
@@ -961,14 +958,14 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
@@ -1072,7 +1069,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
-			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
+			dbg(DBG_HIGH, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*

@@ -147,7 +147,14 @@ OverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (N * min_pi <= 5) {
+	if (m != DEFAULT_OVERLAPPING) {
+		warn(__FUNCTION__, "disabling test %s[%d]: the probabilities in the code of this test have been computed only"
+				     "for m = %ld so far, and m has been set to %ld for this execution."
+				     "If you want to run this test please choose set the template size to %ld",
+		     state->testNames[test_num], test_num, DEFAULT_OVERLAPPING, m, DEFAULT_OVERLAPPING);
+		state->testVector[test_num] = false;
+		return;
+	} else if (N * min_pi <= 5) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires number of blocks (N) * min_pi: %f > %d. "
 				     "In order to run this test, please choose a bigger n.",
 		     state->testNames[test_num], test_num, N * min_pi, MIN_PROD_N_min_pi_OVERLAPPING);
@@ -218,7 +225,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	long int m;		// Overlapping Template Test - template length
 	long int n;		// Length of a single bit stream
 	bool match;		// 1 ==> template match
-	double W_obs;
+	double W_obs;		// Counter of the number of occurrences of a template in a block
 	double chi2_term;	// Term whose square is used to compute chi squared for this iteration
 	double p_value;		// p_value iteration test result(s)
 	long int K;		// Degrees of freedom
@@ -255,7 +262,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	/*
 	 * Step 3: compute values
 	 */
-	stat.lambda = (double) (BLOCK_LENGTH_OVERLAPPING - m + 1) / (double) ((long int) 1 << m);
+	stat.lambda = (double) (BLOCK_LENGTH_OVERLAPPING - m + 1) / (double) ((long int) 1 << m); // TODO can I remove lambda?
 
 	/*
 	 * Perform the test
@@ -650,14 +657,14 @@ OverlappingTemplateMatchings_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
@@ -747,7 +754,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
-			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
+			dbg(DBG_HIGH, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*

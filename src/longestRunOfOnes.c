@@ -145,13 +145,9 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
 struct runs_table {
 	const long int min_n;	// Minimum n from test table
 	const long int M;	// Block bit length
-	const int K;		// Number of classes + 1 == LONGEST_RUN_CLASS_COUNT = max_class - min_class
 	const int min_class;	// Minimum length to consider (0 < min_class)
 	const int max_class;	// Maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT)
 	const double pi_term[LONGEST_RUN_CLASS_COUNT + 1]; // Theoretical probabilities (see comment above)
-
-	/* TODO when we do this we are saying that we expect LONGEST_RUN_CLASS_COUNT classes. This happens all
-	 * the time in this test, so why do we still need K in this struct? It's just a legacy thing and it's never used anyway */
 };
 
 static const struct runs_table runs_table[] = {
@@ -197,7 +193,6 @@ static const struct runs_table runs_table[] = {
 	{
 	 MIN_LENGTH_LONGESTRUN, 	// min_n
 	 8, 				// M
-	 LONGEST_RUN_CLASS_COUNT, 	// K
 	 1, 				// min_class
 	 7,				// max_class
 
@@ -257,7 +252,6 @@ static const struct runs_table runs_table[] = {
 	{
 	 6272,				// min_n
 	 128,				// M
-	 LONGEST_RUN_CLASS_COUNT,	// K
 	 4,				// min_class
 	 10,				// max_class
 
@@ -295,7 +289,6 @@ static const struct runs_table runs_table[] = {
 	{
 	 750000, 			// min_n
 	 10000,				// M
-	 LONGEST_RUN_CLASS_COUNT,	// K
 	 10,				// min_class
 	 16,				// max_class
 
@@ -964,14 +957,14 @@ LongestRunOfOnes_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
@@ -1061,7 +1054,7 @@ LongestRunOfOnes_print(struct state *state)
 			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
-			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
+			dbg(DBG_HIGH, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*

@@ -56,7 +56,8 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			// TODO add debug message and exit
+			err(122, __FUNCTION__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
+			    matrix[i][i]);
 		}
 	}
 
@@ -71,7 +72,8 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			// TODO add debug message and exit
+			err(122, __FUNCTION__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
+			    matrix[i][i]);
 		}
 	}
 

@@ -184,6 +184,7 @@ RandomExcursions_init(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
 	state->driver_state[test_num] = DRIVER_INIT;
+
 	return;
 }
 
@@ -980,14 +981,14 @@ RandomExcursions_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
@@ -1092,7 +1093,7 @@ RandomExcursions_print(struct state *state)
 			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
-			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
+			dbg(DBG_HIGH, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*
@@ -1143,6 +1144,7 @@ RandomExcursions_print(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
 	state->driver_state[test_num] = DRIVER_PRINT;
+
 	return;
 }
 
@@ -1415,6 +1417,7 @@ RandomExcursions_metrics(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
+
 	return;
 }
 
@@ -1487,5 +1490,6 @@ RandomExcursions_destroy(struct state *state)
 	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
+
 	return;
 }

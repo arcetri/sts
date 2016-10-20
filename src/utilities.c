@@ -1353,7 +1353,7 @@ fixParameters(struct state *state)
 				 (state->tp.nonOverlappingTemplateLength > MAXTEMPLEN));
 			break;
 
-		case PARAM_overlappingTemplateBlockLength: // TODO this number is fixed in the code, so either we fix it or we change the way probabilities are computed
+		case PARAM_overlappingTemplateBlockLength:
 			do {
 				// prompt
 				printf("   Enter Overlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);

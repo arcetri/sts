@@ -471,14 +471,14 @@ Frequency_print(struct state *state)
 	 * Open stats.txt file
 	 */
 	stats_txt = filePathName(state->subDir[test_num], "stats.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", stats_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", stats_txt);
 	stats = openTruncate(stats_txt);
 
 	/*
 	 * Open results.txt file
 	 */
 	results_txt = filePathName(state->subDir[test_num], "results.txt");
-	dbg(DBG_MED, "about to open/truncate: %s", results_txt);
+	dbg(DBG_HIGH, "about to open/truncate: %s", results_txt);
 	results = openTruncate(results_txt);
 
 	/*
@@ -568,7 +568,7 @@ Frequency_print(struct state *state)
 			 * Form the data*.txt filename
 			 */
 			data_txt = filePathName(state->subDir[test_num], data_filename);
-			dbg(DBG_MED, "about to open/truncate: %s", data_txt);
+			dbg(DBG_HIGH, "about to open/truncate: %s", data_txt);
 			data = openTruncate(data_txt);
 
 			/*

@@ -52,7 +52,7 @@ file: fft.c
 function: Fast discrete Fourier and cosine transforms and inverses
 author: Monty <xiphmont@mit.edu>
 modifications by: Monty
-last modification date: Jul 1 1996 // TODO find possible more recent alternative
+last modification date: Jul 1 1996
 
 ********************************************************************/
 
