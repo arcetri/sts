@@ -1,3 +1,4 @@
+#if defined(LEGACY_FFT)
 /*
  * The OggSQUISH functions used by sts
  */
@@ -34,3 +35,4 @@ extern void __ogg_fdrffti(long int n, double *wsave, long int *ifac);
 extern void __ogg_fdrfftf(long int n, double *X, double *wsave, long int *ifac);
 
 #endif				/* DFFT_H */
+#endif /* LEGACY_FFT */

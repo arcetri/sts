@@ -32,11 +32,20 @@ SRC= src
 #
 all: assess
 
+legacy:
+	cd ${SRC}; $(MAKE) $@
+
 assess: ${SRC}/assess
 	cd ${SRC}; $(MAKE) ../assess
 
+assess_legacy_fft: ${SRC}/assess_legacy_fft
+	cd ${SRC}; $(MAKE) ../assess_legacy_fft
+
 ${SRC}/assess:
 	cd ${SRC}; $(MAKE) all
+
+${SRC}/assess_legacy_fft:
+	cd ${SRC}; $(MAKE) assess_legacy_fft
 
 # utility rules
 #

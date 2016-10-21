@@ -1,3 +1,4 @@
+#if defined(LEGACY_FFT)
 /*
  * Notes from RFB:
  *
@@ -201,7 +202,7 @@ __ogg_fdcosqi(int n, double *wsave, long int *ifac)
 	__ogg_fdrffti(n, wsave + n, ifac);
 }
 
-#endif
+#endif /* LBBBBBBBBBBBBB */
 
 STIN void
 dradf2(long int ido, long int l1, double *cc, double *ch, double *wa1)
@@ -1727,4 +1728,5 @@ __ogg_fdcosqb(int n, double *x, double *wsave, int *ifac)
 
 	dcsqb1(n, x, wsave, wsave + n, ifac);
 }
-#endif
+#endif /* LBBBBBBBBBBBBBBBB */
+#endif /* LEGACY_FFT */

@@ -3,6 +3,7 @@
 experiments
 # ignore the sts compiled binary
 assess
+assess_legacy_fft
 # ignore mkapertemplate compiled binary
 mkapertemplate
 dataInfo

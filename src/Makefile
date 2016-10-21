@@ -47,7 +47,8 @@ DIFF= diff
 
 # how to compile
 #
-LIBS= -lm
+LEGACY_LIBS= -lm
+LIBS= -lm -L/usr/local/lib -lfftw3
 OPT=
 #OPT= -O3
 #DEBUG=
@@ -85,16 +86,23 @@ HSRC= cephes.h config.h defs.h \
 
 SRCS= ${CSRC} ${HSRC}
 
-OBJ= assess.o frequency.o blockFrequency.o \
+BASE_OBJ= assess.o frequency.o blockFrequency.o \
       cusum.o runs.o longestRunOfOnes.o \
-      serial.o rank.o discreteFourierTransform.o \
+      serial.o rank.o \
       nonOverlappingTemplateMatchings.o \
       overlappingTemplateMatchings.o universal.o \
       approximateEntropy.o randomExcursions.o \
       randomExcursionsVariant.o linearComplexity.o \
-      dfft.o cephes.o matrix.o \
+      cephes.o matrix.o \
       utilities.o generators.o genutils.o \
       Parse_args.o debug.o dyn_alloc.o driver.o
+
+LEGACY_ONLY_OBJ= dfft.o discreteFourierTransform_legacy.o
+MODERN_ONLY_OBJ= discreteFourierTransform.o
+
+OBJ_LEGACY= ${BASE_OBJ} ${LEGACY_ONLY_OBJ}
+
+OBJ= ${BASE_OBJ} ${MODERN_ONLY_OBJ}
 
 DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
 	${DATADIR}/data.pi ${DATADIR}/data.sha1 ${DATADIR}/data.sqrt2 \
@@ -110,19 +118,31 @@ DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
 TOOLS_SRC= ../tools/mkapertemplate.c ../tools/pi_term.nb ../tools/pi_term.txt \
 	../tools/runs_table.cal
 
+LEGACY_TARGETS= assess_legacy_fft ../assess_legacy_fft
+
 TARGETS= assess ../assess
 
 # default rule
 #
 all: ${TARGETS} ${DATA} ${TOOLS_SRC}
 
+legacy: ${LEGACY_TARGETS}
+
 assess: ${OBJ}
 	${RM} -f $@
 	${CC} ${CFLAGS} ${OBJ} ${LIBS} -o $@
 
+assess_legacy_fft: ${OBJ_LEGACY}
+	${RM} -f $@
+	${CC} ${CFLAGS} ${OBJ_LEGACY} ${LEGACY_LIBS} -o $@
+
 ../assess: assess
 	${RM} -f $@
 	${CP} -f -p assess $@
+
+../assess_legacy_fft: assess_legacy_fft
+	${RM} -f $@
+	${CP} -f -p assess_legacy_fft $@
 
 # object dependencies and rules
 #
@@ -156,6 +176,9 @@ rank.o: rank.c
 discreteFourierTransform.o: discreteFourierTransform.c
 	${CC} -c -o $@ ${CFLAGS} discreteFourierTransform.c
 
+discreteFourierTransform_legacy.o: discreteFourierTransform.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT discreteFourierTransform.c
+
 nonOverlappingTemplateMatchings.o: nonOverlappingTemplateMatchings.c
 	${CC} -c -o $@ ${CFLAGS} nonOverlappingTemplateMatchings.c
 
@@ -181,7 +204,7 @@ linearComplexity.o: linearComplexity.c
 	${CC} -c -o $@ ${CFLAGS} linearComplexity.c
 
 dfft.o: dfft.c
-	${CC} -c -o $@ ${CFLAGS} dfft.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT dfft.c
 
 matrix.o: matrix.c
 	${CC} -c -o $@ ${CFLAGS} matrix.c
@@ -210,10 +233,10 @@ mkapertemplate: ../tools/mkapertemplate.c debug.o
 # utility rules
 #
 clean:
-	${RM} -f ${OBJ}
+	${RM} -f ${OBJ} ${LEGACY_ONLY_OBJ}
 
 clobber: clean
-	@for i in ${TARGETS} tags Makefile.bak mkapertemplate; do \
+	@for i in ${TARGETS} ${LEGACY_TARGETS} tags Makefile.bak mkapertemplate; do \
 	    if [[ -e "$$i" ]]; then \
 		echo ${RM} -f "$$i"; \
 		${RM} -f "$$i"; \
