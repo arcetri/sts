@@ -150,7 +150,6 @@ BlockFrequency_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -751,11 +750,6 @@ BlockFrequency_metric_print(struct state *state, long int sampleCount, long int 
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -880,13 +874,6 @@ BlockFrequency_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*

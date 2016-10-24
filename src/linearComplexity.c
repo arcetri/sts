@@ -168,7 +168,6 @@ LinearComplexity_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -250,22 +249,10 @@ LinearComplexity_iterate(struct state *state)
 	M = state->tp.linearComplexitySequenceLength;
 	n = state->tp.n;
 	stat.discarded = n % M;
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * N = (int) floor(n / M);
-	 */
 	N = n / M;
 
 	/*
 	 * Zeroize the nu counters
-	 */
-	/*
-	 * NOTE: Logical code rewrite, old code commented out below:
-	 *
-	 * for (i = 0; i < LINEARCOMPLEXITY_K_DEGREES + 1; i++) {
-	 *      stat.nu[i] = 0;
-	 * }
 	 */
 	memset(stat.v, 0, (LINEARCOMPLEXITY_K_DEGREES + 1) * sizeof(stat.v[0]));
 
@@ -276,16 +263,6 @@ LinearComplexity_iterate(struct state *state)
 
 		/*
 		 * Zeroize working LSRF storage
-		 */
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < M; ++i) {
-		 *      state->linear_b[i] = 0;
-		 *      state->linear_c[i] = 0;
-		 *      state->linear_p[i] = 0;
-		 *      state->linear_t[i] = 0;
-		 * }
 		 */
 		memset(state->linear_b, 0, M * sizeof(state->linear_b[0]));
 		memset(state->linear_c, 0, M * sizeof(state->linear_c[0]));

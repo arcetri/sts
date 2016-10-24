@@ -46,9 +46,9 @@
 struct OverlappingTemplateMatchings_private_stats {
 	bool success;		// Success or failure of iteration test
 	long int N;		// Number of independent blocks
-	long int v[OVERLAP_K_DEGREES + 1];	// Occurrences of B in each block
-	double chi2;		// chi^2 value for this iteration
-	double lambda;		// Term used to to compute theoretical properties (2*eta)
+	long int v[OVERLAP_K_DEGREES + 1];	// v[i] counts the number of times the template occurs
+						// a total of i times cumulatively in the blocks
+	double chi2;		// Test statistic chi^2
 };
 
 
@@ -68,7 +68,7 @@ static const enum test test_num = TEST_OVERLAPPING;	// This test number
  *
  * Refer to them for more details about the computation of these probabilities.
  *
- * // TODO: these numbers are computed for m = 9, so m has to be fixed too !!!
+ * NOTE: This probabilities have been computed for m = 9 and M = 1032
  */
 static const double pi_term[OVERLAP_K_DEGREES + 1] = {
 	0.36409105321672786245,	// T0[[M]]/2^1032 // N (was 0.364091)
@@ -149,7 +149,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 	 */
 	if (m != DEFAULT_OVERLAPPING) {
 		warn(__FUNCTION__, "disabling test %s[%d]: the probabilities in the code of this test have been computed only"
-				     "for m = %ld so far, and m has been set to %ld for this execution."
+				     "for m = %ld so far, but m has been set to %ld for this execution."
 				     "If you want to run this test please choose set the template size to %ld",
 		     state->testNames[test_num], test_num, DEFAULT_OVERLAPPING, m, DEFAULT_OVERLAPPING);
 		state->testVector[test_num] = false;
@@ -190,7 +190,6 @@ OverlappingTemplateMatchings_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -260,22 +259,27 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	stat.N = n / BLOCK_LENGTH_OVERLAPPING;
 
 	/*
-	 * Step 3: compute values
+	 * Set the v counters to zero.
+	 * NOTE: v[k] counts the number of times the template occurs
+	 * 	 a total of k times cumulatively in the blocks
 	 */
-	stat.lambda = (double) (BLOCK_LENGTH_OVERLAPPING - m + 1) / (double) ((long int) 1 << m); // TODO can I remove lambda?
+	memset(stat.v, 0, sizeof(stat.v));
 
 	/*
-	 * Perform the test
-	 * Because the template we are checking is made only of ones, we don't need to allocate any array for it.
-	 * We compare with the constant B_VALUE (which is 1) instead.
-	 */
-	memset(stat.v, 0, sizeof(stat.v));	// initialize the counters
-
-	/*
-	 * observe the template matches
+	 * Step 2: calculate the number of occurrences of the template in each of the N blocks of length M.
+	 * NOTE: Because the template we are checking is made only of ones, we don't need to
+	 *       allocate any array for it. We compare with the constant B_VALUE (which is 1) instead.
 	 */
 	for (i = 0; i < stat.N; i++) {
+
+		/*
+		 * Set the initial counter of the occurrences of the template in block i to zero
+		 */
 		W_obs = 0;
+
+		/*
+		 * Increase the W_obs counter whenever there is an occurrence of the template in block i
+		 */
 		for (j = 0; j < BLOCK_LENGTH_OVERLAPPING - m + 1; j++) {
 			match = true;
 			for (k = 0; k < m; k++) {
@@ -289,6 +293,9 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 			}
 		}
 
+		/*
+		 * Increase the counter v depending on the number of occurrences of the template in block i
+		 */
 		if (W_obs < K) {
 			stat.v[(int) W_obs]++;
 		} else {
@@ -297,7 +304,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	}
 
 	/*
-	 * Compute the p_value
+	 * Step 4: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
 	for (i = 0; i < K + 1; i++) {
@@ -305,6 +312,9 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 		stat.chi2 += chi2_term * chi2_term / ((double) stat.N * pi_term[i]);
 	}
 
+	/*
+	 * Step 5: compute the test p-value
+	 */
 	p_value = cephes_igamc(K / 2.0, stat.chi2 / 2.0);
 
 	/*
@@ -314,22 +324,22 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;		// SUCCESS
 	}
 
 	/*
@@ -349,37 +359,6 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 
 	return;
 }
-
-
-#if 0
-static double
-Pr(int u, double eta, double log2)
-{
-	long int l;
-	double sum;
-	double p;
-
-	if (u == 0) {
-		p = exp(-eta);
-	} else {
-		sum = 0.0;
-		for (l = 1; l <= u; l++) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * sum +=
-			 * exp(-eta - u * log(2) + l * log(eta) - cephes_lgam(l + 1) + cephes_lgam(u) - cephes_lgam(l) -
-			 * cephes_lgam(u - l + 1));
-			 */
-			sum +=
-			    exp(-eta - u * log2 + l * log(eta) - cephes_lgam(l + 1) + cephes_lgam(u) - cephes_lgam(l) -
-				cephes_lgam(u - l + 1));
-		}
-		p = sum;
-	}
-	return p;
-}
-#endif
 
 
 /*
@@ -452,14 +431,6 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 		return false;
 	}
 	io_ret = fprintf(stream, "\t\t(d) N (number of substrings) = %ld\n", stat->N);
-	if (io_ret <= 0) {
-		return false;
-	}
-	io_ret = fprintf(stream, "\t\t(e) mu [(M-m+1)/2^m]	   = %f\n", stat->lambda);
-	if (io_ret <= 0) {
-		return false;
-	}
-	io_ret = fprintf(stream, "\t\t(f) eta		       = %f\n", stat->lambda / 2.0);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -603,18 +574,18 @@ OverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 void
 OverlappingTemplateMatchings_print(struct state *state)
 {
-	struct OverlappingTemplateMatchings_private_stats *stat;	// pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	struct OverlappingTemplateMatchings_private_stats *stat;	// Pointer to statistics of an iteration
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -869,11 +840,6 @@ OverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCo
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -997,13 +963,6 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*

@@ -159,7 +159,6 @@
 
 #   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
 #   define MIN_L_UNIVERSAL		(6)		// minimum of L
-#   define MAX_UNIVERSAL		(2250506239L)	// maximum n to allow L <= 16 for TEST_UNIVERSAL
 #   define MAX_L_UNIVERSAL		(16)		// maximum of L
 
 #   define MAX_EXCURSION		(4)		// excursion states: -MAX_EXCURSION to -1,

@@ -437,7 +437,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	long int n;			// Length of a single bit stream
 	long int m;			// NonOverlapping Template Test - block length
 	unsigned int W_obs;		// Counter of the number of occurrences of a template in a block
-	double chi2_term;		// Term used to get chi squared
+	double chi2_term;		// Term used to compute chi squared
 	bool match;			// Indicator of a match of a template in a block
 	long int i;
 	long int j;
@@ -486,8 +486,18 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	 */
 	stat.mu = (stat.M - m + 1) / ((double) ((long int) 1 << m));
 	stat.sigma_squared = stat.M * (1.0 / ((double) ((long int) 1 << m)) - (2.0 * m - 1.0) / ((double) ((long int) 1 << m * 2)));
+
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (stat.sigma_squared < 0.0) {
 		err(132, __FUNCTION__, "sigma_squared: %f < 0.0", stat.sigma_squared);
+	}
+	if (isNegative(stat.mu)) {
+		err(132, __FUNCTION__, "aborting %s, mean(mu) < 0.0: %f", state->testNames[test_num], stat.mu);
+	}
+	if (isZero(stat.mu)) {
+		err(132, __FUNCTION__, "aborting %s, mean(mu) == 0.0: %f", state->testNames[test_num], stat.mu);
 	}
 
 	/*
@@ -505,7 +515,7 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		 */
 		memset(nonover_stat.Wj, 0, sizeof(nonover_stat.Wj));
 
-		/*dd
+		/*
 	 	 * Step 2: count the number of times that this template occurs within each block
 	 	 */
 		for (i = 0; i < BLOCKS_NON_OVERLAPPING; i++) {

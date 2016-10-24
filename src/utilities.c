@@ -1237,6 +1237,7 @@ chooseTests(struct state *state)
 			}
 		} while (success != true);
 	}
+
 	return;
 }
 
@@ -1635,6 +1636,7 @@ fileBasedBitStreams(struct state *state)
 	} else {
 		err(224, __FUNCTION__, "Input file format selection is invalid");
 	}
+
 	return;
 }
 
@@ -2159,6 +2161,7 @@ nist_test_suite(struct state *state)
 			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
 	}
+
 	return;
 }
 

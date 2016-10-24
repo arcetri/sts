@@ -142,11 +142,10 @@ Serial_init(struct state *state)
 	state->stats[test_num] = create_dyn_array(sizeof(struct Serial_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false); // stats.txt data
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
-	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false); // results.txt data
+	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false); // results.txt data // TODO check why size is doubled
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);

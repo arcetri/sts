@@ -171,7 +171,6 @@ RandomExcursions_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -272,7 +271,7 @@ RandomExcursions_iterate(struct state *state)
 	 */
 	stat.test_possible = true;	// assume the test is possible
 	stat.J = 0;
-	S_k[0] = 2 * (long int) state->epsilon[0] - 1;
+	S_k[0] = 2 * (long int) state->epsilon[0] - 1; // TODO change considering DFT implementation
 	for (i = 1; i < n; i++) {
 		S_k[i] = S_k[i - 1] + 2 * state->epsilon[i] - 1;
 		if (S_k[i] == 0) {

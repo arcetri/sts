@@ -113,11 +113,10 @@ CumulativeSums_init(struct state *state)
 	state->stats[test_num] = create_dyn_array(sizeof(struct CumulativeSums_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
-	                                          DEFAULT_CHUNK, 2 * (state->tp.numOfBitStreams), false);	// results.txt
+	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false);	// results.txt // TODO check why size is double
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	if (state->partitionCount[test_num] > 1) {
@@ -265,10 +264,10 @@ CumulativeSums_iterate(struct state *state)
 	}
 	rev_p_value = 1.0 - sum1 + sum2;
 	if (isNegative(rev_p_value)) {
-		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f < 0.0\n", rev_p_value);
+		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f < 0.0\n", rev_p_value); // TODO check and maybe make err()
 	}
 	if (isGreaterThanOne(rev_p_value)) {
-		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f > 1.0\n", rev_p_value);
+		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f > 1.0\n", rev_p_value); // TODO check and maybe make err()
 	}
 
 	/*

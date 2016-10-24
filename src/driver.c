@@ -344,11 +344,6 @@ init(struct state *state)
 	}
 	state->c.logn = log(state->tp.n);
 	state->c.matrix_count = state->tp.n / (RANK_ROWS * RANK_COLS);
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * constraint = MAX(0.005 * pow(n, 0.5), 500);
-	 */
 	long double ceill_result = ceill(MAX(0.005 * state->c.sqrtn, 500.0));
 	if (ceill_result > (long double) LONG_MAX) {	// firewall
 		err(50, __FUNCTION__, "ceill result is too big for a long int");

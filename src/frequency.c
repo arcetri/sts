@@ -128,7 +128,6 @@ Frequency_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -199,7 +198,13 @@ Frequency_iterate(struct state *state)
 	 */
 	stat.S_n = 0;
 	for (i = 0; i < n; i++) {
-		stat.S_n += 2 * (int) state->epsilon[i] - 1;
+		if ((int) state->epsilon[i] == 1) {
+			stat.S_n++;
+		} else if ((int) state->epsilon[i] == 0) {
+			stat.S_n--;
+		} else {
+			err(41, __FUNCTION__, "found a bit different than 1 or 0 in the sequence");
+		}
 	}
 
 	/*

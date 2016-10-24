@@ -45,7 +45,7 @@
  */
 struct Universal_private_stats {
 	bool success;		// Success or failure of iteration test
-	long int Q;		// Number of blocks in the initialization sequence
+	long int Q;		// Number of blocks in the initialization segment
 	long int K;		// Number of blocks in the test segment
 	double sum;		// Sum of the log2 distances between matching L-bit templates
 	double sigma;		// sqrt(variance[L] / K)
@@ -67,7 +67,7 @@ static const enum test test_num = TEST_UNIVERSAL;	// This test number
  * The index for these arrays is L.  The expected_value[] array is from the 2nd column (mu),
  * and the variance[] array is from the 3rd column (sigma^2(1)) in the above reference.
  *
- * Because MIM_L_UNIVERSAL is 6, the values for 0 <= L < MIM_L_UNIVERSAL forced to zero.
+ * Because MIN_L_UNIVERSAL is 6, the values for 0 <= L < MIN_L_UNIVERSAL forced to zero.
  */
 static const double expected_value[MAX_L_UNIVERSAL + 1] = {
 	0, 0, 0, 0, 0, 0, 5.2177052, 6.1962507, 7.1836656,
@@ -103,7 +103,7 @@ Universal_init(struct state *state)
 {
 	long int n;		// Length of a single bit stream
 	long int L;		// Length of each block
-	long int p;		// Elements in the working Universal template
+	long int p;		// Number of possible L-bit blocks and size of the table T
 
 	/*
 	 * Check preconditions (firewall)
@@ -124,7 +124,6 @@ Universal_init(struct state *state)
 		err(200, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO check input size recommendations in page 45 of the paper
 
 	/*
 	 * Collect parameters from state
@@ -140,40 +139,46 @@ Universal_init(struct state *state)
 		state->testVector[test_num] = false;
 		return;
 	}
-	if (n >= MAX_UNIVERSAL) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld < %ld for L <= 16",
-		     state->testNames[test_num], test_num, n, MAX_UNIVERSAL);
-		state->testVector[test_num] = false;
-		return;
-	}
+
 	/*
 	 * Determine L, the length of each block
-	 *
-	 * given n, determine L, the smallest value such that:
-	 *
+	 * Given n, L is the smallest value such that:
 	 *      n >= 1010 * 2^L *L
 	 */
-	for (L = MIN_L_UNIVERSAL - 1; L <= MAX_L_UNIVERSAL; ++L) {
-		if (L > (BITS_N_LONGINT - 1)) {	// firewall
-			warn(__FUNCTION__, "disabling test %s[%d]: L: %ld is too large, "
-			     "1 << L:%ld > %ld bits long", state->testNames[test_num], test_num, L, L, BITS_N_LONGINT - 1);
-			state->testVector[test_num] = false;
-			return;
-		}
-		if (((long int) 1 << L) > ((long int) LONG_MAX / 1010 / L)) {	// paranoia
-			warn(__FUNCTION__, "disabling test %s[%d]: L: %ld is too large, "
-			     "1010 * 1 << L * L will overflow long int", state->testNames[test_num], test_num, L);
-			state->testVector[test_num] = false;
-			return;
-		}
+	for (L = MIN_L_UNIVERSAL + 1; L <= MAX_L_UNIVERSAL; L++) {
+
 		/*
-		 * is L still big enough?
+		 * Make sure that L is less than the number of bits in a long, to prevent overflow
+		 */
+		if (L > (BITS_N_LONGINT - 1)) {
+			warn(__FUNCTION__, "disabling test %s[%d]: L: %ld is too large and should be less than %ld bits long",
+			     state->testNames[test_num], test_num, L, L, BITS_N_LONGINT - 1);
+			state->testVector[test_num] = false;
+			return;
+		}
+
+		/*
+		 * Make sure that the operations we are going to perform with L will not cause overflow
+		 */
+		if (((long int) 1 << L) > ((long int) LONG_MAX / 1010 / L)) {
+			warn(__FUNCTION__, "disabling test %s[%d]: L: %ld is too large, "
+					"1010 * (1 << L) * L will overflow long int", state->testNames[test_num], test_num, L);
+			state->testVector[test_num] = false;
+			return;
+		}
+
+		/*
+		 * Break if L is too big
 		 */
 		if (n < (1010 * (1 << L) * L)) {
-			--L;	// move back to the L that was not too big
 			break;
 		}
 	}
+
+	/*
+	 * Move back to the L that was not too big
+	 */
+	L--;
 
 	/*
 	 * Check preconditions (firewall)
@@ -189,11 +194,15 @@ Universal_init(struct state *state)
 		state->testVector[test_num] = false;
 		return;
 	}
+
+	/*
+	 * Store computed L into state
+	 */
 	state->universal_L = L;
 	p = (long int) 1 << L;
 
 	/*
-	 * Allocate the working template array
+	 * Allocate the T table (with block number of the last occurrence of each block)
 	 */
 	state->universal_T = malloc(p * sizeof(state->universal_T[0]));
 	if (state->universal_T == NULL) {
@@ -218,7 +227,6 @@ Universal_init(struct state *state)
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
-	 *
 	 * NOTE: If we are not partitioning the p_values, no data*.txt filenames are needed
 	 */
 	state->datatxt_fmt[test_num] = data_filename_format(state->partitionCount[test_num]);
@@ -252,12 +260,12 @@ Universal_iterate(struct state *state)
 	struct Universal_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
 	long int L;		// Length of each block
-	long int *T;		// working Universal template
-	long int p;		// Elements in the working Universal template
-	double arg;
+	long int *T;		// Table with block number of the last occurrence of each block
+	long int p;		// Number of possible L-bit blocks and size of the table T
+	double arg;		// Term used to compute p-value
 	double p_value;		// p_value iteration test result(s)
-	double c;
-	long decRep;
+	double c;		// Constant used in the formula of the standard deviation
+	long decRep;		// Decimal representation of a block
 	long int i;
 	long int j;
 
@@ -303,93 +311,75 @@ Universal_iterate(struct state *state)
 	}
 
 	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * p = (long int) pow(2, L);
+	 * Setup parameters for the test
 	 */
 	p = (long int) 1 << L;
 	if (p > ((long int) LONG_MAX / 10)) {	// paranoia
 		err(201, __FUNCTION__, "L: %ld is too large, 10 * 1 << L will overflow long int", L);
 	}
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * stat.Q = 10 * (long int) pow(2, L);
-	 */
 	stat.Q = 10 * p;
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * stat.K = (int) (floor(n/L) - (double)stat.Q); // BLOCKS TO TEST
-	 */
-	stat.K = ((n / L) - stat.Q);	// BLOCKS TO TEST
-	/*
-	 * This test is not needed because stat.Q is set to 10 * (long int) pow(2, L) above
-	 *
-	 * if ((double) stat.Q < 10 * pow(2, L)) {
-	 * fprintf(stats[test_num], "\t\tUNIVERSAL STATISTICAL TEST\n");
-	 * fprintf(stats[test_num], "\t\t---------------------------------------------\n");
-	 * fprintf(stats[test_num], "\t\tQ %ld < %f\n", stat.Q, 10 * pow(2, L));
-	 * warn(__FUNCTION__, "Q %ld < %f", stat.Q, 10 * pow(2, L));
-	 * return;
-	 * }
-	 */
+	stat.K = (((n + L - 1) / L) - stat.Q); // (n + L - 1) / L == ceil(n / L)
+	stat.sum = 0.0;
+	memset(T, 0, p * sizeof(T[0]));	// zeroize T
 
 	/*
-	 * setup and initialize for the test
-	 *
-	 * COMPUTE THE EXPECTED: Formula 16, in Marsaglia's Paper
+	 * Step 2: using the initialization segment, fill table T with block number
+	 * of the last occurrence of each L-bit block.
+	 */
+	for (i = 1; i <= stat.Q; i++) {
+
+		/*
+		 * Get decimal representation of the block.
+		 * It is convenient to use this representation because we can store and
+		 * have access to the contents of each block in the table T with size 2^L.
+		 */
+		decRep = 0;
+		for (j = 0; j < L; j++) {
+			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
+		}
+
+		/*
+		 * Save the block number of this last occurrence of the this L-bit block in the table.
+		 */
+		T[decRep] = i;
+	}
+
+	/*
+	 * Step 3: examine each of the K blocks in the test segment and determine
+	 * the number of blocks since the last occurrence of the same L-bit block
+	 */
+	for (i = stat.Q + 1; i <= stat.Q + stat.K; i++) {
+
+		/*
+		 * Get decimal representation of the block
+		 */
+		decRep = 0;
+		for (j = 0; j < L; j++) {
+			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
+		}
+
+		/*
+		 * Add the distance between re-occurrences of the same L-bit block to an
+		 * accumulating log2 sum of all the differences detected in the K blocks
+		 */
+		stat.sum += log(i - T[decRep]) / state->c.log2;
+
+		/*
+		 * Replace the value in the table with the location of the current block
+		 */
+		T[decRep] = i;
+	}
+
+	/*
+	 * Step 4: compute the test statistic
+	 */
+	stat.f_n = (stat.sum / (double) stat.K);
+
+	/*
+	 * Step 5: compute the test p-value
 	 */
 	c = 0.7 - 0.8 / (double) L + (4 + 32 / (double) L) * pow(stat.K, -3.0 / (double) L) / 15;
 	stat.sigma = c * sqrt(variance[L] / (double) stat.K);
-	stat.sum = 0.0;
-	/*
-	 * NOTE: Logical code rewrite, old code commented out below:
-	 *
-	 * for (i = 0; i < p; i++)
-	 *      T[i] = 0;
-	 */
-	memset(T, 0, p * sizeof(T[0]));	// zeroize T
-	for (i = 1; i <= stat.Q; i++) {	// fill table
-		decRep = 0;
-		for (j = 0; j < L; j++) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * decRep += state->epsilon[(i - 1) * L + j] * (long) pow(2.0, L - 1 - j);
-			 *
-			 * This is the decimal representation of a segment.
-			 * It is convenient to use this representation because we can store and
-			 * have access to the contents of each block in the table  T with size 2^L.
-			 * For example, if L == 2, we have that 00 = 0, 01 = 1, 10 = 2, 11 = 3.
-			 */
-			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
-		}
-		T[decRep] = i;	// the block number of the last occurrence of each L-bit block is noted in the table
-	}
-
-	/*
-	 * Perform the test
-	 */
-	for (i = stat.Q + 1; i <= stat.Q + stat.K; i++) {	/* PROCESS BLOCKS */
-		decRep = 0;
-		for (j = 0; j < L; j++) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * decRep += state->epsilon[(i - 1) * L + j] * (long) pow(2.0, L - 1 - j);
-			 */
-			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
-		}
-		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * stat.sum += log(i - T[decRep]) / log(2);
-		 */
-		stat.sum += log(i - T[decRep]) / state->c.log2;
-		T[decRep] = i;
-	}
-	stat.f_n = (double) (stat.sum / (double) stat.K);
 	arg = fabs(stat.f_n - expected_value[L]) / (state->c.sqrt2 * stat.sigma);
 	p_value = erfc(arg);
 
@@ -400,22 +390,22 @@ Universal_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;		// SUCCESS
 	}
 
 	/*
@@ -432,6 +422,7 @@ Universal_iterate(struct state *state)
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
+
 	return;
 }
 
@@ -636,17 +627,17 @@ void
 Universal_print(struct state *state)
 {
 	struct Universal_private_stats *stat;	// pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -905,11 +896,6 @@ Universal_metric_print(struct state *state, long int sampleCount, long int toolo
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -963,6 +949,7 @@ Universal_metric_print(struct state *state, long int sampleCount, long int toolo
 	if (io_ret != 0) {
 		errp(205, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
+
 	return;
 }
 
@@ -1033,13 +1020,6 @@ Universal_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
