@@ -517,11 +517,12 @@ RandomExcursions_iterate(struct state *state)
 		 * stats.txt accounting
 		 */
 		append_value(state->stats[test_num], &stat);
+	}
 
-		/*
-		 * accounting for tests that cannot be performed
-		 */
-	} else {
+	/*
+	 * accounting for tests that cannot be performed
+	 */
+	else {
 
 		/*
 		 * Count this test, which happens to be invalid
@@ -714,11 +715,12 @@ RandomExcursions_print_stat(FILE * stream, struct state *state, struct RandomExc
 				}
 			}
 		}
+	}
 
-		/*
-		 * Case: test was possible for this iteration
-		 */
-	} else {
+	/*
+	 * Case: test was possible for this iteration
+	 */
+	else {
 		if (state->legacy_output == true) {
 			io_ret = fprintf(stream, "\t\t(c) Rejection Constraint = %f\n", (double) state->c.excursion_constraint);
 			if (io_ret <= 0) {

@@ -950,7 +950,8 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(146, __FUNCTION__, "cannot malloc %ld bytes for freqPerBin", state->tp.uniformity_bins * sizeof(long int));
+		errp(146, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
+		     state->tp.uniformity_bins, sizeof(long int));
 	}
 
 	/*

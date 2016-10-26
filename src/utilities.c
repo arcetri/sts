@@ -963,12 +963,12 @@ generatorOptions(struct state *state)
 		if (state->streamFile == NULL) {
 			errp(221, __FUNCTION__, "unable to open data file to writing: %s", state->randomDataPath);
 		}
+	}
 
-
-		/*
-		 * case: read from file
-		 */
-	} else if (state->generator == GENERATOR_FROM_FILE) {
+	/*
+	 * case: read from file
+	 */
+	else if (state->generator == GENERATOR_FROM_FILE) {
 		// verify the input file is readable
 		if (checkReadPermissions(state->randomDataPath) == false) {
 			err(221, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
@@ -1591,10 +1591,12 @@ fileBasedBitStreams(struct state *state)
 		}
 		state->streamFile = NULL;
 
-		/*
-		 * case: parse raw 8-bit binary bytes
-		 */
-	} else if (state->dataFormat == FORMAT_RAW_BINARY) {
+	}
+
+	/*
+	 * case: parse raw 8-bit binary bytes
+	 */
+	else if (state->dataFormat == FORMAT_RAW_BINARY) {
 
 		/*
 		 * bytes that hold a given set of consecutive bits
@@ -1629,11 +1631,12 @@ fileBasedBitStreams(struct state *state)
 			errp(224, __FUNCTION__, "error closing: %s", state->randomDataPath);
 		}
 		state->streamFile = NULL;
+	}
 
-		/*
-		 * case: should not get here
-		 */
-	} else {
+	/*
+	 * case: should not get here
+	 */
+	else {
 		err(224, __FUNCTION__, "Input file format selection is invalid");
 	}
 
@@ -1873,10 +1876,10 @@ invokeTestSuite(struct state *state)
 	 */
 	if (state == NULL) {
 		err(228, __FUNCTION__, "state arg is NULL");
-	 /*NOTREACHED*/}
+	}
 
 	/*
-	 * case: prep for writing to the datafile
+	 * case: prep for writing to the datafile // TODO understand these following 2 cases
 	 */
 	if (state->runMode == MODE_WRITE_ONLY) {
 
@@ -1885,9 +1888,7 @@ invokeTestSuite(struct state *state)
 		 */
 		switch (state->dataFormat) {
 		case FORMAT_RAW_BINARY:
-			/*
-			 * compression 8:1
-			 */
+			/* Compression BITS_N_BYTE:1 */
 			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
 				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
@@ -1909,17 +1910,16 @@ invokeTestSuite(struct state *state)
 			err(228, __FUNCTION__, "Invalid format");
 			break;
 		}
+	}
 
-
+	/*
+	 * case: prep for reading from a file or from a generator
+	 */
+	else {
 		/*
-		 * case: prep for reading from a file or from a generator
+		 * Announce test
 		 */
-	} else {
-		/*
-		 * announce test
-		 */
-		io_ret =
-		    fprintf(state->freqFile,
+		io_ret = fprintf(state->freqFile,
 			    "________________________________________________________________________________\n\n");
 		if (io_ret <= 0) {
 			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
@@ -1937,8 +1937,7 @@ invokeTestSuite(struct state *state)
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
 		}
-		io_ret =
-		    fprintf(state->freqFile,
+		io_ret = fprintf(state->freqFile,
 			    "________________________________________________________________________________\n\n");
 		if (io_ret <= 0) {
 			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
@@ -1956,9 +1955,8 @@ invokeTestSuite(struct state *state)
 	}
 
 	/*
-	 * test data from a file or from an internal generator
-	 *
-	 * Introduce new pseudo random number generators in this switch
+	 * Test data from a file or from an internal generator
+	 * NOTE: Introduce new pseudo random number generators in this switch
 	 */
 	switch (state->generator) {
 
@@ -2006,7 +2004,7 @@ invokeTestSuite(struct state *state)
 	if (state->runMode == MODE_WRITE_ONLY) {
 
 		/*
-		 * announce end of writes
+		 * Announce end of write only run
 		 */
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Exiting, completed writes to %s", state->randomDataPath);
@@ -2016,16 +2014,17 @@ invokeTestSuite(struct state *state)
 		}
 		destroy(state);
 		exit(0);
+	}
+
+	/*
+	 * -m i: iterate only, write state to -s statePath
+	 *
+	 * State already written, nothing else do to.
+	 */
+	else if (state->runMode == MODE_ITERATE_ONLY) {
 
 		/*
-		 * -m i: iterate only, write state to -s statePath
-		 *
-		 * State already written, nothing else do to.
-		 */
-	} else if (state->runMode == MODE_ITERATE_ONLY) {
-
-		/*
-		 * announce end of iteration only
+		 * Announce end of iteration only run
 		 */
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Exiting iterate only");
@@ -2290,20 +2289,59 @@ write_sequence(struct state *state)
 }
 
 /*
- * long_will_overflow - check if a sum operation will lead to overflow
+ * sum_will_overflow_long - check if a sum operation will lead to overflow
  *
  * given:
- *      number          // the number to which we want to sum something
- *      addend          // the addend that we want to add to number
+ *      si_a		// the number to which we want to sum something
+ *      si_b		// the addend that we want to add to si_a
  *
  * returns:
  *      1 if the operation would cause number to overflow, 0 otherwise
  */
 int
-long_will_overflow(long int number, int addend)
+sum_will_overflow_long(long int si_a, long int si_b)
 {
-	if (LONG_MAX - addend < number) {
+	if (((si_b > 0) && (si_a > (LONG_MAX - si_b))) ||
+	    ((si_b < 0) && (si_a < (LONG_MIN - si_b)))) {
 		return 1;	// will overflow
+	}
+
+	return 0;		// will not overflow
+}
+
+/*
+ * multiplication_will_overflow_long - check if a multiplication operation will lead to overflow
+ *
+ * given:
+ *      si_a		// the number that we want to multiply by something
+ *      si_b		// the multiplier by which we want to multiply si_a
+ *
+ * returns:
+ *      1 if the operation would cause number to overflow, 0 otherwise
+ */
+int
+multiplication_will_overflow_long(long int si_a, long int si_b)
+{
+	if (si_a > 0) {  /* si_a is positive */
+		if (si_b > 0) {  /* si_a and si_b are positive */
+			if (si_a > (LONG_MAX / si_b)) {
+				return 1;	// will overflow
+			}
+		} else { /* si_a positive, si_b nonpositive */
+			if (si_b < (LONG_MIN / si_a)) {
+				return 1;	// will overflow
+			}
+		}
+	} else { /* si_a is nonpositive */
+		if (si_b > 0) { /* si_a is nonpositive, si_b is positive */
+			if (si_a < (LONG_MIN / si_b)) {
+				return 1;	// will overflow
+			}
+		} else { /* si_a and si_b are nonpositive */
+			if ( (si_a != 0) && (si_b < (LONG_MAX / si_a))) {
+				return 1;	// will overflow
+			}
+		}
 	}
 
 	return 0;		// will not overflow

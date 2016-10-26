@@ -412,7 +412,7 @@ main(int argc, char *argv[])
 	int io_ret;		/* I/O return status */
 
 	/*
-	 * set default test parameters and parse command line
+	 * Set default test parameters and parse command line
 	 */
 	Parse_args(&run_state, argc, argv);
 
@@ -422,19 +422,19 @@ main(int argc, char *argv[])
 	init(&run_state);
 
 	/*
-	 * final state report if debugging
+	 * Report state if debugging
 	 */
 	if (debuglevel > DBG_NONE) {
 		print_option_summary(&run_state, "ready to test state");
 	}
 
 	/*
-	 * run test suite iterations
+	 * Run test suite iterations
 	 */
 	invokeTestSuite(&run_state);
 
 	/*
-	 * close down the frequency file
+	 * Close down the frequency file
 	 */
 	if (run_state.freqFile != NULL) {
 		errno = 0;	// paranoia

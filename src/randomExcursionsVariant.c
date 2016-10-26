@@ -304,11 +304,12 @@ RandomExcursionsVariant_iterate(struct state *state)
 		 * stats.txt accounting
 		 */
 		append_value(state->stats[test_num], &stat);
+	}
 
-		/*
-		 * accounting for tests that cannot be performed
-		 */
-	} else {
+	/*
+	 * accounting for tests that cannot be performed
+	 */
+	else {
 
 		/*
 		 * Count this test, which happens to be invalid

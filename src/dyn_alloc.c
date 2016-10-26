@@ -30,8 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "dyn_alloc.h"
+#include "externs.h"
 #include "debug.h"
+#include "utilities.h"
 
 
 extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugging
@@ -61,8 +62,8 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 	void *data;			// Reallocated array
 	long int old_allocated;		// Old number of elements allocated
 	long int new_allocated;		// New number of elements allocated
-	size_t old_bytes;		// Old size of data in dynamic array
-	size_t new_bytes;		// New size of data in dynamic array after allocation
+	long int old_bytes;		// Old size of data in dynamic array
+	long int new_bytes;		// New size of data in dynamic array after allocation
 	unsigned char *p;		// Pointer to the beginning of the new allocated space
 
 	/*
@@ -91,28 +92,35 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 		err(61, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
-	/*
-	 * reallocate array
-	 */
-
-	// firewall - partial check for overflow
+	// firewall - check for overflow
 	old_allocated = array->allocated;
+	if (sum_will_overflow_long(old_allocated, elms_to_allocate)) {
+		err(61, __FUNCTION__, "allocating %ld new elements would overflow the allocated counter (now %ld) of the dynamic "
+				"array: %ld + %ld does not fit in a long int",
+		    elms_to_allocate, old_allocated, old_allocated, elms_to_allocate);
+	}
 	new_allocated = old_allocated + elms_to_allocate;
-	if (new_allocated <= old_allocated) {
-		err(61, __FUNCTION__, "allocating %d new elements would overflow the allocated counter of the dynamic array:"
-				    "allocated would end up going from %ld to %ld",
-		    elms_to_allocate, old_allocated, new_allocated);
-	}
 
-	// firewall - partial check for size overflow
+	// firewall - check for size overflow
 	old_bytes = old_allocated * array->elm_size;
+	if (multiplication_will_overflow_long(new_allocated, array->elm_size)) {
+		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
+				" %ld * %lu does not fit in a long int",
+		    new_allocated, array->elm_size, new_allocated, array->elm_size);
+	}
 	new_bytes = new_allocated * array->elm_size;
-	if (new_bytes <= old_bytes) {
-		err(61, __FUNCTION__, "the number of bytes required with %d new allocated elements would overflow the counter", // TODO Understand
-		    elms_to_allocate, old_bytes, new_bytes);
+
+	// firewall - check if new_bytes fits in a size_t variable
+	if (new_bytes > SIZE_MAX) {
+		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
+				" the bounds of a size_t variable: requires %ld <= %lu",
+		    new_allocated, array->elm_size, new_bytes, SIZE_MAX);
 	}
 
-	data = realloc(array->data, new_bytes);
+	/*
+	 * Reallocate array
+	 */
+	data = realloc(array->data, (size_t) new_bytes);
 	if (data == NULL) {
 		errp(61, __FUNCTION__, "failed to reallocate the dynamic array from a size of %ld bytes to a size of %ld bytes",
 		     old_bytes, new_bytes);
@@ -154,7 +162,8 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 struct dyn_array *
 create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int zeroize)
 {
-	struct dyn_array *ret;	// created dynamic array to return
+	struct dyn_array *ret;		// Created dynamic array to return
+	long int number_of_bytes; 	// Total number of bytes occupied by the initialized array
 
 	/*
 	 * Check preconditions (firewall) - sanity check args
@@ -174,7 +183,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array", // TODO how can I improve this debug message?
+		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
 		     (long int) 1, sizeof(struct dyn_array));
 	}
 
@@ -187,7 +196,21 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	ret->count = 0;		// Allocated array is empty
 	ret->allocated = chunk * ((start_elm_count + (chunk - 1)) / chunk); // Allocate a number of elements multiple of chunk
 	ret->chunk = chunk;
-	ret->data = malloc(ret->allocated * elm_size);
+
+	// firewall - check for size overflow
+	if (multiplication_will_overflow_long(ret->allocated, elm_size)) {
+		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
+				    " %ld * %lu does not fit in a long int",
+		    ret->allocated, elm_size, ret->allocated, elm_size);
+	}
+	number_of_bytes = ret->allocated * elm_size;
+	if (number_of_bytes > SIZE_MAX) {
+		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
+				    " the bounds of a size_t variable: requires %ld <= %lu",
+		    ret->allocated, elm_size, number_of_bytes, SIZE_MAX);
+	}
+
+	ret->data = malloc((size_t) number_of_bytes);
 	if (ret->data == NULL) {
 		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", ret->allocated,
 		     elm_size);

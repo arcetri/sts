@@ -255,10 +255,19 @@ static struct state const defaultstate = {
 		// nonovTemplates
 		NULL,
 
-		// fft_m, fft_X, fft_wsave
+		// fft_m, fft_X
 		NULL,
 		NULL,
+
+		// fft_wsave
+# if defined(LEGACY_FFT)
 		NULL,
+
+		// fftw_p and fftw_out
+#else /* LEGACY_FFT */
+		NULL,
+		NULL,
+#endif /* LEGACY_FFT */
 
 		// rank_matrix
 		NULL,

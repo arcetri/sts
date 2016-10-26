@@ -26,6 +26,7 @@
 
 #   include "config.h"
 #   include "dyn_alloc.h"
+#   include <fftw3.h>
 
 /*****************************************************************************
  M A C R O S
@@ -423,7 +424,12 @@ struct state {
 
 	double *fft_m;				// test m array for TEST_FFT
 	double *fft_X;				// test X array for TEST_FFT
-	double *fft_wsave;			// test wsave array for TEST_FFT
+# if defined(LEGACY_FFT)
+	double *fft_wsave;			// test wsave array for legacy dfft library in TEST_FFT
+#else /* LEGACY_FFT */
+	fftw_plan fftw_p;			// Plan containing information about the fastest way to compute the transform
+	fftw_complex *fftw_out;			// Output array for fftw library output in TEST_FFT
+#endif /* LEGACY_FFT */
 
 	BitSequence **rank_matrix;		// Rank test 32 by 32 matrix for TEST_RANK
 

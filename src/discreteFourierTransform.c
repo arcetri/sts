@@ -33,15 +33,18 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
+#include <complex.h>
 #include "externs.h"
 #include "utilities.h"
 #include "cephes.h"
+#include "debug.h"
+
 #if defined(LEGACY_FFT)
 #include "dfft.h"
 #else /* LEGACY_FFT */
-// TODO use fftw
+#include <fftw3.h>
 #endif /* LEGACY_FFT */
-#include "debug.h"
 
 
 /*
@@ -131,17 +134,23 @@ DiscreteFourierTransform_init(struct state *state)
 	}
 
 	/*
-	 * Allocate and zero special FFT arrays
+	 * Allocate array X, that will be used as input to the DFT
 	 */
 	state->fft_X = malloc((state->tp.n) * sizeof(state->fft_X[0]));
 	if (state->fft_X == NULL) {
-		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_X", state->tp.n,
-		     sizeof(double));
+		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_X", n, sizeof(double));
 	}
+
+	/*
+	 * Zeroize array X
+	 */
 	for (i = 0; i < (state->tp.n + 1); ++i) {
 		state->fft_X[i] = 0.0;
 	}
 
+	/*
+	 * Allocate special arrays that will be used by the DFT libraries
+	 */
 #if defined(LEGACY_FFT)
 	state->fft_wsave = malloc(2 * state->tp.n * sizeof(state->fft_wsave[0]));
 	if (state->fft_wsave == NULL) {
@@ -152,9 +161,17 @@ DiscreteFourierTransform_init(struct state *state)
 		state->fft_wsave[i] = 0.0;
 	}
 #else /* LEGACY_FFT */
-	// TODO use fftw
+	state->fftw_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
+	if (state->fftw_out == NULL) {
+		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fftw_out",
+		     n / 2 + 1, sizeof(fftw_complex));
+	}
+	if(n > INT_MAX) {
+		errp(40, __FUNCTION__, "cannot create a plan: library requires bitcount(n): %ld <= INT_MAX = %d",
+		     n, INT_MAX);
+	}
+	state->fftw_p = fftw_plan_dft_r2c_1d((int) n, state->fft_X, state->fftw_out, FFTW_ESTIMATE);
 #endif /* LEGACY_FFT */
-
 	state->fft_m = malloc((state->tp.n / 2 + 1) * sizeof(state->fft_m[0]));
 	if (state->fft_m == NULL) {
 		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_m",
@@ -209,13 +226,14 @@ DiscreteFourierTransform_iterate(struct state *state)
 	double p_value;			// p_value iteration test result(s)
 	double *X = NULL;		// Adjusted sequence with +1 and -1 bits
 	double *m = NULL;		// Magnitude of the DFT
+	long int i;
 #if defined(LEGACY_FFT)
 	double *wsave = NULL;		// Work array used by __ogg_fdrffti() and __ogg_fdrfftf()
 	long ifac[WORK_ARRAY_LEN + 1];	// work array used by __ogg_fdrffti() and __ogg_fdrfftf()
 #else /* LEGACY_FFT */
-	// TODO use fftw
+	fftw_complex *out;		// Output of the DFT
+	fftw_plan p;			// Information on the fastest way to compute the DFT on this machine
 #endif /* LEGACY_FFT */
-	long int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -233,13 +251,6 @@ DiscreteFourierTransform_iterate(struct state *state)
 	if (state->fft_X == NULL) {
 		err(41, __FUNCTION__, "state->fft_X is NULL");
 	}
-#if defined(LEGACY_FFT)
-	if (state->fft_wsave == NULL) {
-		err(41, __FUNCTION__, "state->fft_wsave is NULL");
-	}
-#else /* LEGACY_FFT */
-	// TODO use fftw
-#endif /* LEGACY_FFT */
 	if (state->fft_m == NULL) {
 		err(41, __FUNCTION__, "state->fft_m is NULL");
 	}
@@ -251,6 +262,18 @@ DiscreteFourierTransform_iterate(struct state *state)
 		err(41, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
+#if defined(LEGACY_FFT)
+	if (state->fft_wsave == NULL) {
+		err(41, __FUNCTION__, "state->fft_wsave is NULL");
+	}
+#else
+	if (state->fftw_out == NULL) {
+		err(41, __FUNCTION__, "state->fftw_out is NULL");
+	}
+	if (state->fftw_p == NULL) {
+		err(41, __FUNCTION__, "state->fftw_p is NULL");
+	}
+#endif /* LEGACY_FFT */
 
 	/*
 	 * Collect parameters from state
@@ -260,7 +283,8 @@ DiscreteFourierTransform_iterate(struct state *state)
 #if defined(LEGACY_FFT)
 	wsave = state->fft_wsave;
 #else /* LEGACY_FFT */
-	// TODO use fftw
+	out = state->fftw_out;
+	p = state->fftw_p;
 #endif /* LEGACY_FFT */
 	m = state->fft_m;
 
@@ -278,30 +302,65 @@ DiscreteFourierTransform_iterate(struct state *state)
 	}
 
 	/*
-	 * Step 2: apply discrete Fourier transform on X
-	 * The values of X will be replaces with frequencies
+	 * Step 2: apply discrete Fourier transform on X.
+	 *
+	 * Because the input array are purely real numbers (X is an array of +1 and -1),
+	 * the DFT output satisfies the “Hermitian” redundancy.
+	 * As a consequence, both the options (legacy dfft and fttw) save only the first
+	 * (n / 2 + 1) non-redundant values of the DFT output.
 	 */
 #if defined(LEGACY_FFT)
+	/*
+	 * The dfft (legacy option) does the transform in-place.
+	 * As a consequence, the values of X will be replaces with frequencies.
+	 *
+	 * After the function returns, X will look like (saying that values followed by I are the imaginary parts):
+	 * 	[a, b, bI, c, cI, ..., l, lI] when n is odd
+	 *	[a, b, bI, c, cI, ..., l, lI, m] when n is even
+	 */
 	__ogg_fdrffti(n, wsave, ifac);
-	__ogg_fdrfftf(n, X, wsave, ifac); // TODO make use of a more recent dft implementation
+	__ogg_fdrfftf(n, X, wsave, ifac);
 #else /* LEGACY_FFT */
-	// TOOD use fftw
+	/*
+	 * The fftw library does the transform out-of-place.
+	 * As a consequence, the computed complex frequencies will be saved in the out array
+	 * of size n / 2 + 1.
+	 */
+	fftw_execute(p);
 #endif /* LEGACY_FFT */
 
 	/*
-	 * Step 3: compute magnitude between frequencies generated by the DFT
-	 * We start from the origin so the absolute value of the 1st point is the distance from the origin
+	 * Step 3: compute modulus (absolute value) of the first (n / 2 + 1) elements (in our case
+	 * all the ones that we have) of the DFT output.
 	 */
-	// TODO use fftw
+#if defined(LEGACY_FFT)
+	/*
+	 * Step 3a: compute modulus (absolute value) of the first element of the DFT output.
+	 * This first element is always real, and has no imaginary part.
+	 */
 	m[0] = fabs(X[0]);
-	// We must be careful not to go beyond the end of the frequency table
-	for (i = 0; i < (n / 2) - 1; i++) {
-		m[i + 1] = sqrt((X[2 * i + 1] * X[2 * i + 1]) + (X[2 * i + 2] * X[2 * i + 2]));
+
+	/*
+	 * Step 3b: compute the modulus of the following n/2 elements of the DFT output.
+	 * These elements are always complex, so we have to consider both real and imaginary value.
+	 */
+	long int j;
+	for (i = 0, j = 1; i < n - 1; i += 2, j++) {
+		m[j] = sqrt((X[i] * X[i]) + (X[i + 1] * X[i + 1]));
 	}
-	// Special case: n is even and we do not have a final pair of frequencies
+
+	/*
+	 * Step 3c: if n is even, consider the remaining additional element at the end of the DFT output.
+	 * This last element is always real, and has no imaginary part.
+	 */
 	if ((n % 2) == 0) {
-		m[i+1] = fabs(X[n-1]); // TODO explain even odd
+		m[i+1] = fabs(X[n-1]);
 	}
+#else /* LEGACY_FFT */
+	for (i = 0; i < n / 2 + 1; i++) {
+		m[i] = cabs(out[i]);
+	}
+#endif /* LEGACY_FFT */
 
 	/*
 	 * Step 5: compute N0
@@ -1068,7 +1127,14 @@ DiscreteFourierTransform_destroy(struct state *state)
 		state->fft_wsave = NULL;
 	}
 #else /* LEGACY_FFT */
-	// TODO use fftw
+	if (state->fftw_out != NULL) {
+		fftw_free(state->fftw_out);
+		state->fftw_out = NULL;
+	}
+	if (state->fftw_p != NULL) {
+		fftw_destroy_plan(state->fftw_p);
+		state->fftw_p = NULL;
+	}
 #endif /* LEGACY_FFT */
 	if (state->fft_m != NULL) {
 		free(state->fft_m);

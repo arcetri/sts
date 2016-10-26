@@ -55,6 +55,7 @@ extern void nist_test_suite(struct state *state);
 extern void createDirectoryTree(struct state *state);
 extern void write_sequence(struct state *state);
 extern void print_option_summary(struct state *state, char *where);
-extern int long_will_overflow(long int number, int addend);
+extern int sum_will_overflow_long(long int si_a, long int si_b);
+extern int multiplication_will_overflow_long(long int si_a, long int si_b);
 
 #endif				/* UTILITY_H */
