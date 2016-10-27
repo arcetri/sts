@@ -121,46 +121,59 @@
 #   define DEFAULT_UNIFORMITY_LEVEL	(0.0001)	// -P 10=uni_level, uniformity errors have values below this
 #   define DEFAULT_ALPHA		(0.01)		// -P 11=alpha, p_value significance level
 
-#   define MIN_LENGTH_FREQUENCY		(100)		// Minimum n for TEST_FREQUENCY and TEST_BLOCK_FREQUENCY
+/*****************************************************************************
+ INPUT SIZE RECOMMENDATIONS CONSTANTS
+ *****************************************************************************/
+
+#   define MIN_LENGTH_FREQUENCY		(100)		// Minimum n for TEST_FREQUENCY
+
+#   define MIN_LENGTH_BLOCK_FREQUENCY	(100)		// Minimum n for TEST_BLOCK_FREQUENCY
 #   define MIN_BLOCK_LENGTH		(20)		// Minimum M for TEST_BLOCK_FREQUENCY
 #   define MIN_RATIO_M_OVER_n_BLOCK	(0.01)		// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
 #   define MAX_BLOCKS_NUMBER		(100)		// Maximum blocks number N for TEST_BLOCK_FREQUENCY
 
 #   define MIN_LENGTH_RUNS		(100)		// Minimum n for TEST_RUNS
 
+#   define MIN_LENGTH_LONGESTRUN	(128)		// Minimum n for a Longest Runs test for TEST_LONGEST_RUN
+#   define LONGEST_RUN_CLASS_COUNT	(6)		// Number of classes == max_len - min_len + 1 for TEST_LONGEST_RUN
+
+#   define RANK_ROWS			(32)		// Number of rows in the rank_matrix used by TEST_RANK
+#   define RANK_COLS			(32)		// Number of columns in the rank_matrix used by TEST_RANK
+#   define MIN_NUMBER_OF_MATRICES	(38)		// Minimum number of matrices required for TEST_RANK
+
 #   define MIN_LENGTH_FFT		(1000)		// Minimum n for TEST_FFT
+
+#   define BLOCKS_NON_OVERLAPPING	(8)		// Number of blocks N used by TEST_NON_OVERLAPPING
+#   define MAX_BLOCKS_NON_OVERLAPPING	(100)		// Maximum number N of blocks used by TEST_NON_OVERLAPPING
+#   define MIN_RATIO_M_OVER_n_NON_OVERLAPPING	(0.01)	// Minimum ratio of M over n for TEST_NON_OVERLAPPING
+#   if BLOCKS_NON_OVERLAPPING > MAX_BLOCKS_NON_OVERLAPPING
+// force syntax error if DEFAULT_NON_OVERLAPPING is too small
+      -=*#@#*=- DEFAULT_NON_OVERLAPPING must be >= MINTEMPLEN -=*#@#*=-
+#   endif
+
+#   define MIN_LENGTH_OVERLAPPING	(1000000)	// Minimum n for TEST_OVERLAPPING
+#   define BLOCK_LENGTH_OVERLAPPING	(1032)		// Length in bits of each block to be tested for TEST_OVERLAPPING
+#   define OVERLAP_K_DEGREES		(5)		// Degrees of freedom for TEST_OVERLAPPING
+#   define MIN_PROD_N_min_pi_OVERLAPPING	(5)	// Minimum product N times min_pi for TEST_OVERLAPPING
+
+#   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
+#   define MIN_L_UNIVERSAL		(6)		// minimum of L
+#   define MAX_L_UNIVERSAL		(16)		// maximum of L
+
+#   define MIN_LENGTH_LINEARCOMPLEXITY	(1000000)	// Minimum n for TEST_LINEARCOMPLEXITY
+#   define MIN_M_LINEARCOMPLEXITY	(500)		// Minimum M for TEST_LINEARCOMPLEXITY
+#   define MAX_M_LINEARCOMPLEXITY	(5000)		// Maximum M for TEST_LINEARCOMPLEXITY
+#   define MIN_N_LINEARCOMPLEXITY	(200)		// Minimum N for TEST_LINEARCOMPLEXITY
+#   define LINEARCOMPLEXITY_K		(6)		// Degrees of freedom (set in SP800-22Rev1a section 2.10.2)
 
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
 // TODO check this requirement in the paper
 #   define MAX_BITCOUNT			(10000000)	// Section 2.0 max recommended length of a single bit stream
 
-#   define MIN_LINEARCOMPLEXITY		(500)		// Section 2.10.5 input size recommendation
-#   define MAX_LINEARCOMPLEXITY		(5000)		// Section 2.10.5 input size recommendation
-
-#   define RANK_ROWS			(32)		// Number of rows in the rank_matrix used by TEST_RANK
-#   define RANK_COLS			(32)		// Number of columns in the rank_matrix used by TEST_RANK
-#   define MIN_NUMBER_OF_MATRICES	(38)		// Minimum number of matrices required for TEST_RANK
-
 #   define MAX_EXCURSION_VAR		(9)		// excursion states: -MAX_EXCURSION_VAR to -1,
 							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
 #   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
-
-#   define BLOCKS_NON_OVERLAPPING	(8)		// Number of blocks used by TEST_NON_OVERLAPPING, should be <= 100
-#   define MIN_RATIO_M_OVER_n_NON_OVERLAPPING	(0.01)	// Minimum ratio of M over n for TEST_NON_OVERLAPPING
-
-#   define BLOCK_LENGTH_OVERLAPPING	(1032)		// Length in bits of each block to be tested for TEST_OVERLAPPING
-#   define OVERLAP_K_DEGREES		(5)		// Degrees of freedom for TEST_OVERLAPPING
-#   define MIN_PROD_N_min_pi_OVERLAPPING	(5)	// Minimum product N times min_pi for TEST_OVERLAPPING
-
-#   define LINEARCOMPLEXITY_K_DEGREES	(6)		// degrees of freedom (set in SP800-22Rev1a section 2.10.2)
-
-#   define MIN_LENGTH_LONGESTRUN	(128)		// Minimum n for a Longest Runs test for TEST_LONGEST_RUN
-#   define LONGEST_RUN_CLASS_COUNT	(6)		// Number of classes == max_len - min_len + 1 for TEST_LONGEST_RUN
-
-#   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
-#   define MIN_L_UNIVERSAL		(6)		// minimum of L
-#   define MAX_L_UNIVERSAL		(16)		// maximum of L
 
 #   define MAX_EXCURSION		(4)		// excursion states: -MAX_EXCURSION to -1,
 //    and 1 to MAX_EXCURSION
@@ -439,7 +452,6 @@ struct state {
 	BitSequence *linear_b;			// LFSR array b for TEST_LINEARCOMPLEXITY
 	BitSequence *linear_c;			// LFSR array c for TEST_LINEARCOMPLEXITY
 	BitSequence *linear_t;			// LFSR array t for TEST_LINEARCOMPLEXITY
-	BitSequence *linear_p;			// LFSR array p (just like b, shifted by 1) for TEST_LINEARCOMPLEXITY
 
 	long int *apen_P;			// Frequency count for TEST_APEN
 	long int apen_p_len;			// Number of long ints in apen_P for TEST_APEN

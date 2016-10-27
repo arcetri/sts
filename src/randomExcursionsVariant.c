@@ -655,7 +655,7 @@ RandomExcursionsVariant_print_p_value(FILE * stream, double p_value)
 void
 RandomExcursionsVariant_print(struct state *state)
 {
-	struct RandomExcursionsVariant_private_stats *stat;	// pointer to statistics of an iteration
+	struct RandomExcursionsVariant_private_stats *stat;	// Pointer to statistics of an iteration
 	double p_value;		// p_value iteration test result(s)
 	FILE *stats = NULL;	// Open stats.txt file
 	FILE *results = NULL;	// Open results.txt file

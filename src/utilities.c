@@ -1424,15 +1424,15 @@ fixParameters(struct state *state)
 				putchar('\n');
 
 				// error range check
-				if (state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) {
+				if (state->tp.linearComplexitySequenceLength < MIN_M_LINEARCOMPLEXITY) {
 					printf("	linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
-					       state->tp.linearComplexitySequenceLength, MIN_LINEARCOMPLEXITY);
-				} else if (state->tp.linearComplexitySequenceLength > MAX_LINEARCOMPLEXITY + 1) {
+					       state->tp.linearComplexitySequenceLength, MIN_M_LINEARCOMPLEXITY);
+				} else if (state->tp.linearComplexitySequenceLength > MAX_M_LINEARCOMPLEXITY + 1) {
 					printf("	linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
-					       state->tp.linearComplexitySequenceLength, MAX_LINEARCOMPLEXITY);
+					       state->tp.linearComplexitySequenceLength, MAX_M_LINEARCOMPLEXITY);
 				}
-			} while ((state->tp.linearComplexitySequenceLength < MIN_LINEARCOMPLEXITY) ||
-				 (state->tp.linearComplexitySequenceLength > MAX_LINEARCOMPLEXITY + 1));
+			} while ((state->tp.linearComplexitySequenceLength < MIN_M_LINEARCOMPLEXITY) ||
+				 (state->tp.linearComplexitySequenceLength > MAX_M_LINEARCOMPLEXITY + 1));
 			break;
 
 		case PARAM_numOfBitStreams:

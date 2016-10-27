@@ -43,10 +43,9 @@
  * Private stats - stats.txt information for this test
  */
 struct LinearComplexity_private_stats {
-	bool success;		// Success or failure of iteration test
-	long int discarded;	// bit discarded from the test
-	long int v[LINEARCOMPLEXITY_K_DEGREES + 1];	// T range count
-	double chi2;		// chi^2 of test
+	bool success;					// Success or failure of iteration test
+	long int v[LINEARCOMPLEXITY_K + 1];		// T range count
+	double chi2;					// chi^2 of test
 };
 
 
@@ -56,11 +55,11 @@ struct LinearComplexity_private_stats {
 static const enum test test_num = TEST_LINEARCOMPLEXITY;	// This test number
 
 /*
- * pi_term - theoretical probabilities of classes
+ * Theoretical probabilities of classes
  *
  * See SP800-22Rev1a section 3.10.
  */
-static const double pi_term[LINEARCOMPLEXITY_K_DEGREES + 1] = { 0.01047, 0.03125, 0.12500, 0.50000, 0.25000, 0.06250, 0.020833 };
+static const double pi_term[LINEARCOMPLEXITY_K + 1] = { 0.01047, 0.03125, 0.12500, 0.50000, 0.25000, 0.06250, 0.020833 };
 
 
 /*
@@ -85,7 +84,9 @@ static void LinearComplexity_metric_print(struct state *state, long int sampleCo
 void
 LinearComplexity_init(struct state *state)
 {
-	long int M;		// Linear Complexity Test - block length
+	long int n;		// Length of a single bit stream
+	long int M;		// Length of each block to be tested
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 
 	/*
 	 * Check preconditions (firewall)
@@ -106,22 +107,35 @@ LinearComplexity_init(struct state *state)
 		err(100, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO n >= 10^6. The value of M must be in the range 500 <= M <= 5000, and N >= 200 for the Chi^2 result to be valid
 
 	/*
 	 * Collect parameters from state
 	 */
+	n = state->tp.n;
 	M = state->tp.linearComplexitySequenceLength;
+	N = n / M;
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (M < MIN_LINEARCOMPLEXITY) {
-		warn(__FUNCTION__, "-P 6: linear complexity sequence length(M): %ld must be >= %d", M, MIN_LINEARCOMPLEXITY);
+	if (n < MIN_LENGTH_LINEARCOMPLEXITY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_LINEARCOMPLEXITY);
 		state->testVector[test_num] = false;
 		return;
-	} else if (M > MAX_LINEARCOMPLEXITY + 1) {
-		warn(__FUNCTION__, "-P 6: linear complexity sequence length(M): %ld must be <= %d", M, MAX_LINEARCOMPLEXITY + 1);
+	} else if (M < MIN_M_LINEARCOMPLEXITY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires sequence length(M): %ld >= %d",
+		     state->testNames[test_num], test_num, M, MIN_M_LINEARCOMPLEXITY);
+		state->testVector[test_num] = false;
+		return;
+	} else if (M > MAX_M_LINEARCOMPLEXITY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires sequence length(M): %ld <= %d",
+		     state->testNames[test_num], test_num, M, MAX_M_LINEARCOMPLEXITY);
+		state->testVector[test_num] = false;
+		return;
+	} else if (N < MIN_N_LINEARCOMPLEXITY) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires blocks number(N): %ld >= %d",
+		     state->testNames[test_num], test_num, N, MIN_N_LINEARCOMPLEXITY);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -145,11 +159,6 @@ LinearComplexity_init(struct state *state)
 	state->linear_c = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_c[0]));
 	if (state->linear_c == NULL) {
 		errp(100, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->linear_c",
-		     state->tp.linearComplexitySequenceLength, sizeof(BitSequence));
-	}
-	state->linear_p = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_p[0]));
-	if (state->linear_p == NULL) {
-		errp(100, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->linear_p",
 		     state->tp.linearComplexitySequenceLength, sizeof(BitSequence));
 	}
 	state->linear_t = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_t[0]));
@@ -199,19 +208,18 @@ void
 LinearComplexity_iterate(struct state *state)
 {
 	struct LinearComplexity_private_stats stat;	// Stats for this iteration
-	long int M;		// Linear Complexity Test - block length
+	long int M;		// Length of each block to be tested
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of independent blocks the bit stream is partitioned into
-	long int j;
-	long int d;		// discrepancy for LFSR algorithm
-	long int L;
-	long int m;
-	long int N_;
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
+	long int d;		// Discrepancy for LFSR algorithm
+	long int L;		// Length of the minimal LFSR for the stream
+	long int m;		// Number of iterations since L was updated to 1 for the LFSR algorithm
+	double mean;		// Theoretical mean under an assumption of randomness
+	double T;		// Value used to identify the class v to increment
 	double p_value;		// p_value iteration test result(s)
-	double T_;
-	double mean;
 	long int i;
-	long int ii;
+	long int j;
+	long int k;
 
 	/*
 	 * Check preconditions (firewall)
@@ -232,9 +240,6 @@ LinearComplexity_iterate(struct state *state)
 	if (state->linear_c == NULL) {
 		err(101, __FUNCTION__, "state->linear_c is NULL");
 	}
-	if (state->linear_p == NULL) {
-		err(101, __FUNCTION__, "state->linear_p is NULL");
-	}
 	if (state->linear_t == NULL) {
 		err(101, __FUNCTION__, "state->linear_t is NULL");
 	}
@@ -248,158 +253,104 @@ LinearComplexity_iterate(struct state *state)
 	 */
 	M = state->tp.linearComplexitySequenceLength;
 	n = state->tp.n;
-	stat.discarded = n % M;
 	N = n / M;
 
 	/*
-	 * Zeroize the nu counters
+	 * Zeroize the v counters
 	 */
-	memset(stat.v, 0, (LINEARCOMPLEXITY_K_DEGREES + 1) * sizeof(stat.v[0]));
+	memset(stat.v, 0, sizeof(stat.v));
 
 	/*
-	 * Perform the test for each independent block
+	 * Step 1: partition the sequence into N independent blocks
+	 *
+	 * Step 2: for each block, we will determine the linear complexity using the version of the Berlekamp-Massey
+	 * algorithm specialized for the binary finite field F2. Explanation of the sub-steps: https://goo.gl/Um0YUr
 	 */
-	for (ii = 0; ii < N; ii++) {
+	for (i = 0; i < N; i++) {
 
 		/*
-		 * Zeroize working LSRF storage
+		 * Sub-step 2: Zeroize the two arrays b and c and set b[0] and c[0] to 1
 		 */
 		memset(state->linear_b, 0, M * sizeof(state->linear_b[0]));
 		memset(state->linear_c, 0, M * sizeof(state->linear_c[0]));
-		memset(state->linear_p, 0, M * sizeof(state->linear_p[0]));
-		memset(state->linear_t, 0, M * sizeof(state->linear_t[0]));
-
-		/*
-		 * Determine linear complexity with the Berlekamp-Massey algorithm.
-		 * NOTE: here we use the version specialized for the binary finite field F2
-		 * REFERENCE: https://goo.gl/Um0YUr
-		 */
-
-		/*
-		 * Initialize values as specified in step 2 and 3 of the test NOTE: M is always equal to (N_ - 1)
-		 */
-		L = 0;
-		m = -1;
 		state->linear_c[0] = 1;
 		state->linear_b[0] = 1;
 
 		/*
-		 * loop as specified in step 4 NB: N_ is N; M is n
+		 * Sub-step 3: initialize L and m to their initial values
 		 */
-		for (N_ = 0; N_ < M; N_++) {
+		L = 0;
+		m = -1;
+
+		/*
+		 * NOTE: j is the N of the algorithm instructions
+		 * 	 M is the n of the algorithm instructions
+		 */
+		for (j = 0; j < M; j++) {
 
 			/*
-			 * set the discrepancy
+			 * Sub-step 4a: set the discrepancy
 			 */
-			d = (int) state->epsilon[ii * M + N_];
-			for (i = 1; i <= L; i++) {
-				d += state->linear_c[i] * state->epsilon[ii * M + N_ - i];
+			d = (int) state->epsilon[i * M + j];
+			for (k = 1; k <= L; k++) {
+				d += state->linear_c[k] * state->epsilon[i * M + j - k];
 			}
 
 			d = d % 2;
 			if (d == 1) {
-				/*
-				 * NOTE: Logical code rewrite, old code commented out below:
-				 *
-				 * for (i = 0; i < M; i++) {
-				 *      state->linear_t[i] = state->linear_c[i];
-				 *      state->linear_p[i] = 0;
-				 * }
-				 */
 
 				/*
-				 * let t be a copy of c
+				 * Sub-step 4b: let t be a copy of c
 				 */
 				memcpy(state->linear_t, state->linear_c, M * sizeof(state->linear_t[0]));
 
 				/*
-				 * this piece of code is letting P be like B, with values shifted by 1 position to the right:
-				 * P[j+1] = B[j]
+				 * Sub-step 4c: update c array
 				 */
-				memset(state->linear_p, 0, M * sizeof(state->linear_p[0]));
-				for (j = 0; j < M; j++) {
-					if (state->linear_b[j] == 1) {
-						state->linear_p[j + N_ - m] = 1;
-					}
+				for (k = j - m; k < M; k++) {
+					state->linear_c[k] = (BitSequence) ((state->linear_c[k] + state->linear_b[k - j + m]) % 2);
 				}
 
 				/*
-				 * update c array
+				 * Sub-step 4d: update L, M and b
 				 */
-				for (i = 0; i < M; i++) {
-					state->linear_c[i] = (BitSequence) ((state->linear_c[i] + state->linear_p[i]) % 2);
-				}
-
-				/*
-				 * update L, M and b
-				 */
-				if (L <= N_ / 2) {
-					L = N_ + 1 - L;
-					m = N_;
-					for (i = 0; i < M; i++) {
-						state->linear_b[i] = state->linear_t[i];
-					}
+				if (L <= j / 2) {
+					L = j + 1 - L;
+					m = j;
+					memcpy(state->linear_b, state->linear_t, M * sizeof(state->linear_b[0]));
 				}
 			}
 		}
 
 		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * The value M is forced to be: 500 <= M <= 5000, so 1.0 / pow(2, M) is very close to 0.
-		 * It is so close to zero that the final term is dropped to avoid overflow / underflow.
-		 *
-		 * if ((parity = (M + 1) % 2) == 0)
-		 * sign = -1;
-		 * else
-		 * sign = 1;
-		 * mean = M / 2.0 + (9.0 + sign) / 36.0 - 1.0 / pow(2, M) * (M / 3.0 + 2.0 / 9.0);
+		 * Step 3: calculate the theoretical mean
+		 * NOTE: the conditional operator is checking if (M + 1) is even or odd
 		 */
+		mean = (M / 2.0)
+		       + (((M + 1) % 2) ? 10 : 8) / 36.0
+		       - (M / 3.0 + 2.0 / 9.0) / (double ) (1 << M);
 
 		/*
-		 * Determine mean
-		 * NOTE: the if is checking if (M + 1) is even or odd
+		 * Step 4: calculate a value of T
+		 * NOTE: the conditional operator is checking if M is even or odd
 		 */
-		if ((M + 1) % 2 == 0) {
-			mean = (M / 2.0) + (10.0) / 36.0;
-		} else {	// if (M + 1) is odd
-			mean = (M / 2.0) + (8.0) / 36.0;
-		}
+		T = ((M % 2) ? (mean - L) : (L - mean)) + 2.0 / 9.0;
 
 		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * if ((parity = M % 2) == 0)
-		 * sign = 1;
-		 * else
-		 * sign = -1;
-		 * T_ = sign * (L - mean) + 2.0 / 9.0;
+		 * Step 5: record the T value in v
 		 */
-
-		/*
-		 * Determine T value
-		 * NOTE: the if is checking if M is even or odd
-		 */
-		if (M % 2 == 0) {
-			T_ = (L - mean) + 2.0 / 9.0;
-		} else {
-			T_ = (mean - L) + 2.0 / 9.0;
-		}
-
-		/*
-		 * Count T ranges // TODO shall we make this K dependent?
-		 */
-		if (T_ <= -2.5) {
+		// TODO make k dependent: how should I handle when K is odd?
+		if (T <= -2.5) {
 			stat.v[0]++;
-		} else if (T_ > -2.5 && T_ <= -1.5) {
+		} else if (T > -2.5 && T <= -1.5) {
 			stat.v[1]++;
-		} else if (T_ > -1.5 && T_ <= -0.5) {
+		} else if (T > -1.5 && T <= -0.5) {
 			stat.v[2]++;
-		} else if (T_ > -0.5 && T_ <= 0.5) {
+		} else if (T > -0.5 && T <= 0.5) {
 			stat.v[3]++;
-		} else if (T_ > 0.5 && T_ <= 1.5) {
+		} else if (T > 0.5 && T <= 1.5) {
 			stat.v[4]++;
-		} else if (T_ > 1.5 && T_ <= 2.5) {
+		} else if (T > 1.5 && T <= 2.5) {
 			stat.v[5]++;
 		} else {
 			stat.v[6]++;
@@ -407,18 +358,17 @@ LinearComplexity_iterate(struct state *state)
 	}
 
 	/*
-	 * evaluate the test
+	 * Step 6: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
-	for (i = 0; i < LINEARCOMPLEXITY_K_DEGREES + 1; i++) {
-		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * stat.chi2 += pow(nu[i] - N * pi_term[i], 2) / (N * pi_term[i]);
-		 */
+	for (i = 0; i < LINEARCOMPLEXITY_K + 1; i++) {
 		stat.chi2 += (stat.v[i] - N * pi_term[i]) * (stat.v[i] - N * pi_term[i]) / (N * pi_term[i]);
 	}
-	p_value = cephes_igamc(LINEARCOMPLEXITY_K_DEGREES / 2.0, stat.chi2 / 2.0);
+
+	/*
+	 * Step 7: compute the test P-value
+	 */
+	p_value = cephes_igamc(LINEARCOMPLEXITY_K / 2.0, stat.chi2 / 2.0);
 
 	/*
 	 * Record testable test success or failure
@@ -427,22 +377,22 @@ LinearComplexity_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;		// SUCCESS
 	}
 
 	/*
@@ -544,7 +494,8 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\tNote: %ld bits were discarded!\n", stat->discarded);
+		io_ret = fprintf(stream, "\tNote: %ld bits were discarded!\n",
+				 state->tp.n / state->tp.linearComplexitySequenceLength);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -566,7 +517,8 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\tbits discarded	       = %ld\n", stat->discarded);
+		io_ret = fprintf(stream, "\t\tbits discarded	       = %ld\n",
+				 state->tp.n % state->tp.linearComplexitySequenceLength);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -591,7 +543,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 			return false;
 		}
 	}
-	for (i = 0; i < LINEARCOMPLEXITY_K_DEGREES + 1; i++) {
+	for (i = 0; i < LINEARCOMPLEXITY_K + 1; i++) {
 		io_ret = fprintf(stream, "%4ld ", stat->v[i]);
 		if (io_ret <= 0) {
 			return false;
@@ -692,18 +644,18 @@ LinearComplexity_print_p_value(FILE * stream, double p_value)
 void
 LinearComplexity_print(struct state *state)
 {
-	struct LinearComplexity_private_stats *stat;	// pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	struct LinearComplexity_private_stats *stat;	// Pointer to statistics of an iteration
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -958,11 +910,6 @@ LinearComplexity_metric_print(struct state *state, long int sampleCount, long in
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -1087,13 +1034,6 @@ LinearComplexity_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1227,10 +1167,6 @@ LinearComplexity_destroy(struct state *state)
 	if (state->linear_c != NULL) {
 		free(state->linear_c);
 		state->linear_c = NULL;
-	}
-	if (state->linear_p != NULL) {
-		free(state->linear_p);
-		state->linear_p = NULL;
 	}
 	if (state->linear_t != NULL) {
 		free(state->linear_t);

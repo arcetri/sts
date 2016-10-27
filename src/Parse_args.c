@@ -276,8 +276,7 @@ static struct state const defaultstate = {
 		NULL,
 		NULL,
 
-		// linear_t, linear_p, linear_b, linear_c
-		NULL,
+		// linear_t, linear_b, linear_c
 		NULL,
 		NULL,
 		NULL,

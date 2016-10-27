@@ -521,7 +521,7 @@ CumulativeSums_print_p_value(FILE * stream, double p_value)
 void
 CumulativeSums_print(struct state *state)
 {
-	struct CumulativeSums_private_stats *stat;	// pointer to statistics of an iteration
+	struct CumulativeSums_private_stats *stat;	// Pointer to statistics of an iteration
 	double p_value;		// p_value iteration test result(s) - forward direction
 	double rev_p_value;	// p_value iteration test result(s) - reverse direction
 	FILE *stats = NULL;	// Open stats.txt file

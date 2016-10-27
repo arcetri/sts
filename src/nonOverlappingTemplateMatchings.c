@@ -45,7 +45,7 @@
 struct NonOverlappingTemplateMatchings_private_stats {
 	double mu;		// Theoretical mean under an assumption of randomness
 	double sigma_squared;	// Theoretical variance under an assumption of randomness
-	long int M;		// Length in bits of the blocks to be tested
+	long int M;		// Length of the blocks to be tested
 };
 
 
@@ -913,7 +913,7 @@ NonOverlappingTemplateMatchings_print_p_value(FILE * stream, double p_value)
 void
 NonOverlappingTemplateMatchings_print(struct state *state)
 {
-	struct NonOverlappingTemplateMatchings_private_stats *stat;	// pointer to statistics of an iteration
+	struct NonOverlappingTemplateMatchings_private_stats *stat;	// Pointer to statistics of an iteration
 	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
 	FILE *stats = NULL;	// Open stats.txt file
 	FILE *results = NULL;	// Open results.txt file

@@ -76,9 +76,9 @@ static void BlockFrequency_metric_print(struct state *state, long int sampleCoun
 void
 BlockFrequency_init(struct state *state)
 {
-	long int M;		// Block Frequency Test - block length
+	long int M;		// Length of each block to be tested
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of non-overlapping blocks
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 
 	/*
 	 * Check preconditions (firewall)
@@ -110,9 +110,9 @@ BlockFrequency_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (n < MIN_LENGTH_FREQUENCY) {
+	if (n < MIN_LENGTH_BLOCK_FREQUENCY) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
-		     state->testNames[test_num], test_num, n, MIN_LENGTH_FREQUENCY);
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_BLOCK_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
 	} else if (M < MIN_BLOCK_LENGTH) {
@@ -126,7 +126,7 @@ BlockFrequency_init(struct state *state)
 		state->testVector[test_num] = false;
 		return;
 	} else if (N >= MAX_BLOCKS_NUMBER) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires blocks number(N): %ld < %d",
+		warn(__FUNCTION__, "disabling test %s[%d]: requires s %ld < %d",
 		     state->testNames[test_num], test_num, N, MAX_BLOCKS_NUMBER);
 		state->testVector[test_num] = false;
 		return;
@@ -181,9 +181,9 @@ void
 BlockFrequency_iterate(struct state *state)
 {
 	struct BlockFrequency_private_stats stat;	// Stats for this iteration
-	long int M;		// Block Frequency Test - block length
+	long int M;		// Length of each block to be tested
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of non-overlapping blocks
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 	long int blockSum;      // Number of ones in a block
 	double p_value;		// p_value iteration test result(s)
 	double sum;             // Term of the chi squared formula
@@ -218,7 +218,7 @@ BlockFrequency_iterate(struct state *state)
 	N = n / M;
 
 	/*
-	 * Step 1: partition the sequence into N non-overlapping blocks
+	 * Step 1: partition the sequence into N independent blocks
 	 */
 	sum = 0.0;
 	for (i = 0; i < N; i++) {
@@ -311,9 +311,9 @@ BlockFrequency_iterate(struct state *state)
 static bool
 BlockFrequency_print_stat(FILE * stream, struct state *state, struct BlockFrequency_private_stats *stat, double p_value)
 {
-	long int M;		// Block Frequency Test - block length
+	long int M;		// Length of each block to be tested
 	long int n;		// Length of a single bit stream
-	long int N;		// Number of non-overlapping blocks
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 	int io_ret;		// I/O return status
 
 	/*
@@ -480,7 +480,7 @@ BlockFrequency_print_p_value(FILE * stream, double p_value)
 void
 BlockFrequency_print(struct state *state)
 {
-	struct BlockFrequency_private_stats *stat;	// pointer to statistics of an iteration
+	struct BlockFrequency_private_stats *stat;	// Pointer to statistics of an iteration
 	double p_value;		// p_value iteration test result(s)
 	FILE *stats = NULL;	// Open stats.txt file
 	FILE *results = NULL;	// Open results.txt file

@@ -622,7 +622,7 @@ Serial_print_p_value(FILE * stream, double p_value)
 void
 Serial_print(struct state *state)
 {
-	struct Serial_private_stats *stat;	// pointer to statistics of an iteration
+	struct Serial_private_stats *stat;	// Pointer to statistics of an iteration
 	double p_value;		// generic p_value iteration
 	double p_value1;	// p_value iteration test result(s) - #1
 	double p_value2;	// p_value iteration test result(s) - #2

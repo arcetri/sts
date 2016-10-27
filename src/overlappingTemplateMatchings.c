@@ -45,7 +45,7 @@
  */
 struct OverlappingTemplateMatchings_private_stats {
 	bool success;		// Success or failure of iteration test
-	long int N;		// Number of independent blocks
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 	long int v[OVERLAP_K_DEGREES + 1];	// v[i] counts the number of times the template occurs
 						// a total of i times cumulatively in the blocks
 	double chi2;		// Test statistic chi^2
@@ -59,16 +59,14 @@ static const enum test test_num = TEST_OVERLAPPING;	// This test number
 
 /*
  * The Mathematica code to evaluate the pi terms is found in the file:
- *
  *      ../tools/pi_term.txt
  *
  * Or the Mathematica notebook:
- *
  *      ../tools/pi_term.nb
  *
  * Refer to them for more details about the computation of these probabilities.
  *
- * NOTE: This probabilities have been computed for m = 9 and M = 1032
+ * NOTE: These probabilities have been computed for m = 9 and M = 1032.
  */
 static const double pi_term[OVERLAP_K_DEGREES + 1] = {
 	0.36409105321672786245,	// T0[[M]]/2^1032 // N (was 0.364091)
@@ -105,7 +103,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 {
 	long int n;		// Length of a single bit stream
 	long int m;		// Overlapping Template Test - block length
-	long int N;		// Number of blocks used
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
 	double min_pi;		// Minimum pi term used for an input check
 	int i;
 
@@ -146,12 +144,24 @@ OverlappingTemplateMatchings_init(struct state *state)
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
+	 *
+	 * NOTE: K and M are fixed to default values in this code.
+	 * m is not really fixed (can be still set up as argument to the program), but the test is only run when it is
+	 * equal to the default value, because the probabilities in pi_terms are computed for fixed values of m and M.
+	 *
+	 * Potentially, someone might compute probabilities for different values of m and allow
+	 * different values of m to be accepted by this code.
 	 */
 	if (m != DEFAULT_OVERLAPPING) {
 		warn(__FUNCTION__, "disabling test %s[%d]: the probabilities in the code of this test have been computed only"
 				     "for m = %ld so far, but m has been set to %ld for this execution."
 				     "If you want to run this test please choose set the template size to %ld",
 		     state->testNames[test_num], test_num, DEFAULT_OVERLAPPING, m, DEFAULT_OVERLAPPING);
+		state->testVector[test_num] = false;
+		return;
+	} else if (n < MIN_LENGTH_OVERLAPPING) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_OVERLAPPING);
 		state->testVector[test_num] = false;
 		return;
 	} else if (N * min_pi <= 5) {
@@ -227,7 +237,6 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	double W_obs;		// Counter of the number of occurrences of a template in a block
 	double chi2_term;	// Term whose square is used to compute chi squared for this iteration
 	double p_value;		// p_value iteration test result(s)
-	long int K;		// Degrees of freedom
 	long int i;
 	long int j;
 	long int k;
@@ -255,7 +264,6 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 */
 	m = state->tp.overlappingTemplateLength;
 	n = state->tp.n;
-	K = OVERLAP_K_DEGREES;
 	stat.N = n / BLOCK_LENGTH_OVERLAPPING;
 
 	/*
@@ -296,10 +304,10 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 		/*
 		 * Increase the counter v depending on the number of occurrences of the template in block i
 		 */
-		if (W_obs < K) {
+		if (W_obs < OVERLAP_K_DEGREES) {
 			stat.v[(int) W_obs]++;
 		} else {
-			stat.v[K]++;
+			stat.v[OVERLAP_K_DEGREES]++;
 		}
 	}
 
@@ -307,7 +315,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 * Step 4: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
-	for (i = 0; i < K + 1; i++) {
+	for (i = 0; i < OVERLAP_K_DEGREES + 1; i++) {
 		chi2_term = (double) stat.v[i] - (double) stat.N * pi_term[i];
 		stat.chi2 += chi2_term * chi2_term / ((double) stat.N * pi_term[i]);
 	}
@@ -315,7 +323,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	/*
 	 * Step 5: compute the test p-value
 	 */
-	p_value = cephes_igamc(K / 2.0, stat.chi2 / 2.0);
+	p_value = cephes_igamc(OVERLAP_K_DEGREES / 2.0, stat.chi2 / 2.0);
 
 	/*
 	 * Record testable test success or failure

@@ -44,8 +44,8 @@
  */
 struct LongestRunOfOnes_private_stats {
 	bool success;		// Success or failure of iteration test
-	long int N;		// Number of M bit blocks
-	long int M;		// Block length
+	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
+	long int M;		// Length of each block to be tested
 	double chi2;		// Sum of chi^2 for each iteration
 	int runs_table_index;	// Index in the runs_table[] being used
 
@@ -144,7 +144,7 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
  */
 struct runs_table {
 	const long int min_n;	// Minimum n from test table
-	const long int M;	// Block bit length
+	const long int M;	// Length of each block to be tested
 	const int min_class;	// Minimum length to consider (0 < min_class)
 	const int max_class;	// Maximum length to consider (min_class + LONGEST_RUN_CLASS_COUNT)
 	const double pi_term[LONGEST_RUN_CLASS_COUNT + 1]; // Theoretical probabilities (see comment above)
@@ -475,7 +475,7 @@ LongestRunOfOnes_iterate(struct state *state)
 	memset(stat.count, 0, sizeof(stat.count));
 
 	/*
-	 * Step 1: partition the sequence into N M-bit blocks
+	 * Step 1: partition the sequence into N independent M-bit blocks
 	 */
 	for (i = 0; i < stat.N; i++) {
 
@@ -902,7 +902,7 @@ LongestRunOfOnes_print_p_value(FILE * stream, double p_value)
 void
 LongestRunOfOnes_print(struct state *state)
 {
-	struct LongestRunOfOnes_private_stats *stat;	// pointer to statistics of an iteration
+	struct LongestRunOfOnes_private_stats *stat;	// Pointer to statistics of an iteration
 	double p_value;		// p_value iteration test result(s)
 	FILE *stats = NULL;	// Open stats.txt file
 	FILE *results = NULL;	// Open results.txt file
