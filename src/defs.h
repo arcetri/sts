@@ -456,8 +456,8 @@ struct state {
 	long int *apen_P;			// Frequency count for TEST_APEN
 	long int apen_p_len;			// Number of long ints in apen_P for TEST_APEN
 
-	long int *serial_P;			// Frequency count for TEST_SERIAL
-	long int serial_p_len;			// Number of long ints in serial_P for TEST_SERIAL
+	long int *serial_v;			// Frequency count for TEST_SERIAL
+	long int serial_v_len;			// Number of long ints in serial_v for TEST_SERIAL
 
 	BitSequence *nonper_seq;		// special BitSequence for TEST_NON_OVERLAPPING
 

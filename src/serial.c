@@ -62,7 +62,7 @@ static const enum test test_num = TEST_SERIAL;	// This test number
 /*
  * Forward static function declarations
  */
-static double psi2(struct state *state, long int m, long int n);
+static double psi2(struct state *state, long int blocksize);
 static bool Serial_print_stat(FILE * stream, struct state *state, struct Serial_private_stats *stat, double p_value1,
 			      double p_value2);
 static bool Serial_print_p_value(FILE * stream, double p_value);
@@ -103,29 +103,33 @@ Serial_init(struct state *state)
 		err(190, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO Choose m and n such that m < floor(log2 n) -2.
 
 	/*
-	 * Allocate frequency count P array
-	 *
-	 * The P array, an array of long ints, is allocated with length:
-	 *
-	 *      powLen = ((long int) 1 << (m + 1)) - 1;
-	 *
-	 * Where m is state->tp.serialBlockLength
-	 *
-	 * We ignore the final "- 1" for safety.   // TODO why? what does "for safety" mean?
+	 * Collect parameters from state
 	 */
 	m = state->tp.serialBlockLength;
-	if ((m + 1) > (BITS_N_LONGINT - 1 - 3)) {	// firewall, -3 is for 8 byte long int
-		err(190, __FUNCTION__, "(m+1): %ld is too large, 1 << (m:%ld + 2) > %ld bits long", m + 1, m,
-		    BITS_N_LONGINT - 1 - 3);
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (m >= (long int) state->c.logn / state->c.log2 - 2) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(m): %ld >= %d",
+		     state->testNames[test_num], test_num, m, (long int) state->c.logn / state->c.log2 - 2);
+		state->testVector[test_num] = false;
+		return;
 	}
-	state->serial_p_len = (long int) 1 << (m + 1);
-	state->serial_P = malloc(state->serial_p_len * sizeof(state->serial_P[0]));
-	if (state->serial_P == NULL) {
-		errp(190, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->serial_P",
-		     state->apen_p_len, sizeof(long int));
+
+	/*
+	 * Allocate frequency count v array
+	 */
+	if (m > (BITS_N_LONGINT - 1)) {	// firewall
+		err(190, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
+	}
+	state->serial_v_len = (long int) 1 << m;
+	state->serial_v = malloc(state->serial_v_len * sizeof(state->serial_v[0]));
+	if (state->serial_v == NULL) {
+		errp(190, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->serial_v",
+		     state->serial_v_len, sizeof(long int));
 	}
 
 	/*
@@ -142,7 +146,7 @@ Serial_init(struct state *state)
 	state->stats[test_num] = create_dyn_array(sizeof(struct Serial_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false); // stats.txt data
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
-	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false); // results.txt data // TODO check why size is doubled
+	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false); // results.txt data
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
@@ -177,12 +181,13 @@ void
 Serial_iterate(struct state *state)
 {
 	struct Serial_private_stats stat;	// Stats for this iteration
-	long int n;		// Length of a single bit stream
 	long int m;		// Serial block length (state->tp.serialBlockLength)
 	double p_value1;	// p_value iteration test result(s) - #1
 	double p_value2;	// p_value iteration test result(s) - #2
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(191, __FUNCTION__, "state arg is NULL");
 	}
@@ -198,27 +203,23 @@ Serial_iterate(struct state *state)
 	/*
 	 * Collect parameters from state
 	 */
-	n = state->tp.n;
 	m = state->tp.serialBlockLength;
-	if ((state->tp.serialBlockLength - 1) > (BITS_N_LONGINT - 1)) {	// firewall
-		err(191, __FUNCTION__, "(state->tp.serialBlockLength - 1): %ld is too large, "
-		    "1 << (state->tp.serialBlockLength:%ld - 1) > %ld bits long",
-		    (state->tp.serialBlockLength - 1), state->tp.serialBlockLength, BITS_N_LONGINT - 1);
-	}
 
 	/*
 	 * Perform the test
 	 */
-	stat.psim0 = psi2(state, m, n);
-	stat.psim1 = psi2(state, m - 1, n);
-	stat.psim2 = psi2(state, m - 2, n);
+	stat.psim0 = psi2(state, m);
+	stat.psim1 = psi2(state, m - 1);
+	stat.psim2 = psi2(state, m - 2);
+
+	/*
+	 * Step 4: compute the test statistics
+	 */
 	stat.del1 = stat.psim0 - stat.psim1;
 	stat.del2 = stat.psim0 - 2.0 * stat.psim1 + stat.psim2;
+
 	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * p_value1 = cephes_igamc(pow(2.0, m - 1) / 2.0, del1 / 2.0);
-	 * p_value2 = cephes_igamc(pow(2.0, m - 2) / 2.0, del2 / 2.0);
+	 * Step 5: compute the test P-values
 	 */
 	p_value1 = cephes_igamc((double) ((long int) 1 << (m - 1)) / 2.0, stat.del1 / 2.0);
 	p_value2 = cephes_igamc((double) ((long int) 1 << (m - 2)) / 2.0, stat.del2 / 2.0);
@@ -230,22 +231,22 @@ Serial_iterate(struct state *state)
 	state->count[test_num]++;	// Count a testable test
 	if (isNegative(p_value1)) {
 		state->failure[test_num]++;	// Bogus p_value1 < 0.0 treated as a failure
-		stat.success1 = false;	// FAILURE
+		stat.success1 = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value1: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value1);
 	} else if (isGreaterThanOne(p_value1)) {
 		state->failure[test_num]++;	// Bogus p_value1 > 1.0 treated as a failure
-		stat.success1 = false;	// FAILURE
+		stat.success1 = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value1: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value1);
 	} else if (p_value1 < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value1 in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value1 but too low is a failure
-		stat.success1 = false;	// FAILURE
+		stat.success1 = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value1 in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value1 not too low is a success
-		stat.success1 = true;	// SUCCESS
+		stat.success1 = true;		// SUCCESS
 	}
 
 	/*
@@ -255,22 +256,22 @@ Serial_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value2)) {
 		state->failure[test_num]++;	// Bogus p_value2 < 0.0 treated as a failure
-		stat.success2 = false;	// FAILURE
+		stat.success2 = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value2: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value2);
 	} else if (isGreaterThanOne(p_value2)) {
 		state->failure[test_num]++;	// Bogus p_value2 > 1.0 treated as a failure
-		stat.success2 = false;	// FAILURE
+		stat.success2 = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value2: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value2);
 	} else if (p_value2 < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value2 in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value2 but too low is a failure
-		stat.success2 = false;	// FAILURE
+		stat.success2 = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value2 in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value2 not too low is a success
-		stat.success2 = true;	// SUCCESS
+		stat.success2 = true;		// SUCCESS
 	}
 
 	/*
@@ -292,15 +293,25 @@ Serial_iterate(struct state *state)
 	return;
 }
 
-
+/*
+ * psi2 - compute psi-squared for the given block size
+ *
+ * given:
+ *      state           // run state to test under
+ *      blocksize	// length of an overlapping sub-sequence
+ *
+ * This auxiliary function computes the psi-squared values needed for the
+ * test statistic of the Serial test.
+ */
 static double
-psi2(struct state *state, long int m, long int n)
+psi2(struct state *state, long int blocksize)
 {
-	long int powLen;
+	long int n;		// Length of a single bit stream
+	long int powLen;	// Number of possible m-bit sub-sequences
+	long int mask;		// Bit-mask used to discard the extra bits of a sequence
+	long int dec;		// Decimal representation of an m-bit sub-sequence
+	double sum;		// Sum of the squares of all the counters, needed to compute psi-squared
 	long int i;
-	long int j;
-	long int k;
-	double sum;
 
 	/*
 	 * Check preconditions (firewall)
@@ -311,75 +322,91 @@ psi2(struct state *state, long int m, long int n)
 	if (state->epsilon == NULL) {
 		err(192, __FUNCTION__, "state->epsilon is NULL");
 	}
-	if ((m == 0) || (m == -1)) {
+	if ((blocksize == 0) || (blocksize == -1)) {
 		return 0.0;
 	}
-	if ((m + 1) > (BITS_N_LONGINT - 1)) {	// firewall
-		err(192, __FUNCTION__, "m+1: %ld is too large, 1 << (m:%ld + 1) > %ld bits long", m + 1, m, BITS_N_LONGINT - 1);
+	if (blocksize > (BITS_N_LONGINT - 1)) {	// firewall
+		err(192, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
 	}
-	if (state->serial_P == NULL) {
-		err(192, __FUNCTION__, "state->serial_P is NULL");
+	if (state->serial_v == NULL) {
+		err(192, __FUNCTION__, "state->serial_v is NULL");
 	}
+
 	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * powLen = (int) pow(2, m + 1) - 1;
+	 * Collect parameters from state
 	 */
-	powLen = ((long int) 1 << (m + 1)) - 1;	// TODO linked to the previous why
-	if (powLen > state->serial_p_len) {
+	n = state->tp.n;
+
+	/*
+	 * Compute how many counters are needed, i.e. how many different possible
+	 * sub-sequences of the given size can possibly exist
+	 */
+	powLen = (long int) 1 << blocksize;
+	if (powLen > state->serial_v_len) {
 		err(192, __FUNCTION__, "powLen: %ld is too large, "
-		    "1 << (m:%ld + 1) - 1 > state->serial_p_len: %ld ", powLen, m, state->serial_p_len);
+		    "1 << blocksize: %ld > state->serial_v_len: %ld ", powLen, blocksize, state->serial_v_len);
 	}
 
 	/*
-	 * Zeroize nodes
+	 * Zeroize those counters in the array v
 	 */
-	memset(state->serial_P, 0, powLen * sizeof(state->serial_P[0]));
+	memset(state->serial_v, 0, powLen * sizeof(state->serial_v[0]));
 
 	/*
-	 * Compute frequency
-	 *
-	 * % n is used to avoid appending m-1 bits in the end
+	 * Compute the mask that will be used by the algorithm
 	 */
-	// TODO Change the algorithm to improve both time and space complexity (see whiteboard)
-	for (i = 0; i < n; i++) {	/* COMPUTE FREQUENCY */
-		k = 1;
-		for (j = 0; j < m; j++) {
-			if (state->epsilon[(i + j) % n] == 0) {
-				k = 2 * k;
-			} else if (state->epsilon[(i + j) % n] == 1) {
-				k = 2 * k + 1;
-			}
-		}
+	mask = (1 << blocksize) - 1;
+
+	/*
+	 * Step 2: compute the frequency of all the overlapping sub-sequences
+	 *
+	 * This algorithm works by taking each consecutive overlapping sub-sequence
+	 * of length blocksize from the original sequence epsilon of length n.
+	 *
+	 * For each sub-sequence found, the decimal representation is computed and
+	 * the corresponding counter in the array v is incremented.
+	 *
+	 * It is convenient to use the decimal representation because we can more easily
+	 * store and have access to the counters of each block in the array v with size 2^blocksize.
+	 *
+	 * NOTE: i % n is used to avoid appending blocksize-1 bits in the end (as indicated in the paper)
+	 */
+	for (dec = 0, i = 0; i < n + blocksize; i++) {
 
 		/*
-		 * Check preconditions (firewall)
+		 * Get the decimal representation of the current block.
+		 * This line of code works by shifting the decimal representation of the
+		 * previous number left by 1 bit, adding to it the following bit of epsilon,
+		 * and then discarding the left-most bit by doing an AND with the mask (in fact,
+		 * the mask is used to keep only the right-most blocksize bits of the number).
 		 */
-		if (k <= 0) {
-			err(192, __FUNCTION__, "k: %ld <= 0", k);
-		} else if (k > powLen) {
-			err(192, __FUNCTION__, "k: %ld > powLen: %ld", k, powLen);
+		dec = ((dec << 1) + (int) state->epsilon[i % n]) & mask;
+
+		/*
+		 * If we have already counted the first (blocksize - 1) bits of epsilon,
+		 * count the occurrence of the current block in its corresponding counter.
+		 *
+		 * NOTE: this check is important because during the first (blocksize - 1) iterations
+		 * of this loop, dec will be the decimal representation of blocks of length
+		 * which is smaller than blocksize.
+		 */
+		if (i >= blocksize) {
+			state->serial_v[dec]++;
 		}
-		state->serial_P[k - 1]++;
 	}
+
+	/*
+	 * Compute the sum of the squares of all the frequencies (needed for step 3)
+	 */
 	sum = 0.0;
-
-	/*
-	 * NOTE: Mathematical expression code rewrite, old code commented out below:
-	 *
-	 * for (i = (int) pow(2, m) - 1; i < (int) pow(2, m + 1) - 1; i++) {
-	 * sum += pow(state->serial_P[i], 2);
-	 * }
-	 * sum = (sum * pow(2, m) / (double) n) - (double) n;
-	 */
-	for (i = ((long int) 1 << m) - 1; i < ((long int) 1 << (m + 1)) - 1; i++) {
-		sum += (double) state->serial_P[i] * (double) state->serial_P[i];
+	for (i = 0; i < powLen; i++) {
+		sum += (double) state->serial_v[i] * (double) state->serial_v[i];
 	}
 
 	/*
-	 * return frequency
+	 * Step 3: compute psi-squared
 	 */
-	return (sum * (double) ((long int) 1 << m) / (double) n) - (double) n;
+	return (sum * (double) ((long int) 1 << blocksize) / (double) n) - (double) n;
 }
 
 
@@ -623,7 +650,7 @@ void
 Serial_print(struct state *state)
 {
 	struct Serial_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// generic p_value iteration
+	double p_value;		// Generic p_value iteration
 	double p_value1;	// p_value iteration test result(s) - #1
 	double p_value2;	// p_value iteration test result(s) - #2
 	FILE *stats = NULL;	// Open stats.txt file
@@ -900,11 +927,6 @@ Serial_metric_print(struct state *state, long int sampleCount, long int toolow, 
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -1029,13 +1051,6 @@ Serial_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1162,9 +1177,9 @@ Serial_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	if (state->serial_P != NULL) {
-		free(state->serial_P);
-		state->serial_P = NULL;
+	if (state->serial_v != NULL) {
+		free(state->serial_v);
+		state->serial_v = NULL;
 	}
 
 	/*

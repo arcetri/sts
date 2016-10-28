@@ -285,7 +285,7 @@ static struct state const defaultstate = {
 		NULL,
 		0,
 
-		// serial_P, serial_p_len
+		// serial_v, serial_v_len
 		NULL,
 		0,
 
