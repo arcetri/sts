@@ -281,7 +281,7 @@ static struct state const defaultstate = {
 		NULL,
 		NULL,
 
-		// apen_P, apen_p_len
+		// apen_C, apen_C_len
 		NULL,
 		0,
 

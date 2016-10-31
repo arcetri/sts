@@ -59,6 +59,7 @@ static const enum test test_num = TEST_APEN;	// This test number
 /*
  * Forward static function declarations
  */
+static double phi(struct state *state, long int blocksize);
 static bool ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct ApproximateEntropy_private_stats *stat,
 					  double p_value);
 static bool ApproximateEntropy_print_p_value(FILE * stream, double p_value);
@@ -99,7 +100,21 @@ ApproximateEntropy_init(struct state *state)
 		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO Choose m and n such that m < floor(log2 n) - 5.
+
+	/*
+	 * Collect parameters from state
+	 */
+	m = state->tp.approximateEntropyBlockLength;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (m >= (long int) state->c.logn / state->c.log2 - 5) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(m): %ld >= %d",
+		     state->testNames[test_num], test_num, m, (long int) state->c.logn / state->c.log2 - 5);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -110,28 +125,16 @@ ApproximateEntropy_init(struct state *state)
 	}
 
 	/*
-	 * Allocate frequency count P array
-	 *
-	 * The P array, an array of long ints, is allocated with length:
-	 *
-	 *      powLen = ((long int) 1 << (blockSize + 1)) - 1;
-	 *
-	 * Where blockSize can be m+1 we need an array this many long int values:
-	 *
-	 *      (1 << (m+2)) - 1
-	 *
-	 * We ignore the final "- 1" for safety. // TODO allocate less space
+	 * Allocate frequency count C array
 	 */
-	m = state->tp.approximateEntropyBlockLength;
-	if ((m + 2) > (BITS_N_LONGINT - 1 - 3)) {	// firewall, -3 is for 8 byte long int
-		err(10, __FUNCTION__, "(m+2): %ld is too large, 1 << (m:%ld + 2) > %ld bits long", m + 2, m,
-		    BITS_N_LONGINT - 1 - 3);
+	if (m > (BITS_N_LONGINT - 1)) {	// firewall
+		err(10, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
 	}
-	state->apen_p_len = (long int) 1 << (m + 2);
-	state->apen_P = malloc(state->apen_p_len * sizeof(state->apen_P[0]));
-	if (state->apen_P == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->apen_P",
-		     state->apen_p_len, sizeof(long int));
+	state->apen_C_len = (long int) 1 << (m + 1);
+	state->apen_C = malloc(state->apen_C_len * sizeof(state->apen_C[0]));
+	if (state->apen_C == NULL) {
+		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->apen_C",
+		     state->apen_C_len, sizeof(long int));
 	}
 
 	/*
@@ -177,15 +180,7 @@ ApproximateEntropy_iterate(struct state *state)
 	struct ApproximateEntropy_private_stats stat;	// Stats for this iteration
 	long int m;		// Approximate Entropy Test - block length
 	long int n;		// Length of a single bit stream
-	long int r;		// 0 ==> first block, 1 ==> second block
-	long int blockSize;	// Length of each block
-	long int powLen;	// Elements in apen_P array to be used for this block
-	double sum;		// Frequency sum for block
 	double p_value;		// p_value iteration test result(s)
-	long int index;
-	long int i;
-	long int j;
-	long int k;
 
 	/*
 	 * Check preconditions (firewall)
@@ -200,8 +195,8 @@ ApproximateEntropy_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(11, __FUNCTION__, "state->epsilon is NULL");
 	}
-	if (state->apen_P == NULL) {
-		err(11, __FUNCTION__, "state->apen_P is NULL");
+	if (state->apen_C == NULL) {
+		err(11, __FUNCTION__, "state->apen_C is NULL");
 	}
 	if (state->cSetup != true) {
 		err(11, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
@@ -219,96 +214,20 @@ ApproximateEntropy_iterate(struct state *state)
 	n = state->tp.n;
 
 	/*
-	 * Perform the test for blocksize m (r==0) and m+1 (r==1)
+	 * Step 4 and 5: compute phi for blocksize m and m+1
 	 */
-	for (r = 0, blockSize = m; blockSize <= m + 1; blockSize++, ++r) {
-
-		/*
-		 * Take care of the zero block size
-		 */
-		if (blockSize == 0) {
-			stat.phi[0] = 0.0;
-			continue;
-		}
-
-		/*
-		 * Initialize P (state->apen_P array)
-		 */
-		powLen = ((long int) 1 << (blockSize + 1)) - 1;
-
-		/*
-		 * Check preconditions (firewall)
-		 */
-		if (powLen > state->apen_p_len) {
-			err(11, __FUNCTION__, "powLen: %ld is too large, "
-			    "1 << (blockSize:%ld + 1) - 1 > state->apen_p_len: %ld ", powLen, blockSize, state->apen_p_len);
-		}
-
-		/*
-		 * Zeroize P (state->apen_P array)
-		 */
-		memset(state->apen_P, 0, powLen * sizeof(state->apen_P[0]));
-
-		/*
-		 * Step 1 (augmenting the sequence) is not necessary if we use the modulo operation
-		 * Step 2: compute the frequency // TODO improve this algorithm as in serial test
-		 */
-		for (i = 0; i < n; i++) {
-			k = 1;
-			for (j = 0; j < blockSize; j++) {
-				k <<= 1;
-				if ((int) state->epsilon[(i + j) % n] == 1) {
-					k++;
-				}
-			}
-
-			/*
-			 * Check preconditions (firewall)
-			 */
-			if (k <= 0) {
-				err(11, __FUNCTION__, "k: %ld <= 0", k);
-			} else if (k > powLen) {
-				err(11, __FUNCTION__, "k: %ld > powLen: %ld", k, powLen);
-			}
-
-			/*
-			 * Count this frequency
-			 */
-			state->apen_P[k - 1]++;
-		}
-
-		/*
-		 * Step 3 and 4: compute the terms of the phi formula, and then phi
-		 */
-		sum = 0.0;
-		index = ((long int) 1 << blockSize) - 1;
-		for (i = 0; i < ((long int) 1 << blockSize); i++) {
-
-			/*
-			 * Check preconditions (firewall)
-			 */
-			if (index < 0) {
-				err(11, __FUNCTION__, "index: %ld < 0", index);
-			} else if (index >= powLen) {
-				err(11, __FUNCTION__, "index: %ld >= powLen: %ld", index, powLen);
-			}
-
-			/*
-			 * Sum frequency
-			 */
-			if (state->apen_P[index] > 0) {
-				sum += state->apen_P[index] * log(state->apen_P[index] / (double) n);
-			}
-			index++;
-		}
-		stat.phi[r] = sum / (double) n;
-	}
+	stat.phi[0] = phi(state, m);
+	stat.phi[1] = phi(state, m + 1);
 
 	/*
-	 * Analyze results and compute p_value
+	 * Step 6: compute the test statistic
 	 */
 	stat.ApEn = stat.phi[0] - stat.phi[1];
 	stat.chi_squared = 2.0 * n * (state->c.log2 - stat.ApEn);
+
+	/*
+	 * Step 7: compute the test p-value
+	 */
 	p_value = cephes_igamc((double) ((long int) 1 << (m - 1)), stat.chi_squared / 2.0);
 
 	/*
@@ -318,22 +237,22 @@ ApproximateEntropy_iterate(struct state *state)
 	state->valid[test_num]++;	// Count this valid test
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
+		stat.success = false;		// FAILURE
 	} else {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
+		stat.success = true;		// SUCCESS
 	}
 
 	/*
@@ -352,6 +271,123 @@ ApproximateEntropy_iterate(struct state *state)
 	}
 
 	return;
+}
+
+
+/*
+ * phi - compute phi for the given block size
+ *
+ * given:
+ *      state           // run state to test under
+ *      blocksize	// length of an overlapping sub-sequence
+ *
+ * This auxiliary function computes the phi values needed for the
+ * test statistic of the ApproximateEntropy test.
+ */
+static double
+phi(struct state *state, long int blocksize)
+{
+	long int n;		// Length of a single bit stream
+	long int powLen;	// Number of possible m-bit sub-sequences
+	long int mask;		// Bit-mask used to discard the extra bits of a sequence
+	long int dec;		// Decimal representation of an m-bit sub-sequence
+	double sum;		// Sum of the squares of all the counters, needed to compute psi-squared
+	long int i;
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(192, __FUNCTION__, "state arg is NULL");
+	}
+	if (state->epsilon == NULL) {
+		err(192, __FUNCTION__, "state->epsilon is NULL");
+	}
+	if (blocksize == 0) {
+		return 0.0;
+	}
+	if (blocksize > (BITS_N_LONGINT - 1)) {	// firewall
+		err(192, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
+	}
+	if (state->apen_C == NULL) {
+		err(192, __FUNCTION__, "state->apen_C is NULL");
+	}
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Compute how many counters are needed, i.e. how many different possible
+	 * m-bit sub-sequences can possibly exist
+	 */
+	powLen = (long int) 1 << blocksize;
+	if (powLen > state->apen_C_len) {
+		err(11, __FUNCTION__, "powLen: %ld is too large, "
+				"1 << blockSize: %ld > state->apen_C_len: %ld ", powLen, blocksize, state->apen_C_len);
+	}
+
+	/*
+	 * Zeroize those counters in the array C
+	 */
+	memset(state->apen_C, 0, powLen * sizeof(state->apen_C[0]));
+
+	/*
+	 * Compute the mask that will be used by the algorithm
+	 */
+	mask = (1 << blocksize) - 1;
+
+	/*
+	 * Step 2: compute the frequency of all the overlapping sub-sequences
+	 *
+	 * This algorithm works by taking each consecutive overlapping sub-sequence
+	 * of length blocksize from the original sequence epsilon of length n.
+	 *
+	 * For each sub-sequence found, the decimal representation is computed and
+	 * the corresponding counter in the array v is incremented.
+	 *
+	 * It is convenient to use the decimal representation because we can more easily
+	 * store and have access to the counters of each block in the array v with size 2^blocksize.
+	 *
+	 * NOTE: i % n is used to avoid appending blocksize-1 bits in the end (as indicated in the paper)
+	 */
+	for (dec = 0, i = 0; i < n + blocksize; i++) {
+
+		/*
+		 * Get the decimal representation of the current block.
+		 * This line of code works by shifting the decimal representation of the
+		 * previous number left by 1 bit, adding to it the following bit of epsilon,
+		 * and then discarding the left-most bit by doing an AND with the mask (in fact,
+		 * the mask is used to keep only the right-most blocksize bits of the number).
+		 */
+		dec = ((dec << 1) + (int) state->epsilon[i % n]) & mask;
+
+		/*
+		 * If we have already counted the first (blocksize - 1) bits of epsilon,
+		 * count the occurrence of the current block in its corresponding counter.
+		 *
+		 * NOTE: this check is important because during the first (blocksize - 1) iterations
+		 * of this loop, dec will be the decimal representation of blocks of length
+		 * which is smaller than blocksize.
+		 */
+		if (i >= blocksize) {
+			state->apen_C[dec]++;
+		}
+	}
+
+	/*
+	 * Step 3 and 4a: compute the the terms of the phi formula
+	 */
+	sum = 0.0;
+	for (i = 0; i < powLen; i++) {
+		sum += (double) state->apen_C[i] * log(state->apen_C[i] / (double) n);
+	}
+
+	/*
+	 * Step 4b: compute phi
+	 */
+	return sum / (double) n;
 }
 
 
@@ -453,21 +489,6 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	if (state->tp.approximateEntropyBlockLength > (long int) (state->c.logn / state->c.log2 - 5.0)) {
-		io_ret = fprintf(stream, "\t\tNote: The blockSize = %ld exceeds recommended value of %ld\n",
-				 state->tp.approximateEntropyBlockLength, MAX(1, (long int) (state->c.logn / state->c.log2 - 5.0)));
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\tResults are inaccurate!\n");
-		if (io_ret <= 0) {
-			return false;
-		}
-		io_ret = fprintf(stream, "\t\t--------------------------------------------\n");
-		if (io_ret <= 0) {
-			return false;
-		}
-	}
 	if (stat->success == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {
@@ -553,17 +574,17 @@ void
 ApproximateEntropy_print(struct state *state)
 {
 	struct ApproximateEntropy_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -771,14 +792,14 @@ ApproximateEntropy_print(struct state *state)
 static void
 ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*
@@ -1066,9 +1087,9 @@ ApproximateEntropy_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	if (state->apen_P != NULL) {
-		free(state->apen_P);
-		state->apen_P = NULL;
+	if (state->apen_C != NULL) {
+		free(state->apen_C);
+		state->apen_C = NULL;
 	}
 
 	/*

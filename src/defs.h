@@ -453,8 +453,8 @@ struct state {
 	BitSequence *linear_c;			// LFSR array c for TEST_LINEARCOMPLEXITY
 	BitSequence *linear_t;			// LFSR array t for TEST_LINEARCOMPLEXITY
 
-	long int *apen_P;			// Frequency count for TEST_APEN
-	long int apen_p_len;			// Number of long ints in apen_P for TEST_APEN
+	long int *apen_C;			// Frequency count for TEST_APEN
+	long int apen_C_len;			// Number of long ints in apen_C for TEST_APEN
 
 	long int *serial_v;			// Frequency count for TEST_SERIAL
 	long int serial_v_len;			// Number of long ints in serial_v for TEST_SERIAL
