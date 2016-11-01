@@ -62,7 +62,7 @@ static const enum test test_num = TEST_SERIAL;	// This test number
 /*
  * Forward static function declarations
  */
-static double psi2(struct state *state, long int blocksize);
+static double compute_psi2(struct state *state, long int blocksize);
 static bool Serial_print_stat(FILE * stream, struct state *state, struct Serial_private_stats *stat, double p_value1,
 			      double p_value2);
 static bool Serial_print_p_value(FILE * stream, double p_value);
@@ -208,9 +208,9 @@ Serial_iterate(struct state *state)
 	/*
 	 * Perform the test
 	 */
-	stat.psim0 = psi2(state, m);
-	stat.psim1 = psi2(state, m - 1);
-	stat.psim2 = psi2(state, m - 2);
+	stat.psim0 = compute_psi2(state, m);
+	stat.psim1 = compute_psi2(state, m - 1);
+	stat.psim2 = compute_psi2(state, m - 2);
 
 	/*
 	 * Step 4: compute the test statistics
@@ -227,8 +227,8 @@ Serial_iterate(struct state *state)
 	/*
 	 * Record testable test success or failure for 1st p_value
 	 */
+	state->count[test_num]++;	// Count this test
 	state->valid[test_num]++;	// Count this valid test
-	state->count[test_num]++;	// Count a testable test
 	if (isNegative(p_value1)) {
 		state->failure[test_num]++;	// Bogus p_value1 < 0.0 treated as a failure
 		stat.success1 = false;		// FAILURE
@@ -294,7 +294,7 @@ Serial_iterate(struct state *state)
 }
 
 /*
- * psi2 - compute psi-squared for the given block size
+ * compute_psi2 - compute psi-squared for the given block size
  *
  * given:
  *      state           // run state to test under
@@ -304,7 +304,7 @@ Serial_iterate(struct state *state)
  * test statistic of the Serial test.
  */
 static double
-psi2(struct state *state, long int blocksize)
+compute_psi2(struct state *state, long int blocksize)
 {
 	long int n;		// Length of a single bit stream
 	long int powLen;	// Number of possible m-bit sub-sequences

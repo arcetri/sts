@@ -59,7 +59,7 @@ static const enum test test_num = TEST_APEN;	// This test number
 /*
  * Forward static function declarations
  */
-static double phi(struct state *state, long int blocksize);
+static double compute_phi(struct state *state, long int blocksize);
 static bool ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct ApproximateEntropy_private_stats *stat,
 					  double p_value);
 static bool ApproximateEntropy_print_p_value(FILE * stream, double p_value);
@@ -216,8 +216,8 @@ ApproximateEntropy_iterate(struct state *state)
 	/*
 	 * Step 4 and 5: compute phi for blocksize m and m+1
 	 */
-	stat.phi[0] = phi(state, m);
-	stat.phi[1] = phi(state, m + 1);
+	stat.phi[0] = compute_phi(state, m);
+	stat.phi[1] = compute_phi(state, m + 1);
 
 	/*
 	 * Step 6: compute the test statistic
@@ -275,7 +275,7 @@ ApproximateEntropy_iterate(struct state *state)
 
 
 /*
- * phi - compute phi for the given block size
+ * compute_phi - compute phi for the given block size
  *
  * given:
  *      state           // run state to test under
@@ -285,7 +285,7 @@ ApproximateEntropy_iterate(struct state *state)
  * test statistic of the ApproximateEntropy test.
  */
 static double
-phi(struct state *state, long int blocksize)
+compute_phi(struct state *state, long int blocksize)
 {
 	long int n;		// Length of a single bit stream
 	long int powLen;	// Number of possible m-bit sub-sequences
@@ -298,19 +298,19 @@ phi(struct state *state, long int blocksize)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(192, __FUNCTION__, "state arg is NULL");
+		err(18, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
-		err(192, __FUNCTION__, "state->epsilon is NULL");
+		err(18, __FUNCTION__, "state->epsilon is NULL");
 	}
 	if (blocksize == 0) {
 		return 0.0;
 	}
 	if (blocksize > (BITS_N_LONGINT - 1)) {	// firewall
-		err(192, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
+		err(18, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
 	}
 	if (state->apen_C == NULL) {
-		err(192, __FUNCTION__, "state->apen_C is NULL");
+		err(18, __FUNCTION__, "state->apen_C is NULL");
 	}
 
 	/*
@@ -324,7 +324,7 @@ phi(struct state *state, long int blocksize)
 	 */
 	powLen = (long int) 1 << blocksize;
 	if (powLen > state->apen_C_len) {
-		err(11, __FUNCTION__, "powLen: %ld is too large, "
+		err(18, __FUNCTION__, "powLen: %ld is too large, "
 				"1 << blockSize: %ld > state->apen_C_len: %ld ", powLen, blocksize, state->apen_C_len);
 	}
 

@@ -157,14 +157,16 @@
 #   define MIN_PROD_N_min_pi_OVERLAPPING	(5)	// Minimum product N times min_pi for TEST_OVERLAPPING
 
 #   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
-#   define MIN_L_UNIVERSAL		(6)		// minimum of L
-#   define MAX_L_UNIVERSAL		(16)		// maximum of L
+#   define MIN_L_UNIVERSAL		(6)		// minimum value of L for TEST_UNIVERSAL
+#   define MAX_L_UNIVERSAL		(16)		// maximum value of L for TEST_UNIVERSAL
 
 #   define MIN_LENGTH_LINEARCOMPLEXITY	(1000000)	// Minimum n for TEST_LINEARCOMPLEXITY
 #   define MIN_M_LINEARCOMPLEXITY	(500)		// Minimum M for TEST_LINEARCOMPLEXITY
 #   define MAX_M_LINEARCOMPLEXITY	(5000)		// Maximum M for TEST_LINEARCOMPLEXITY
 #   define MIN_N_LINEARCOMPLEXITY	(200)		// Minimum N for TEST_LINEARCOMPLEXITY
-#   define LINEARCOMPLEXITY_K		(6)		// Degrees of freedom (set in SP800-22Rev1a section 2.10.2)
+#   define LINEARCOMPLEXITY_K		(6)		// Degrees of freedom for TEST_LINEARCOMPLEXITY
+
+#   define MIN_LENGTH_CUSUM		(100)		// Minimum n for TEST_CUSUM
 
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0

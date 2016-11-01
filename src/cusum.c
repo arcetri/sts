@@ -43,10 +43,10 @@
  * Private stats - stats.txt information for this test
  */
 struct CumulativeSums_private_stats {
-	bool success;		// Success or failure forward of iteration test
-	bool rev_success;	// Success or failure reverse of iteration test
-	long int z;		// maximum forward partial sum
-	long int zrev;		// maximum reverse partial sum
+	bool success_forward;	// Success or failure for forward test
+	bool success_backward;	// Success or failure for backward test
+	long int z_forward;	// Maximum forward partial sum
+	long int z_backward;	// Maximum backward partial sum
 };
 
 
@@ -59,6 +59,7 @@ static const enum test test_num = TEST_CUSUM;	// This test number
 /*
  * Forward static function declarations
  */
+static double compute_pi_value(struct state *state, long int z);
 static bool CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeSums_private_stats *stat,
 				      double p_value, double rev_p_value);
 static bool CumulativeSums_print_p_value(FILE * stream, double p_value);
@@ -78,6 +79,8 @@ static void CumulativeSums_metric_print(struct state *state, long int sampleCoun
 void
 CumulativeSums_init(struct state *state)
 {
+	long int n;		// Length of a single bit stream
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -97,7 +100,21 @@ CumulativeSums_init(struct state *state)
 		err(30, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO n >= 100
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (n < MIN_LENGTH_CUSUM) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_CUSUM);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -113,7 +130,7 @@ CumulativeSums_init(struct state *state)
 	state->stats[test_num] = create_dyn_array(sizeof(struct CumulativeSums_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
-	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false);	// results.txt // TODO check why size is double
+	                                          DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false);	// results.txt
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
@@ -153,15 +170,13 @@ void
 CumulativeSums_iterate(struct state *state)
 {
 	struct CumulativeSums_private_stats stat;	// Stats for this iteration
-	long int n;		// Length of a single bit stream
-	long int S;
-	long int sup;
-	long int inf;
+	long int n;			// Length of a single bit stream
+	long int S;			// Variable used to store the forward partial sums
+	long int S_max;			// Maximum forward partial sum
+	long int S_min;			// Minimum forward partial sum
+	double p_value_forward;		// p_value for forward test
+	double p_value_backward;	// p_value for backward test
 	long int k;
-	double sum1;
-	double sum2;
-	double p_value;		// p_value iteration test result(s)
-	double rev_p_value;	// reverse test p_value
 
 	/*
 	 * Check preconditions (firewall)
@@ -191,114 +206,101 @@ CumulativeSums_iterate(struct state *state)
 	n = state->tp.n;
 
 	/*
-	 * setup to perform the test
+	 * Zeroize stats before performing the test
+	 */
+	memset(&stat, 0, sizeof(stat));
+
+	/*
+	 * Step 2a: find the maximum and the minimum values of the forward partial sums.
+	 *
+	 * It can be proven that the maximum and the minimum values of the
+	 * backward partial sums are complementary to the ones of the
+	 * forward partial sums in relation to the total final sum.
+	 *
+	 * In other words, if S_max and S_min are the maximum and the minimum forward
+	 * partial sums and S is the final total sum of the adjusted values of epsilon,
+	 * the maximum and the minimum backwards partial sums will be respectively
+	 * (S - S_min) and (S - S_max).
 	 */
 	S = 0;
-	sup = 0;
-	inf = 0;
-	memset(&stat, 0, sizeof(stat));
-	for (k = 0; k < n; k++) {	// TODO make more intuitive and find theorem
+	S_max = 0;
+	S_min = 0;
+	for (k = 0; k < n; k++) {
 		(state->epsilon[k] != 0) ? S++ : S--;
-		if (S > sup) {
-			sup = S;
-		}
-		if (S < inf) {
-			inf = S;
-		}
+		S_max = MAX(S, S_max);
+		S_min = MIN(S, S_min);
 	}
 
-	stat.zrev = (sup - S > S - inf) ? sup - S : S - inf;
-	stat.z = (sup > -inf) ? sup : -inf;
-
 	/*
-	 * Perform the forward test
+	 * Step 3: compute the test statistics
+	 * We are applying the test both in forward and backward mode,
+	 * so we have two separate test statistics.
 	 */
-	sum1 = 0.0;
-	for (k = (-n / stat.z + 1) / 4; k <= (n / stat.z - 1) / 4; k++) {
-		sum1 += cephes_normal(((4 * k + 1) * stat.z) / state->c.sqrtn);
-		sum1 -= cephes_normal(((4 * k - 1) * stat.z) / state->c.sqrtn);
-	}
-	sum2 = 0.0;
-	for (k = (-n / stat.z - 3) / 4; k <= (n / stat.z - 1) / 4; k++) {
-		sum2 += cephes_normal(((4 * k + 3) * stat.z) / state->c.sqrtn);
-		sum2 -= cephes_normal(((4 * k + 1) * stat.z) / state->c.sqrtn);
-	}
-	p_value = 1.0 - sum1 + sum2;
+	stat.z_backward = (S_max - S > S - S_min) ? S_max - S : S - S_min;
+	stat.z_forward = (S_max > -S_min) ? S_max : -S_min;
 
 	/*
-	 * Record testable test success or failure
+	 * Step 4: compute test p-values
 	 */
-	state->count[test_num]++;	// Count a testable test // TODO why not increment valid[test_num]?
-	if (isNegative(p_value)) {
-		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
-	} else if (isGreaterThanOne(p_value)) {
-		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-		stat.success = false;	// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
-	} else if (p_value < state->tp.alpha) {
-		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
-		state->failure[test_num]++;	// Valid p_value but too low is a failure
-		stat.success = false;	// FAILURE
-	} else {
-		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
-		state->success[test_num]++;	// Valid p_value not too low is a success
-		stat.success = true;	// SUCCESS
-	}
+	p_value_forward = compute_pi_value(state, stat.z_forward);
+	p_value_backward = compute_pi_value(state, stat.z_backward);
 
 	/*
-	 * Perform the reverse test
-	 */
-	sum1 = 0.0;
-	for (k = (-n / stat.zrev + 1) / 4; k <= (n / stat.zrev - 1) / 4; k++) {
-		sum1 += cephes_normal(((4 * k + 1) * stat.zrev) / state->c.sqrtn);
-		sum1 -= cephes_normal(((4 * k - 1) * stat.zrev) / state->c.sqrtn);
-	}
-	sum2 = 0.0;
-	for (k = (-n / stat.zrev - 3) / 4; k <= (n / stat.zrev - 1) / 4; k++) {
-		sum2 += cephes_normal(((4 * k + 3) * stat.zrev) / state->c.sqrtn);
-		sum2 -= cephes_normal(((4 * k + 1) * stat.zrev) / state->c.sqrtn);
-	}
-	rev_p_value = 1.0 - sum1 + sum2;
-	if (isNegative(rev_p_value)) {
-		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f < 0.0\n", rev_p_value); // TODO check and maybe make err()
-	}
-	if (isGreaterThanOne(rev_p_value)) {
-		warn(__FUNCTION__, "\t\tWARNING:  REVERSE P_VALUE: %f > 1.0\n", rev_p_value); // TODO check and maybe make err()
-	}
-
-	/*
-	 * record success or failure of reverse test
+	 * Record testable test success or failure for the forward p_value
 	 */
 	state->count[test_num]++;	// Count this test
 	state->valid[test_num]++;	// Count this valid test
-	if (isNegative(rev_p_value)) {
-		state->failure[test_num]++;
-		stat.rev_success = false;
-		warn(__FUNCTION__, "iteration %ld of reverse test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, rev_p_value);
-	} else if (isGreaterThanOne(rev_p_value)) {
-		state->failure[test_num]++;
-		stat.rev_success = false;
-		warn(__FUNCTION__, "iteration %ld of reverse test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, rev_p_value);
-	} else if (rev_p_value < state->tp.alpha) {
-		state->failure[test_num]++;
-		stat.rev_success = false;
+	if (isNegative(p_value_forward)) {
+		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
+		stat.success_forward = false;	// FAILURE
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value_forward);
+	} else if (isGreaterThanOne(p_value_forward)) {
+		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
+		stat.success_forward = false;	// FAILURE
+		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value_forward);
+	} else if (p_value_forward < state->tp.alpha) {
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->failure[test_num]++;	// Valid p_value but too low is a failure
+		stat.success_forward = false;	// FAILURE
 	} else {
-		state->success[test_num]++;
-		stat.rev_success = true;
+		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
+		state->success[test_num]++;	// Valid p_value not too low is a success
+		stat.success_forward = true;	// SUCCESS
+	}
+
+	/*
+	 * Record testable test success or failure for backward p_value
+	 */
+	state->count[test_num]++;	// Count this test
+	state->valid[test_num]++;	// Count this valid test
+	if (isNegative(p_value_backward)) {
+		state->failure[test_num]++;	// Bogus backward p_value < 0.0 treated as a failure
+		stat.success_backward = false;	// FAILURE
+		warn(__FUNCTION__, "iteration %ld of backward test %s[%d] produced bogus p_value: %f < 0.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value_backward);
+	} else if (isGreaterThanOne(p_value_backward)) {
+		state->failure[test_num]++;	// Bogus backward p_value > 1.0 treated as a failure
+		stat.success_backward = false;	// FAILURE
+		warn(__FUNCTION__, "iteration %ld of backward test %s[%d] produced bogus p_value: %f > 1.0\n",
+		     state->curIteration, state->testNames[test_num], test_num, p_value_backward);
+	} else if (p_value_backward < state->tp.alpha) {
+		state->valid_p_val[test_num]++;	// Valid backward p_value in [0.0, 1.0] range
+		state->failure[test_num]++;	// Valid backward p_value but too low is a failure
+		stat.success_backward = false;	// FAILURE
+	} else {
+		state->valid_p_val[test_num]++;	// Valid backward p_value in [0.0, 1.0] range
+		state->success[test_num]++;	// Valid backward p_value not too low is a success
+		stat.success_backward = true;	// SUCCESS
 	}
 
 	/*
 	 * Record values computed during this iteration
 	 */
 	append_value(state->stats[test_num], &stat);
-	append_value(state->p_val[test_num], &p_value);
-	append_value(state->p_val[test_num], &rev_p_value);
+	append_value(state->p_val[test_num], &p_value_forward);
+	append_value(state->p_val[test_num], &p_value_backward);
 
 	/*
 	 * Set driver state to DRIVER_ITERATE
@@ -314,6 +316,59 @@ CumulativeSums_iterate(struct state *state)
 
 
 /*
+ * compute_pi_value - compute pi-value for the given test statistic
+ *
+ * given:
+ *      state           // run state to test under
+ *      z		// test statistic (either the mode 0 or 1 one)
+ *
+ * This auxiliary function computes the pi-value for the Cumulative Sums test.
+ */
+static double
+compute_pi_value(struct state *state, long int z)
+{
+	long int n;		// Length of a single bit stream
+	double sum1;		// First summation of the p-value formula
+	double sum2;		// Second summation of the p-value formula
+	long int k;
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(38, __FUNCTION__, "state arg is NULL");
+	}
+	if (z < 0) {
+		err(38, __FUNCTION__, "z is negative: requires z: %ld >= 0", z);
+	}
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Step 4a: compute terms needed for the test p-value
+	 */
+	sum1 = 0.0;
+	for (k = (-n / z + 1) / 4; k <= (n / z - 1) / 4; k++) {
+		sum1 += cephes_normal(((4 * k + 1) * z) / state->c.sqrtn);
+		sum1 -= cephes_normal(((4 * k - 1) * z) / state->c.sqrtn);
+	}
+	sum2 = 0.0;
+	for (k = (-n / z - 3) / 4; k <= (n / z - 1) / 4; k++) {
+		sum2 += cephes_normal(((4 * k + 3) * z) / state->c.sqrtn);
+		sum2 -= cephes_normal(((4 * k + 1) * z) / state->c.sqrtn);
+	}
+
+	/*
+	 * Step 4b: compute the test p-value
+	 */
+	return 1.0 - sum1 + sum2;
+}
+
+
+/*
  * CumulativeSums_print_stat - print private_stats information to the end of an open file
  *
  * given:
@@ -321,7 +376,7 @@ CumulativeSums_iterate(struct state *state)
  *      state           // run state to test under
  *      stat            // struct CumulativeSums_private_stats for format and print
  *      p_value         // p_value iteration test result(s) - forward direction
- *      rev_p_value     // p_value iteration test result(s) - reverse direction
+ *      rev_p_value     // p_value iteration test result(s) - backward direction
  *
  * returns:
  *      true --> no errors
@@ -345,11 +400,11 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	if (stat == NULL) {
 		err(32, __FUNCTION__, "stat arg is NULL");
 	}
-	if (p_value == NON_P_VALUE && stat->success == true) {
-		err(32, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success == true");
+	if (p_value == NON_P_VALUE && stat->success_forward == true) {
+		err(32, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success_forward == true");
 	}
-	if (rev_p_value == NON_P_VALUE && stat->rev_success == true) {
-		err(32, __FUNCTION__, "rev_p_value was set to NON_P_VALUE but stat->rev_success == true");
+	if (rev_p_value == NON_P_VALUE && stat->success_backward == true) {
+		err(32, __FUNCTION__, "rev_p_value was set to NON_P_VALUE but stat->success_backward == true");
 	}
 
 	/*
@@ -378,7 +433,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) The maximum partial sum = %ld\n", stat->z);
+	io_ret = fprintf(stream, "\t\t(a) The maximum partial sum = %ld\n", stat->z_forward);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -386,7 +441,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	if (io_ret <= 0) {
 		return false;
 	}
-	if (stat->success == true) {
+	if (stat->success_forward == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", p_value);
 		if (io_ret <= 0) {
 			return false;
@@ -404,10 +459,10 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	}
 
 	/*
-	 * Print stat to a file for the reverse test
+	 * Print stat to a file for the backward test
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	    CUMULATIVE SUMS (REVERSE) TEST\n");
+		io_ret = fprintf(stream, "\t\t	    CUMULATIVE SUMS (BACKWARD) TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -420,7 +475,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	    Cumulative sums reverse test\n");
+		io_ret = fprintf(stream, "\t\t	    Cumulative sums backward test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -429,7 +484,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) The maximum partial sum = %ld\n", stat->zrev);
+	io_ret = fprintf(stream, "\t\t(a) The maximum partial sum = %ld\n", stat->z_backward);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -437,7 +492,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	if (io_ret <= 0) {
 		return false;
 	}
-	if (stat->rev_success == true) {
+	if (stat->success_backward == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\tp_value = %f\n\n", rev_p_value);
 		if (io_ret <= 0) {
 			return false;
@@ -522,18 +577,18 @@ void
 CumulativeSums_print(struct state *state)
 {
 	struct CumulativeSums_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s) - forward direction
-	double rev_p_value;	// p_value iteration test result(s) - reverse direction
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s) - forward direction
+	double rev_p_value;		// p_value iteration test result(s) - backward direction
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -597,7 +652,7 @@ CumulativeSums_print(struct state *state)
 		stat = addr_value(state->stats[test_num], struct CumulativeSums_private_stats, i);
 
 		/*
-		 * Get p_value pair (forwaed and reverse) for this iteration
+		 * Get p_value pair (forward and backward) for this iteration
 		 */
 		p_value = get_value(state->p_val[test_num], double, i * 2);
 		rev_p_value = get_value(state->p_val[test_num], double, (i * 2) + 1);
@@ -737,7 +792,7 @@ CumulativeSums_print(struct state *state)
  * CumulativeSums_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
+ *      state           	// run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
  *      freqPerBin              // Uniformity frequency bins
@@ -745,14 +800,14 @@ CumulativeSums_print(struct state *state)
 static void
 CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*
@@ -916,13 +971,6 @@ CumulativeSums_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
