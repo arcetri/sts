@@ -43,11 +43,11 @@
  * Private stats - stats.txt information for this test
  */
 struct RandomExcursions_private_stats {
-	bool excursion_success[NUMBER_OF_STATES_RND_EXCURSION];	// Success or failure of iteration test for each excursion state
+	bool success[NUMBER_OF_STATES_RND_EXCURSION];		// Success or failure of iteration test for each excursion state
 	long int counter[NUMBER_OF_STATES_RND_EXCURSION];	// Counters of visits to each excursion state
 	double chi2[NUMBER_OF_STATES_RND_EXCURSION];		// Chi^2 statistics for each excursion state
 	bool test_possible;					// true --> test is possible for this iteration
-	long int number_of_cycles;				// Number of cycles for this iteration
+	long int number_of_cycles;				// Number of cycles (and zero crossings) for this iteration
 };
 
 
@@ -56,21 +56,6 @@ struct RandomExcursions_private_stats {
  */
 static const enum test test_num = TEST_RND_EXCURSION;	// This test number
 
-/*
- * pi_term - probabilities
- *
- * These constants are from SP800-22Rev1a section 3.14 (page 3-24).
- *
- * pi_term[x][y] refers to row x, column pi_y(x).
- */
-static const double pi_term[EXCURSION_CLASSES][DEGREES_OF_FREEDOM_RND_EXCURSION] = {
-// TODO make it compute dynamically or of smaller size removing the EXCURSION_CLASSES and using MAX_EXCURSION_RND_EXCURSION instead
-	{0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-	{0.5000000000, 0.25000000000, 0.12500000000, 0.06250000000, 0.03125000000, 0.0312500000},	// x = 1
-	{0.7500000000, 0.06250000000, 0.04687500000, 0.03515625000, 0.02636718750, 0.0791015625},	// x = 2
-	{0.8333333333, 0.02777777778, 0.02314814815, 0.01929012346, 0.01607510288, 0.0803755143},	// x = 3
-	{0.8750000000, 0.01562500000, 0.01367187500, 0.01196289063, 0.01046752930, 0.0732727051},	// x = 4
-};
 
 /*
  * Forward static function declarations
@@ -98,6 +83,7 @@ RandomExcursions_init(struct state *state)
 {
 	long int n;		// Length of a single bit stream
 	long int i;
+	long int j;
 
 	/*
 	 * Check preconditions (firewall)
@@ -153,11 +139,11 @@ RandomExcursions_init(struct state *state)
 	}
 
 	/*
-	 * Allocate and initialize excursion states
+	 * Allocate and initialize excursion states mapping array
 	 */
-	state->excursion_stateX = malloc(NUMBER_OF_STATES_RND_EXCURSION * sizeof(state->excursion_stateX[0]));
-	if (state->excursion_stateX == NULL) {
-		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->excursion_stateX",
+	state->rnd_excursion_stateX = malloc(NUMBER_OF_STATES_RND_EXCURSION * sizeof(state->rnd_excursion_stateX[0]));
+	if (state->rnd_excursion_stateX == NULL) {
+		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_stateX",
 		     (long int) NUMBER_OF_STATES_RND_EXCURSION, sizeof(long int));
 	}
 
@@ -165,8 +151,51 @@ RandomExcursions_init(struct state *state)
 	 * Store the values of each excursion state in order (to later retrieve the value of a state from its index)
 	 */
 	for (i = 1; i <= MAX_EXCURSION_RND_EXCURSION; i++) {
-		state->excursion_stateX[i - 1] = -MAX_EXCURSION_RND_EXCURSION + i - 1;;
-		state->excursion_stateX[NUMBER_OF_STATES_RND_EXCURSION - MAX_EXCURSION_RND_EXCURSION + i - 1] = i;
+		state->rnd_excursion_stateX[i - 1] = -MAX_EXCURSION_RND_EXCURSION + i - 1;;
+		state->rnd_excursion_stateX[NUMBER_OF_STATES_RND_EXCURSION - MAX_EXCURSION_RND_EXCURSION + i - 1] = i;
+	}
+
+	/*
+	 * Allocate the array that will be used for holding the theoretical probabilities
+	 */
+	state->rnd_excursion_pi_terms = malloc(MAX_EXCURSION_RND_EXCURSION * sizeof(state->rnd_excursion_pi_terms[0]));
+	if (state->rnd_excursion_pi_terms == NULL) {
+		errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_pi_terms",
+		     (long int) MAX_EXCURSION_RND_EXCURSION, sizeof(state->rnd_excursion_pi_terms[0]));
+	}
+	for (i = 0; i < MAX_EXCURSION_RND_EXCURSION; i++) {
+		state->rnd_excursion_pi_terms[i] = malloc(DEGREES_OF_FREEDOM_RND_EXCURSION
+							  * sizeof(state->rnd_excursion_pi_terms[0][0]));
+		if (state->rnd_excursion_pi_terms[i] == NULL) {
+			errp(150, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for "
+					     "state->rnd_excursion_pi_terms[%ld]", (long int) MAX_EXCURSION_RND_EXCURSION,
+			     sizeof(state->rnd_excursion_pi_terms[0]), i);
+		}
+	}
+
+	/*
+	 * Compute the theoretical probabilities when k = 0
+	 */
+	for (i = 1; i <= MAX_EXCURSION_RND_EXCURSION; i++) {
+		state->rnd_excursion_pi_terms[i - 1][0] = 1.0 - 1.0 / (2.0 * i);
+	}
+
+	/*
+	 * Compute the theoretical probabilities when 0 < k < DEGREES_OF_FREEDOM_RND_EXCURSION - 1
+	 */
+	for (j = 1; j < DEGREES_OF_FREEDOM_RND_EXCURSION - 1; j++) {
+		for (i = 1; i <= MAX_EXCURSION_RND_EXCURSION; i++) {
+			state->rnd_excursion_pi_terms[i - 1][j] = 1.0 / (4.0 * i * i)
+					* pow(state->rnd_excursion_pi_terms[i - 1][0], j - 1);
+		}
+	}
+
+	/*
+	 * Compute the theoretical probabilities when k = DEGREES_OF_FREEDOM_RND_EXCURSION - 1
+	 */
+	for (i = 1; i <= MAX_EXCURSION_RND_EXCURSION; i++) {
+		state->rnd_excursion_pi_terms[i - 1][DEGREES_OF_FREEDOM_RND_EXCURSION - 1] = 1.0 / (2.0 * i) *
+				pow(state->rnd_excursion_pi_terms[i - 1][0], 4);
 	}
 
 	/*
@@ -213,7 +242,7 @@ RandomExcursions_iterate(struct state *state)
 	long int n;					// Length of a single bit stream
 	long int v[DEGREES_OF_FREEDOM_RND_EXCURSION][NUMBER_OF_STATES_RND_EXCURSION];	// Global frequency counters
 	struct dyn_array *cycle;	// Counter used for single iterations
-	long int *S;			// Sum of -1/+1 states for an iteration
+	long int *S;			// Array of the partial sums of the -1/+1 states
 	long int count_index;		// Index of the count array to be incremented
 	long int offset;		// Sum offset used to get the index of a state value in the counter array
 	long int x;			// State value to test
@@ -222,7 +251,7 @@ RandomExcursions_iterate(struct state *state)
 	long int cycleStop;		// Index where a cycle ends
 	long int occurrences;		// Number of occurrences of a given state value in a cycle
 	double p_value;			// p_value iteration test result(s)
-	double sum_term;		// a value whose square is used to compute sum
+	double sum_term;		// Value whose square is used to compute the test statistic
 	long int i;
 	long int j;
 
@@ -239,8 +268,8 @@ RandomExcursions_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(151, __FUNCTION__, "state->epsilon is NULL");
 	}
-	if (state->excursion_stateX == NULL) {
-		err(151, __FUNCTION__, "state->excursion_stateX is NULL");
+	if (state->rnd_excursion_stateX == NULL) {
+		err(151, __FUNCTION__, "state->rnd_excursion_stateX is NULL");
 	}
 	if (state->rnd_excursion_S == NULL) {
 		err(151, __FUNCTION__, "state->rnd_excursion_S is NULL");
@@ -290,7 +319,7 @@ RandomExcursions_iterate(struct state *state)
 
 		/*
 		 * Step 4a: whenever a 0 in the partial sums is found, which means that a cycle has
-		 * ended, append the ending position of that cycle to the cycle array.
+		 * ended, append the ending position of that cycle to the cycle array
 		 */
 		if (S[i] == 0) {
 			append_value(cycle, &i);
@@ -311,7 +340,7 @@ RandomExcursions_iterate(struct state *state)
 	stat.number_of_cycles = cycle->count;
 
 	/*
-	 * Step 4d: determine if there are enough crossings
+	 * Step 4d: determine if there are enough cycles
 	 */
 	stat.test_possible = (stat.number_of_cycles < state->c.min_zero_crossings) ? false : true;
 
@@ -429,14 +458,17 @@ RandomExcursions_iterate(struct state *state)
 			/*
 			 * Get the value of the state x from its index
 			 */
-			x = state->excursion_stateX[i];
+			x = state->rnd_excursion_stateX[i];
 			labs_x = labs(x);
 
 			/*
 			 * Check preconditions (firewall)
 			 */
-			if (labs_x > MAX_EXCURSION_RND_EXCURSION) {
-				err(151, __FUNCTION__, "labs(%ld): %ld > MAX_EXCURSION_RND_EXCURSION: %d", x, labs_x, MAX_EXCURSION_RND_EXCURSION);
+			if (labs_x == 0) {
+				err(151, __FUNCTION__, "labs_x: %ld should be positive", labs_x);
+			} else if (labs_x > MAX_EXCURSION_RND_EXCURSION) {
+				err(151, __FUNCTION__, "labs(%ld): %ld > MAX_EXCURSION_RND_EXCURSION: %d", x, labs_x,
+				    MAX_EXCURSION_RND_EXCURSION);
 			}
 
 			/*
@@ -444,8 +476,10 @@ RandomExcursions_iterate(struct state *state)
 			 */
 			stat.chi2[i] = 0.0;
 			for (j = 0; j < DEGREES_OF_FREEDOM_RND_EXCURSION; j++) {
-				sum_term = (double) v[j][i] - ((double) stat.number_of_cycles * pi_term[labs(x)][j]);
-				stat.chi2[i] += sum_term * sum_term / ((double) stat.number_of_cycles * pi_term[labs(x)][j]);
+				sum_term = (double) v[j][i] - ((double) stat.number_of_cycles
+							       * state->rnd_excursion_pi_terms[labs_x - 1][j]);
+				stat.chi2[i] += sum_term * sum_term / ((double) stat.number_of_cycles
+								       * state->rnd_excursion_pi_terms[labs_x - 1][j]);
 			}
 
 			/*
@@ -460,22 +494,22 @@ RandomExcursions_iterate(struct state *state)
 			state->valid[test_num]++;	// Count this valid iteration
 			if (isNegative(p_value)) {
 				state->failure[test_num]++;		// Bogus p_value < 0.0 treated as a failure
-				stat.excursion_success[i] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (isGreaterThanOne(p_value)) {
 				state->failure[test_num]++;		// Bogus p_value > 1.0 treated as a failure
-				stat.excursion_success[i] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (p_value < state->tp.alpha) {
 				state->valid_p_val[test_num]++;		// Valid p_value in [0.0, 1.0] range
 				state->failure[test_num]++;		// Valid p_value but too low is a failure
-				stat.excursion_success[i] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 			} else {
 				state->valid_p_val[test_num]++;		// Valid p_value in [0.0, 1.0] range
 				state->success[test_num]++;		// Valid p_value not too low is a success
-				stat.excursion_success[i] = true;	// SUCCESS
+				stat.success[i] = true;	// SUCCESS
 			}
 
 			/*
@@ -504,7 +538,7 @@ RandomExcursions_iterate(struct state *state)
 		 * Record statistics of this invalid iteration
 		 */
 		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION; i++) {
-			stat.excursion_success[i] = false;	// FAILURE
+			stat.success[i] = false;	// FAILURE
 		}
 		memset(stat.counter, 0, sizeof(stat.counter));
 		append_value(state->stats[test_num], &stat);
@@ -726,8 +760,8 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 	if (stat == NULL) {
 		err(153, __FUNCTION__, "stat arg is NULL");
 	}
-	if (state->excursion_stateX == NULL) {
-		err(153, __FUNCTION__, "state->excursion_stateX is NULL");
+	if (state->rnd_excursion_stateX == NULL) {
+		err(153, __FUNCTION__, "state->rnd_excursion_stateX is NULL");
 	}
 	if (p < 0) {
 		err(153, __FUNCTION__, "p arg: %ld must be > 0", p);
@@ -742,14 +776,14 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 	if (stat->test_possible != true) {
 		return true;
 	}
-	if (p_value == NON_P_VALUE && stat->excursion_success[p] == true) {
-		err(153, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->excursion_success[%ld] == true", p);
+	if (p_value == NON_P_VALUE && stat->success[p] == true) {
+		err(153, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success[%ld] == true", p);
 	}
 
 	/*
 	 * Print stat to a file
 	 */
-	if (stat->excursion_success[p] == true) {
+	if (stat->success[p] == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\t");
 		if (io_ret <= 0) {
 			return false;
@@ -763,14 +797,14 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 	if (state->legacy_output == true) {
 		if (p_value == NON_P_VALUE) {
 			io_ret =
-			    fprintf(stream, "x = %2ld chi^2 = %9.6f p_value = __INVALID__\n", state->excursion_stateX[p],
+			    fprintf(stream, "x = %2ld chi^2 = %9.6f p_value = __INVALID__\n", state->rnd_excursion_stateX[p],
 				    stat->chi2[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
 			io_ret =
-			    fprintf(stream, "x = %2ld chi^2 = %9.6f p_value = %f\n", state->excursion_stateX[p], stat->chi2[p],
+			    fprintf(stream, "x = %2ld chi^2 = %9.6f p_value = %f\n", state->rnd_excursion_stateX[p], stat->chi2[p],
 				    p_value);
 			if (io_ret <= 0) {
 				return false;
@@ -779,13 +813,13 @@ RandomExcursions_print_stat2(FILE * stream, struct state *state, struct RandomEx
 	} else {
 		if (p_value == NON_P_VALUE) {
 			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = __INVALID__\n",
-					 state->excursion_stateX[p], stat->counter[p]);
+					 state->rnd_excursion_stateX[p], stat->counter[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
 			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = %f\n",
-					 state->excursion_stateX[p], stat->counter[p], p_value);
+					 state->rnd_excursion_stateX[p], stat->counter[p], p_value);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -1358,6 +1392,8 @@ RandomExcursions_metrics(struct state *state)
 void
 RandomExcursions_destroy(struct state *state)
 {
+	int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1394,9 +1430,9 @@ RandomExcursions_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	if (state->excursion_stateX != NULL) {
-		free(state->excursion_stateX);
-		state->excursion_stateX = NULL;
+	if (state->rnd_excursion_stateX != NULL) {
+		free(state->rnd_excursion_stateX);
+		state->rnd_excursion_stateX = NULL;
 	}
 	if (state->rnd_excursion_S != NULL) {
 		free(state->rnd_excursion_S);
@@ -1405,6 +1441,21 @@ RandomExcursions_destroy(struct state *state)
 	if (state->rnd_excursion_cycle != NULL) {
 		free_dyn_array(state->rnd_excursion_cycle);
 		state->rnd_excursion_cycle = NULL;
+	}
+	// Free the theoretical probabilities matrix
+	if (state->rnd_excursion_pi_terms != NULL) {
+
+		// Free all rows of the matrix
+		for (i = 0; i < MAX_EXCURSION_RND_EXCURSION; i++) {
+			if (state->rnd_excursion_pi_terms[i] != NULL) {
+				free(state->rnd_excursion_pi_terms[i]);
+				state->rnd_excursion_pi_terms[i] = NULL;
+			}
+		}
+
+		// Free the rows array of the theoretical probabilities matrix
+		free(state->rnd_excursion_pi_terms);
+		state->rnd_excursion_pi_terms = NULL;
 	}
 
 	/*

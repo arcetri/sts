@@ -49,7 +49,7 @@ static void change_params(struct state *state, long int parameter, long int valu
  * set the default state for options,
  * default state allows assess to run without any modifications
  */
-static struct state const defaultstate = {
+static struct state const defaultstate = { // TODO check if all the values and comments are matching and in the right position
 /* *INDENT-OFF* */
 
 		// batchmode
@@ -276,7 +276,7 @@ static struct state const defaultstate = {
 		NULL,
 		NULL,
 
-		// linear_t, linear_b, linear_c
+		// linear_b, linear_c, linear_t
 		NULL,
 		NULL,
 		NULL,
@@ -292,10 +292,13 @@ static struct state const defaultstate = {
 		// nonper_seq
 		NULL,
 
-		// universal_L
+		// universal_L, universal_T
+		0,
 		0,
 
-		// rnd_excursion_S, rnd_excursion_cycle
+		// rnd_excursion_S, rnd_excursion_cycle, rnd_excursion_stateX, rnd_excursion_pi_terms
+		NULL,
+		NULL,
 		NULL,
 		NULL,
 

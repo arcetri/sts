@@ -1041,19 +1041,18 @@ Rank_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	// free the Rank test matrix
+	// Free the Rank test matrix
 	if (state->rank_matrix != NULL) {
 
-		// free all rows of the Rank test matrix
+		// Free all rows of the Rank test matrix
 		for (i = 0; i < NUMBER_OF_ROWS_RANK; i++) {
-			// free a row of the Rank test matrix
 			if (state->rank_matrix[i] != NULL) {
 				free(state->rank_matrix[i]);
 				state->rank_matrix[i] = NULL;
 			}
 		}
 
-		// free the row array of the Rank test matrix
+		// Free the rows array of the Rank test matrix
 		free(state->rank_matrix);
 		state->rank_matrix = NULL;
 	}

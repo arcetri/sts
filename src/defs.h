@@ -182,10 +182,6 @@
 							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
 #   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
 
-// TODO remove
-#   define EXCURSION_CLASSES		(MAX_EXCURSION_RND_EXCURSION+1)		// pool sigma values into 0 <= classes < EXCURSION_CLASSES,
-// and for class >= EXCURSION_CLASSES for TEST_RND_EXCURSION
-
 #   if DEFAULT_NON_OVERLAPPING < MINTEMPLEN
 // force syntax error if DEFAULT_NON_OVERLAPPING is too small
       -=*#@#*=- DEFAULT_NON_OVERLAPPING must be >= MINTEMPLEN -=*#@#*=-
@@ -469,7 +465,8 @@ struct state {
 
 	long int *rnd_excursion_S;		// Sum of -1/+1 states for TEST_RND_EXCURSION
 	struct dyn_array *rnd_excursion_cycle;	// Contains the index of the ending position of each cycle for TEST_RND_EXCURSION
-	long int *excursion_stateX;		// pointer to NUMBER_OF_STATES_RND_EXCURSION states for TEST_RND_EXCURSION_VAR
+	long int *rnd_excursion_stateX;		// Pointer to NUMBER_OF_STATES_RND_EXCURSION states for TEST_RND_EXCURSION_VAR
+	double **rnd_excursion_pi_terms;	// Theoretical probabilities for states of TEST_RND_EXCURSION_VAR
 
 	bool legacy_output;			// true ==> try to mimic output format of legacy code
 
