@@ -144,6 +144,55 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 }
 
 
+/*
+ * clear_dyn_array - clears the dynamic array
+ *
+ * given:
+ *      array           		pointer to the dynamic array
+ *
+ * This function does not return on error.
+ */
+void
+clear_dyn_array(struct dyn_array *array)
+{
+	/*
+	 * Check preconditions (firewall) - sanity check args
+	 */
+	if (array == NULL) {
+		err(61, __FUNCTION__, "array arg is NULL");
+	}
+
+	/*
+	 * Check preconditions (firewall) - sanity check array
+	 */
+	if (array->data == NULL) {
+		err(61, __FUNCTION__, "data for dynamic array is NULL");
+	}
+	if (array->elm_size <= 0) {
+		err(61, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+	}
+	if (array->chunk <= 0) {
+		err(61, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+	}
+	if (array->count > array->allocated) {
+		err(61, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+	}
+
+	/*
+	 * Zeroize the elements currently in the array
+	 */
+	if (array->zeroize == 1) {
+		memset(array->data, 0, array->count * array->elm_size);
+	}
+
+	/*
+	 * Set the number of elements in the array to zero
+	 */
+	array->count = 0;
+
+	return;
+}
+
 
 /*
  * create_dyn_array - create a dynamic array

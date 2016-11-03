@@ -46,7 +46,7 @@
 struct OverlappingTemplateMatchings_private_stats {
 	bool success;		// Success or failure of iteration test
 	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
-	long int v[OVERLAP_K_DEGREES + 1];	// v[i] counts the number of times the template occurs
+	long int v[K_OVERLAPPING + 1];	// v[i] counts the number of times the template occurs
 						// a total of i times cumulatively in the blocks
 	double chi2;		// Test statistic chi^2
 };
@@ -68,7 +68,7 @@ static const enum test test_num = TEST_OVERLAPPING;	// This test number
  *
  * NOTE: These probabilities have been computed for m = 9 and M = 1032.
  */
-static const double pi_term[OVERLAP_K_DEGREES + 1] = {
+static const double pi_term[K_OVERLAPPING + 1] = {
 	0.36409105321672786245,	// T0[[M]]/2^1032 // N (was 0.364091)
 	0.18565890010624038178,	// T1[[M]]/2^1032 // N (was 0.185659)
 	0.13938113045903269914,	// T2[[M]]/2^1032 // N (was 0.139381)
@@ -138,7 +138,7 @@ OverlappingTemplateMatchings_init(struct state *state)
 	 * Get minimum pi from the pi_term array
 	 */
 	min_pi = 1;
-	for (i = 0; i < OVERLAP_K_DEGREES + 1; i++) {
+	for (i = 0; i < K_OVERLAPPING + 1; i++) {
 		min_pi = fmin(pi_term[i], min_pi);
 	}
 
@@ -304,10 +304,10 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 		/*
 		 * Increase the counter v depending on the number of occurrences of the template in block i
 		 */
-		if (W_obs < OVERLAP_K_DEGREES) {
+		if (W_obs < K_OVERLAPPING) {
 			stat.v[(int) W_obs]++;
 		} else {
-			stat.v[OVERLAP_K_DEGREES]++;
+			stat.v[K_OVERLAPPING]++;
 		}
 	}
 
@@ -315,7 +315,7 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	 * Step 4: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
-	for (i = 0; i < OVERLAP_K_DEGREES + 1; i++) {
+	for (i = 0; i < K_OVERLAPPING + 1; i++) {
 		chi2_term = (double) stat.v[i] - (double) stat.N * pi_term[i];
 		stat.chi2 += chi2_term * chi2_term / ((double) stat.N * pi_term[i]);
 	}
@@ -323,13 +323,13 @@ OverlappingTemplateMatchings_iterate(struct state *state)
 	/*
 	 * Step 5: compute the test p-value
 	 */
-	p_value = cephes_igamc(OVERLAP_K_DEGREES / 2.0, stat.chi2 / 2.0);
+	p_value = cephes_igamc(K_OVERLAPPING / 2.0, stat.chi2 / 2.0);
 
 	/*
-	 * Record testable test success or failure
+	 * Record success or failure for this iteration
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE

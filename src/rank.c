@@ -46,9 +46,9 @@
 struct Rank_private_stats {
 	bool success;		// Success or failure of iteration test
 	double chi_squared;	// Chi squared for rank frequencies
-	long int F_M;		// Frequency of rank RANK_ROWS fpr this iteration
-	long int F_M_minus_one;	// Frequency of rank RANK_ROWS-1 fpr this iteration
-	long int F_remaining;	// Frequency of rank < RANK_ROWS-1 fpr this iteration
+	long int F_M;		// Frequency of rank NUMBER_OF_ROWS_RANK fpr this iteration
+	long int F_M_minus_one;	// Frequency of rank NUMBER_OF_ROWS_RANK-1 fpr this iteration
+	long int F_remaining;	// Frequency of rank < NUMBER_OF_ROWS_RANK-1 fpr this iteration
 };
 
 
@@ -109,9 +109,9 @@ Rank_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (matrix_count < MIN_NUMBER_OF_MATRICES) {
+	if (matrix_count < MIN_NUMBER_OF_MATRICES_RANK) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires number of matrixes(matrix_count): %ld >= %d",
-		     state->testNames[test_num], test_num, matrix_count, MIN_NUMBER_OF_MATRICES);
+		     state->testNames[test_num], test_num, matrix_count, MIN_NUMBER_OF_MATRICES_RANK);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -119,7 +119,7 @@ Rank_init(struct state *state)
 	/*
 	 * Allocate the special Rank test matrix
 	 */
-	state->rank_matrix = create_matrix(RANK_ROWS, RANK_COLS);
+	state->rank_matrix = create_matrix(NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK);
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -172,7 +172,7 @@ Rank_iterate(struct state *state)
 	struct Rank_private_stats stat;	// Stats for this iteration
 	BitSequence **matrix;		// The matrix state->rank_matrix
 	BitSequence *row;		// A row of the matrix state->rank_matrix
-	int R;				// Rank of a given RANK_ROWS by RANK_COLS matrix
+	int R;				// Rank of a given NUMBER_OF_ROWS_RANK by NUMBER_OF_COLS_RANK matrix
 	double p_value;			// p_value iteration test result(s)
 	long int k;
 	long int i;
@@ -205,7 +205,7 @@ Rank_iterate(struct state *state)
 	/*
 	 * Zeroize the Rank test matrix
 	 */
-	for (i = 0; i < RANK_ROWS; ++i) {
+	for (i = 0; i < NUMBER_OF_ROWS_RANK; ++i) {
 
 		/*
 		 * Find the row
@@ -218,7 +218,7 @@ Rank_iterate(struct state *state)
 		/*
 		 * Zeroize the full row
 		 */
-		memset(row, 0, RANK_COLS * sizeof(row[0]));
+		memset(row, 0, NUMBER_OF_COLS_RANK * sizeof(row[0]));
 	}
 
 	/*
@@ -229,27 +229,27 @@ Rank_iterate(struct state *state)
 	stat.F_M_minus_one = 0;
 
 	/*
-	 * Step 1a: divide the sequence into disjoint blocks of RANK_ROWS * RANK_COLS bits
+	 * Step 1a: divide the sequence into disjoint blocks of NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK bits
 	 */
 	for (k = 0; k < state->c.matrix_count; k++) {
 
 		/*
-	 	 * Step 1b: copy bits of each block into a RANK_ROWS * RANK_COLS matrix
+	 	 * Step 1b: copy bits of each block into a NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK matrix
 	 	 */
-		def_matrix(state, RANK_ROWS, RANK_COLS, matrix, k);
+		def_matrix(state, NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, matrix, k);
 
 		/*
 	 	 * Step 2: determine the binary rank of each matrix
 	 	 */
-		R = computeRank(RANK_ROWS, RANK_COLS, matrix);
+		R = computeRank(NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, matrix);
 
 		/*
 		 * Step 3a: count the number of matrices with rank = (full rank) and rank = (full rank - 1)
 		 */
-		if (R == RANK_ROWS) {
-			stat.F_M++;	// rank RANK_ROWS found
-		} else if (R == (RANK_ROWS - 1)) {
-			stat.F_M_minus_one++;	// rank RANK_ROWS-1 found
+		if (R == NUMBER_OF_ROWS_RANK) {
+			stat.F_M++;	// rank NUMBER_OF_ROWS_RANK found
+		} else if (R == (NUMBER_OF_ROWS_RANK - 1)) {
+			stat.F_M_minus_one++;	// rank NUMBER_OF_ROWS_RANK-1 found
 		}
 	}
 
@@ -277,10 +277,10 @@ Rank_iterate(struct state *state)
 	p_value = exp(-stat.chi_squared / 2.0);
 
 	/*
-	 * Record testable test success or failure
+	 * Record success or failure for this iteration
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
@@ -386,27 +386,27 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 			return false;
 		}
 	}
-	io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", RANK_ROWS, state->c.p_32);
+	io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", NUMBER_OF_ROWS_RANK, state->c.p_32);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b)	      P_%d = %f\n", RANK_ROWS - 1, state->c.p_31);
+	io_ret = fprintf(stream, "\t\t(b)	      P_%d = %f\n", NUMBER_OF_ROWS_RANK - 1, state->c.p_31);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c)	      P_%d = %f\n", RANK_ROWS - 2, state->c.p_30);
+	io_ret = fprintf(stream, "\t\t(c)	      P_%d = %f\n", NUMBER_OF_ROWS_RANK - 2, state->c.p_30);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(d) Frequency   F_%d = %ld\n", RANK_ROWS, stat->F_M);
+	io_ret = fprintf(stream, "\t\t(d) Frequency   F_%d = %ld\n", NUMBER_OF_ROWS_RANK, stat->F_M);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(e)	      F_%d = %ld\n", RANK_ROWS - 1, stat->F_M_minus_one);
+	io_ret = fprintf(stream, "\t\t(e)	      F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 1, stat->F_M_minus_one);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f)	      F_%d = %ld\n", RANK_ROWS - 2, stat->F_remaining);
+	io_ret = fprintf(stream, "\t\t(f)	      F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 2, stat->F_remaining);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -419,12 +419,14 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 		return false;
 	}
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t(i) NOTE: %ld BITS WERE DISCARDED.\n", state->tp.n % (RANK_ROWS * RANK_COLS));
+		io_ret = fprintf(stream, "\t\t(i) NOTE: %ld BITS WERE DISCARDED.\n",
+				 state->tp.n % (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK));
 		if (io_ret <= 0) {
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t(i) %ld bits were discarded\n", state->tp.n % (RANK_ROWS * RANK_COLS));
+		io_ret = fprintf(stream, "\t\t(i) %ld bits were discarded\n",
+				 state->tp.n % (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK));
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -1043,7 +1045,7 @@ Rank_destroy(struct state *state)
 	if (state->rank_matrix != NULL) {
 
 		// free all rows of the Rank test matrix
-		for (i = 0; i < RANK_ROWS; i++) {
+		for (i = 0; i < NUMBER_OF_ROWS_RANK; i++) {
 			// free a row of the Rank test matrix
 			if (state->rank_matrix[i] != NULL) {
 				free(state->rank_matrix[i]);

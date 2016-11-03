@@ -70,5 +70,6 @@ struct dyn_array *create_dyn_array(size_t elm_size, long int chunk, long int sta
 extern void append_value(struct dyn_array *array, void *value_to_add);
 extern void append_array(struct dyn_array *array, void *array_to_add_p, long int total_elements_to_add);
 extern void free_dyn_array(struct dyn_array *array);
+extern void clear_dyn_array(struct dyn_array *array);
 
 #endif				// DYN_ALLOC_H

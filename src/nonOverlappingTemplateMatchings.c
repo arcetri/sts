@@ -574,10 +574,10 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		nonover_stat.template_index = jj;
 
 		/*
-		 * Record testable test success or failure
+		 * Record success or failure for this iteration
 		 */
-		state->count[test_num]++;	// Count this test
-		state->valid[test_num]++;	// Count this valid test
+		state->count[test_num]++;	// Count this iteration
+		state->valid[test_num]++;	// Count this valid iteration
 		if (isNegative(nonover_stat.p_value)) {
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE

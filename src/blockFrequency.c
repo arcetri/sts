@@ -115,19 +115,19 @@ BlockFrequency_init(struct state *state)
 		     state->testNames[test_num], test_num, n, MIN_LENGTH_BLOCK_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
-	} else if (M < MIN_BLOCK_LENGTH) {
+	} else if (M < MIN_M_BLOCK_FREQUENCY) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld >= %d",
-		     state->testNames[test_num], test_num, M, MIN_BLOCK_LENGTH);
+		     state->testNames[test_num], test_num, M, MIN_M_BLOCK_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
-	} else if (M <= MIN_RATIO_M_OVER_n_BLOCK * n) {
+	} else if (M <= MIN_RATIO_M_OVER_n_BLOCK_FREQUENCY * n) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(M): %ld > %f * n, and here n = %ld",
-		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n_BLOCK, n);
+		     state->testNames[test_num], test_num, M, MIN_RATIO_M_OVER_n_BLOCK_FREQUENCY, n);
 		state->testVector[test_num] = false;
 		return;
-	} else if (N >= MAX_BLOCKS_NUMBER) {
+	} else if (N >= MAX_N_BLOCK_FREQUENCY) {
 		warn(__FUNCTION__, "disabling test %s[%d]: requires s %ld < %d",
-		     state->testNames[test_num], test_num, N, MAX_BLOCKS_NUMBER);
+		     state->testNames[test_num], test_num, N, MAX_N_BLOCK_FREQUENCY);
 		state->testVector[test_num] = false;
 		return;
 	}
@@ -252,10 +252,10 @@ BlockFrequency_iterate(struct state *state)
 	p_value = cephes_igamc(N / 2.0, stat.chi_squared / 2.0);
 
 	/*
-	 * Record testable test success or failure
+	 * Record success or failure for this iteration
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;	        // FAILURE

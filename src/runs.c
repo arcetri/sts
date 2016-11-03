@@ -235,10 +235,10 @@ Runs_iterate(struct state *state)
 		p_value = erfc(stat.erfc_arg);
 
 		/*
-		 * Record testable test success or failure
+		 * Record success or failure for this iteration
 		 */
-		state->count[test_num]++;	// Count this test
-		state->valid[test_num]++;	// Count this valid test
+		state->count[test_num]++;	// Count this iteration
+		state->valid[test_num]++;	// Count this valid iteration
 		if (isNegative(p_value)) {
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			stat.success = false;		// FAILURE
@@ -267,14 +267,17 @@ Runs_iterate(struct state *state)
 	}
 
 	/*
-	 * Record values for tests that cannot be performed
+	 * Record values when the test could not be performed
 	 */
 	else {
 
-		state->count[test_num]++;	// Count this test, which happens to be invalid
+		/*
+		 * Count this iteration, which happens to be invalid
+		 */
+		state->count[test_num]++;
 
 		/*
-		 * Record predefined values to stats.txt
+		 * Record statistics of this invalid iteration
 		 */
 		stat.pi = UNSET_DOUBLE;
 		stat.V_n = 0;
@@ -283,7 +286,7 @@ Runs_iterate(struct state *state)
 		append_value(state->stats[test_num], &stat);
 
 		/*
-		 * Record predefined p-value to results.txt
+		 * Record non p-value of this invalid iteration
 		 */
 		p_value = NON_P_VALUE;
 		append_value(state->p_val[test_num], &p_value);

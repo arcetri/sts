@@ -128,18 +128,18 @@
 #   define MIN_LENGTH_FREQUENCY		(100)		// Minimum n for TEST_FREQUENCY
 
 #   define MIN_LENGTH_BLOCK_FREQUENCY	(100)		// Minimum n for TEST_BLOCK_FREQUENCY
-#   define MIN_BLOCK_LENGTH		(20)		// Minimum M for TEST_BLOCK_FREQUENCY
-#   define MIN_RATIO_M_OVER_n_BLOCK	(0.01)		// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
-#   define MAX_BLOCKS_NUMBER		(100)		// Maximum blocks number N for TEST_BLOCK_FREQUENCY
+#   define MIN_M_BLOCK_FREQUENCY	(20)		// Minimum M for TEST_BLOCK_FREQUENCY
+#   define MIN_RATIO_M_OVER_n_BLOCK_FREQUENCY	(0.01)	// Minimum ratio of M over n for TEST_BLOCK_FREQUENCY
+#   define MAX_N_BLOCK_FREQUENCY	(100)		// Maximum blocks number N for TEST_BLOCK_FREQUENCY
 
 #   define MIN_LENGTH_RUNS		(100)		// Minimum n for TEST_RUNS
 
 #   define MIN_LENGTH_LONGESTRUN	(128)		// Minimum n for a Longest Runs test for TEST_LONGEST_RUN
-#   define LONGEST_RUN_CLASS_COUNT	(6)		// Number of classes == max_len - min_len + 1 for TEST_LONGEST_RUN
+#   define CLASS_COUNT_LONGEST_RUN	(6)		// Number of classes == max_len - min_len + 1 for TEST_LONGEST_RUN
 
-#   define RANK_ROWS			(32)		// Number of rows in the rank_matrix used by TEST_RANK
-#   define RANK_COLS			(32)		// Number of columns in the rank_matrix used by TEST_RANK
-#   define MIN_NUMBER_OF_MATRICES	(38)		// Minimum number of matrices required for TEST_RANK
+#   define NUMBER_OF_ROWS_RANK		(32)		// Number of rows in the rank_matrix used by TEST_RANK
+#   define NUMBER_OF_COLS_RANK		(32)		// Number of columns in the rank_matrix used by TEST_RANK
+#   define MIN_NUMBER_OF_MATRICES_RANK	(38)		// Minimum number of matrices required for TEST_RANK
 
 #   define MIN_LENGTH_FFT		(1000)		// Minimum n for TEST_FFT
 
@@ -153,7 +153,7 @@
 
 #   define MIN_LENGTH_OVERLAPPING	(1000000)	// Minimum n for TEST_OVERLAPPING
 #   define BLOCK_LENGTH_OVERLAPPING	(1032)		// Length in bits of each block to be tested for TEST_OVERLAPPING
-#   define OVERLAP_K_DEGREES		(5)		// Degrees of freedom for TEST_OVERLAPPING
+#   define K_OVERLAPPING		(5)		// Degrees of freedom for TEST_OVERLAPPING
 #   define MIN_PROD_N_min_pi_OVERLAPPING	(5)	// Minimum product N times min_pi for TEST_OVERLAPPING
 
 #   define MIN_UNIVERSAL		(387840)	// minimum n to allow L >= 6 for TEST_UNIVERSAL
@@ -164,9 +164,14 @@
 #   define MIN_M_LINEARCOMPLEXITY	(500)		// Minimum M for TEST_LINEARCOMPLEXITY
 #   define MAX_M_LINEARCOMPLEXITY	(5000)		// Maximum M for TEST_LINEARCOMPLEXITY
 #   define MIN_N_LINEARCOMPLEXITY	(200)		// Minimum N for TEST_LINEARCOMPLEXITY
-#   define LINEARCOMPLEXITY_K		(6)		// Degrees of freedom for TEST_LINEARCOMPLEXITY
+#   define K_LINEARCOMPLEXITY		(6)		// Degrees of freedom for TEST_LINEARCOMPLEXITY
 
 #   define MIN_LENGTH_CUSUM		(100)		// Minimum n for TEST_CUSUM
+
+#   define MIN_LENGTH_RND_EXCURSION		(1000000)	// Minimum n for TEST_RND_EXCURSION
+#   define MAX_EXCURSION_RND_EXCURSION		(4)		// Maximum excursion for state values in TEST_RND_EXCURSION
+#   define NUMBER_OF_STATES_RND_EXCURSION	(2*MAX_EXCURSION_RND_EXCURSION)	// Number of states for TEST_RND_EXCURSION
+#   define DEGREES_OF_FREEDOM_RND_EXCURSION	(6)		// Degrees of freedom (including 0) for TEST_RND_EXCURSION
 
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
@@ -177,12 +182,9 @@
 							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
 #   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
 
-#   define MAX_EXCURSION		(4)		// excursion states: -MAX_EXCURSION to -1,
-//    and 1 to MAX_EXCURSION
-#   define EXCURSION_CLASSES		(MAX_EXCURSION+1)		// pool sigma values into 0 <= classes < EXCURSION_CLASSES,
+// TODO remove
+#   define EXCURSION_CLASSES		(MAX_EXCURSION_RND_EXCURSION+1)		// pool sigma values into 0 <= classes < EXCURSION_CLASSES,
 // and for class >= EXCURSION_CLASSES for TEST_RND_EXCURSION
-#   define EXCURSION_TEST_CNT		(2*MAX_EXCURSION)	// Number of tests & conclusions for TEST_RND_EXCURSION
-#   define EXCURSION_FREEDOM		(6)			// degrees of freedom for TEST_RND_EXCURSION
 
 #   if DEFAULT_NON_OVERLAPPING < MINTEMPLEN
 // force syntax error if DEFAULT_NON_OVERLAPPING is too small
@@ -337,12 +339,12 @@ typedef struct _const {
 	double sqrt_log20_n;	// Square root of ln(20) * n - used by TEST_FFT
 	double sqrt2n;		// Square root of (2*n) - used by TEST_RUNS
 	double two_over_sqrtn;	// 2 / Square root of n - used by TEST_RUNS
-	double p_32;		// Probability of rank RANK_ROWS - used by RANK_TEST
-	double p_31;		// Probability of rank RANK_ROWS-1 - used by RANK_TEST
-	double p_30;		// Probability of rank < RANK_ROWS-1 - used by RANK_TEST
+	double p_32;		// Probability of rank NUMBER_OF_ROWS_RANK - used by RANK_TEST
+	double p_31;		// Probability of rank NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
+	double p_30;		// Probability of rank < NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
 	double logn;		// log(n) - used by many tests
-	long int excursion_constraint;	// Number of crossings required to complete the test -
-					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION //TODO move?
+	long int min_zero_crossings;	// Number of crossings required to complete the test -
+					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
 	long int matrix_count;	// Total possible matrix for a given bit stream length - used by RANK_TEST
 } T_CONST;
 
@@ -352,8 +354,7 @@ typedef struct _const {
 
 /*
  * state - execution state, initialized and set up by the command line, augmented by test results
- */
-
+ */ // TODO Improve the comments here
 struct state {
 	bool batchmode;		// -b: true -> non-interactive execution, false -> classic mode
 
@@ -466,10 +467,9 @@ struct state {
 	long int universal_L;			// Length of each block for TEST_UNIVERSAL
 	long int *universal_T;			// working Universal template
 
-	long int *rnd_excursion_S_k;		// Sum of -1/+1 states for TEST_RND_EXCURSION
-	long int *rnd_excursion_cycle;		// cycle counts for TEST_RND_EXCURSION
-	long int rnd_excursion_cycle_len;	// Length of the rnd_excursion_cycle array for TEST_RND_EXCURSION
-	long int *excursion_stateX;		// pointer to EXCURSION_TEST_CNT states for TEST_RND_EXCURSION_VAR
+	long int *rnd_excursion_S;		// Sum of -1/+1 states for TEST_RND_EXCURSION
+	struct dyn_array *rnd_excursion_cycle;	// Contains the index of the ending position of each cycle for TEST_RND_EXCURSION
+	long int *excursion_stateX;		// pointer to NUMBER_OF_STATES_RND_EXCURSION states for TEST_RND_EXCURSION_VAR
 
 	bool legacy_output;			// true ==> try to mimic output format of legacy code
 

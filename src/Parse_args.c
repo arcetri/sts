@@ -125,9 +125,9 @@ static struct state const defaultstate = {
 		 UNSET_DOUBLE,		// Square root of ln(20) * n - used by TEST_FFT
 		 UNSET_DOUBLE,		// Square root of (2*n) - used by TEST_RUNS
 		 UNSET_DOUBLE,		// 2 / Square root of n - used by TEST_RUNS
-		 UNSET_DOUBLE,		// Probability of rank RANK_ROWS - used by RANK_TEST
-		 UNSET_DOUBLE,		// Probability of rank RANK_ROWS-1 - used by RANK_TEST
-		 UNSET_DOUBLE,		// Probability of rank < RANK_ROWS-1 - used by RANK_TEST
+		 UNSET_DOUBLE,		// Probability of rank NUMBER_OF_ROWS_RANK - used by RANK_TEST
+		 UNSET_DOUBLE,		// Probability of rank NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
+		 UNSET_DOUBLE,		// Probability of rank < NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
 		 UNSET_DOUBLE,		// log(n) - used by many tests
 		 0,			// Number of crossings required to complete the test -
 					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
@@ -196,7 +196,7 @@ static struct state const defaultstate = {
 		 1,			// TEST_OVERLAPPING = 9
 		 1,			// TEST_UNIVERSAL = 10
 		 1,			// TEST_APEN = 11
-		 EXCURSION_TEST_CNT,	// TEST_RND_EXCURSION = 12
+		 NUMBER_OF_STATES_RND_EXCURSION,	// TEST_RND_EXCURSION = 12
 		 EXCURSION_VAR_STATES,	// TEST_RND_EXCURSION_VAR = 13
 		 2,			// TEST_SERIAL = 14
 		 1,			// TEST_LINEARCOMPLEXITY = 15
@@ -295,10 +295,9 @@ static struct state const defaultstate = {
 		// universal_L
 		0,
 
-		// rnd_excursion_S_k, rnd_excursion_cycle, rnd_excursion_cycle_len
+		// rnd_excursion_S, rnd_excursion_cycle
 		NULL,
 		NULL,
-		0,
 
 		// legacy_output
 		false,

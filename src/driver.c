@@ -292,33 +292,37 @@ init(struct state *state)
 	} else {
 		state->c.two_over_sqrtn = 2.0 / state->c.sqrtn;
 	}
-	// Probability of rank RANK_ROWS
-	r = RANK_ROWS;
+	// Probability of rank NUMBER_OF_ROWS_RANK
+	r = NUMBER_OF_ROWS_RANK;
 	product = 1.0;
 	for (i = 0; i <= r - 1; i++) {
-		product *= ((1.0 - pow(2.0, i - RANK_ROWS)) * (1.0 - pow(2.0, i - RANK_COLS))) / (1.0 - pow(2.0, i - r));
+		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
+			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
 	}
-	state->c.p_32 = pow(2.0, r * (RANK_ROWS + RANK_COLS - r) - RANK_ROWS * RANK_COLS) * product;
+	state->c.p_32 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
+				 - NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
 	if (state->c.p_32 <= 0.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_32 value: %f should be > 0.0", state->c.p_32);
 	}
 	if (state->c.p_32 >= 1.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", state->c.p_32);
 	}
-	// Probability of rank RANK_ROWS-1
-	r = RANK_ROWS - 1;
+	// Probability of rank NUMBER_OF_ROWS_RANK-1
+	r = NUMBER_OF_ROWS_RANK - 1;
 	product = 1.0;
 	for (i = 0; i <= r - 1; i++) {
-		product *= ((1.0 - pow(2.0, i - RANK_ROWS)) * (1.0 - pow(2.0, i - RANK_COLS))) / (1.0 - pow(2.0, i - r));
+		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
+			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
 	}
-	state->c.p_31 = pow(2.0, r * (RANK_ROWS + RANK_COLS - r) - RANK_ROWS * RANK_COLS) * product;
+	state->c.p_31 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
+				 - NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
 	if (state->c.p_31 <= 0.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_31 value: %f should be > 0.0", state->c.p_31);
 	}
 	if (state->c.p_31 >= 1.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", state->c.p_31);
 	}
-	// Probability of rank < RANK_ROWS-1
+	// Probability of rank < NUMBER_OF_ROWS_RANK-1
 	state->c.p_30 = 1.0 - (state->c.p_32 + state->c.p_31);
 	if (state->c.p_30 <= 0.0) {	// paranoia
 		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
@@ -329,26 +333,27 @@ init(struct state *state)
 		    state->c.p_30, state->c.p_31, state->c.p_32);
 	}
 	// Total possible matrix for a given bit stream length - used by RANK_TEST
-	if (RANK_ROWS <= 0) {	// paranoia
-		err(50, __FUNCTION__, "RANK_ROWS: %d must be > 0", RANK_ROWS);
+	if (NUMBER_OF_ROWS_RANK <= 0) {	// paranoia
+		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d must be > 0", NUMBER_OF_ROWS_RANK);
 	}
-	if (RANK_COLS <= 0) {	// paranoia
-		err(50, __FUNCTION__, "RANK_COLS: %d must be > 0", RANK_COLS);
+	if (NUMBER_OF_COLS_RANK <= 0) {	// paranoia
+		err(50, __FUNCTION__, "NUMBER_OF_COLS_RANK: %d must be > 0", NUMBER_OF_COLS_RANK);
 	}
-	if (((long int) RANK_ROWS * (long int) RANK_COLS) > (long int) LONG_MAX) {	// paranoia
-		err(50, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d cannot fit into an int because the product is > %ld",
-		    RANK_ROWS, RANK_COLS, LONG_MAX);
+	if (((long int) NUMBER_OF_ROWS_RANK * (long int) NUMBER_OF_COLS_RANK) > (long int) LONG_MAX) {	// paranoia
+		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d cannot fit into an int because"
+				    "the product is > %ld", NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, LONG_MAX);
 	}
-	if ((RANK_ROWS * RANK_COLS) == 0) {	// paranoia
-		err(50, __FUNCTION__, "RANK_ROWS: %d * RANK_COLS: %d == 0, perhaps due to overflow", RANK_ROWS, RANK_COLS);
+	if ((NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) == 0) {	// paranoia
+		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d == 0, perhaps due to overflow",
+		    NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK);
 	}
 	state->c.logn = log(state->tp.n);
-	state->c.matrix_count = state->tp.n / (RANK_ROWS * RANK_COLS);
-	long double ceill_result = ceill(MAX(0.005 * state->c.sqrtn, 500.0));
-	if (ceill_result > (long double) LONG_MAX) {	// firewall
-		err(50, __FUNCTION__, "ceill result is too big for a long int");
-	}
-	state->c.excursion_constraint = (long) ceill_result;
+	state->c.matrix_count = state->tp.n / (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK);
+
+	/*
+	 * Compute the minimum number of zero crossings required by the random excursions test
+	 */
+	state->c.min_zero_crossings = (long int) MAX(0.005 * state->c.sqrtn, 500.0);
 
 	/*
 	 * indicate that the test constants have been initialized

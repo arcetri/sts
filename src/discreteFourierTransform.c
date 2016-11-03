@@ -389,10 +389,10 @@ DiscreteFourierTransform_iterate(struct state *state)
 	p_value = erfc(fabs(stat.d) / state->c.sqrt2);
 
 	/*
-	 * Record testable test success or failure
+	 * Record success or failure for this iteration
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE

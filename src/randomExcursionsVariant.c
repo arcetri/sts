@@ -235,7 +235,7 @@ RandomExcursionsVariant_iterate(struct state *state)
 	/*
 	 * Determine if we still can test
 	 */
-	stat.test_possible = (stat.J < state->c.excursion_constraint) ? false : true;
+	stat.test_possible = (stat.J < state->c.min_zero_crossings) ? false : true;
 
 	/*
 	 * Perform and record the test if it is possible to test
@@ -270,10 +270,10 @@ RandomExcursionsVariant_iterate(struct state *state)
 				       (sqrt(2.0 * stat.J * (4.0 * labs(state->excursion_var_stateX[p]) - 2.0))));
 
 			/*
-			 * Record testable test success or failure
+			 * Record success or failure for this iteration
 			 */
-			state->count[test_num]++;	// Count this test
-			state->valid[test_num]++;	// Count this valid test
+			state->count[test_num]++;	// Count this iteration
+			state->valid[test_num]++;	// Count this valid iteration
 			if (isNegative(p_value)) {
 				state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 				stat.excursion_success[p] = false;	// FAILURE
@@ -312,7 +312,7 @@ RandomExcursionsVariant_iterate(struct state *state)
 	else {
 
 		/*
-		 * Count this test, which happens to be invalid
+		 * Count this iteration, which happens to be invalid
 		 */
 		state->count[test_num]++;
 
@@ -429,7 +429,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 		return false;
 	}
 	if (state->legacy_output == false) {
-		io_ret = fprintf(stream, "\t\t(c) Rejection Constraint = %ld\n", state->c.excursion_constraint);
+		io_ret = fprintf(stream, "\t\t(c) Rejection Constraint = %ld\n", state->c.min_zero_crossings);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -438,6 +438,11 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 	if (io_ret <= 0) {
 		return false;
 	}
+
+	/*
+	 * Case: test was not possible for this iteration
+	 * Note that in this cycle, this test is not applicable
+	 */
 	if (stat->test_possible == false) {
 		if (state->legacy_output == true) {
 			io_ret = fprintf(stream, "\n\t\tWARNING:  TEST NOT APPLICABLE.  THERE ARE AN\n");
@@ -457,15 +462,12 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 				return false;
 			}
 		} else {
-			/*
-			 * note which cycle is not applicable
-			 */
 			io_ret = fprintf(stream, "\t\titeration %ld test not applicable\n", iteration);
 			if (io_ret <= 0) {
 				return false;
 			}
 			io_ret = fprintf(stream, "\t\texcessive cycles, J: %ld >= max expected: %lu\n\n",
-					 stat->J, state->c.excursion_constraint);
+					 stat->J, state->c.min_zero_crossings);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -495,10 +497,10 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
  *
  * Unlike most *_print_stat() functions, the EXCURSION_VAR_STATES number of p_values
  * will be printed by repeated calls to RandomExcursionsVariant_print_stat2()
- * with differet excursion numbers.
+ * with different excursion numbers.
  *
- * If the test was possible, then the excursion state, visit cound and p_value are printed.
- * If the test was not possible due to an insufficent number of crossings, this function
+ * If the test was possible, then the excursion state, visit count and p_value are printed.
+ * If the test was not possible due to an insufficient number of crossings, this function
  * does not print, just returns.
  */
 static bool
@@ -506,8 +508,6 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 				    long int p, double p_value)
 {
 	int io_ret;		// I/O return status
-
-	// need to cal this function with stat.test_possible == true
 
 	/*
 	 * Check preconditions (firewall)
@@ -532,7 +532,7 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	}
 
 	/*
-	 * Nothint to print if the test was not possible
+	 * Nothing to print if the test was not possible
 	 */
 	if (stat->test_possible != true) {
 		return true;

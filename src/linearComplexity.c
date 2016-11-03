@@ -44,7 +44,7 @@
  */
 struct LinearComplexity_private_stats {
 	bool success;					// Success or failure of iteration test
-	long int v[LINEARCOMPLEXITY_K + 1];		// T range count
+	long int v[K_LINEARCOMPLEXITY + 1];		// T range count
 	double chi2;					// chi^2 of test
 };
 
@@ -59,7 +59,7 @@ static const enum test test_num = TEST_LINEARCOMPLEXITY;	// This test number
  *
  * See SP800-22Rev1a section 3.10.
  */
-static const double pi_term[LINEARCOMPLEXITY_K + 1] = { 0.01047, 0.03125, 0.12500, 0.50000, 0.25000, 0.06250, 0.020833 };
+static const double pi_term[K_LINEARCOMPLEXITY + 1] = { 0.01047, 0.03125, 0.12500, 0.50000, 0.25000, 0.06250, 0.020833 };
 
 
 /*
@@ -361,20 +361,20 @@ LinearComplexity_iterate(struct state *state)
 	 * Step 6: compute the test statistic
 	 */
 	stat.chi2 = 0.0;
-	for (i = 0; i < LINEARCOMPLEXITY_K + 1; i++) {
+	for (i = 0; i < K_LINEARCOMPLEXITY + 1; i++) {
 		stat.chi2 += (stat.v[i] - N * pi_term[i]) * (stat.v[i] - N * pi_term[i]) / (N * pi_term[i]);
 	}
 
 	/*
 	 * Step 7: compute the test P-value
 	 */
-	p_value = cephes_igamc(LINEARCOMPLEXITY_K / 2.0, stat.chi2 / 2.0);
+	p_value = cephes_igamc(K_LINEARCOMPLEXITY / 2.0, stat.chi2 / 2.0);
 
 	/*
-	 * Record testable test success or failure
+	 * Record success or failure for this iteration
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
@@ -543,7 +543,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 			return false;
 		}
 	}
-	for (i = 0; i < LINEARCOMPLEXITY_K + 1; i++) {
+	for (i = 0; i < K_LINEARCOMPLEXITY + 1; i++) {
 		io_ret = fprintf(stream, "%4ld ", stat->v[i]);
 		if (io_ret <= 0) {
 			return false;

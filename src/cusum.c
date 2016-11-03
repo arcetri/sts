@@ -246,10 +246,10 @@ CumulativeSums_iterate(struct state *state)
 	p_value_backward = compute_pi_value(state, stat.z_backward);
 
 	/*
-	 * Record testable test success or failure for the forward p_value
+	 * Record success or failure for this iteration (forward test)
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value_forward)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success_forward = false;	// FAILURE
@@ -271,10 +271,10 @@ CumulativeSums_iterate(struct state *state)
 	}
 
 	/*
-	 * Record testable test success or failure for backward p_value
+	 * Record success or failure for this iteration (backward test)
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value_backward)) {
 		state->failure[test_num]++;	// Bogus backward p_value < 0.0 treated as a failure
 		stat.success_backward = false;	// FAILURE

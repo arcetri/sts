@@ -225,10 +225,10 @@ Serial_iterate(struct state *state)
 	p_value2 = cephes_igamc((double) ((long int) 1 << (m - 2)) / 2.0, stat.del2 / 2.0);
 
 	/*
-	 * Record testable test success or failure for 1st p_value
+	 * Record success or failure for this iteration (1st test)
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value1)) {
 		state->failure[test_num]++;	// Bogus p_value1 < 0.0 treated as a failure
 		stat.success1 = false;		// FAILURE
@@ -250,10 +250,10 @@ Serial_iterate(struct state *state)
 	}
 
 	/*
-	 * Record testable test success or failure for 2nd p_value
+	 * Record success or failure for this iteration (2nd test)
 	 */
-	state->count[test_num]++;	// Count this test
-	state->valid[test_num]++;	// Count this valid test
+	state->count[test_num]++;	// Count this iteration
+	state->valid[test_num]++;	// Count this valid iteration
 	if (isNegative(p_value2)) {
 		state->failure[test_num]++;	// Bogus p_value2 < 0.0 treated as a failure
 		stat.success2 = false;		// FAILURE
