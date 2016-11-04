@@ -197,7 +197,7 @@ static struct state const defaultstate = { // TODO check if all the values and c
 		 1,			// TEST_UNIVERSAL = 10
 		 1,			// TEST_APEN = 11
 		 NUMBER_OF_STATES_RND_EXCURSION,	// TEST_RND_EXCURSION = 12
-		 EXCURSION_VAR_STATES,	// TEST_RND_EXCURSION_VAR = 13
+		 NUMBER_OF_STATES_RND_EXCURSION_VAR,	// TEST_RND_EXCURSION_VAR = 13
 		 2,			// TEST_SERIAL = 14
 		 1,			// TEST_LINEARCOMPLEXITY = 15
 		},
@@ -272,7 +272,7 @@ static struct state const defaultstate = { // TODO check if all the values and c
 		// rank_matrix
 		NULL,
 
-		// excursion_var_stateX, ex_var_partial_sums
+		// rnd_excursion_var_stateX, ex_var_partial_sums
 		NULL,
 		NULL,
 

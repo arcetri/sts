@@ -173,14 +173,14 @@
 #   define NUMBER_OF_STATES_RND_EXCURSION	(2*MAX_EXCURSION_RND_EXCURSION)	// Number of states for TEST_RND_EXCURSION
 #   define DEGREES_OF_FREEDOM_RND_EXCURSION	(6)		// Degrees of freedom (including 0) for TEST_RND_EXCURSION
 
+#   define MIN_LENGTH_RND_EXCURSION_VAR		(1000000)	// Minimum n for TEST_RND_EXCURSION_VAR
+#   define MAX_EXCURSION_RND_EXCURSION_VAR	(9)		// Maximum excursion for state values in TEST_RND_EXCURSION_VAR
+#   define NUMBER_OF_STATES_RND_EXCURSION_VAR	(2*MAX_EXCURSION_RND_EXCURSION_VAR) // Number of states for TEST_RND_EXCURSION_VAR
+
 // TODO let MIN_BITCOUNT be really the smallest
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
 // TODO check this requirement in the paper
 #   define MAX_BITCOUNT			(10000000)	// Section 2.0 max recommended length of a single bit stream
-
-#   define MAX_EXCURSION_VAR		(9)		// excursion states: -MAX_EXCURSION_VAR to -1,
-							// and 1 to MAX_EXCURSION_VAR - used by TEST_RND_EXCURSION_VAR
-#   define EXCURSION_VAR_STATES	(2*MAX_EXCURSION_VAR)	// Number of excursion states possible for TEST_RND_EXCURSION_VAR
 
 #   if DEFAULT_NON_OVERLAPPING < MINTEMPLEN
 // force syntax error if DEFAULT_NON_OVERLAPPING is too small
@@ -445,7 +445,7 @@ struct state {
 
 	BitSequence **rank_matrix;		// Rank test 32 by 32 matrix for TEST_RANK
 
-	long int *excursion_var_stateX;		// pointer to EXCURSION_VAR_STATES states for TEST_RND_EXCURSION_VAR
+	long int *rnd_excursion_var_stateX;		// pointer to NUMBER_OF_STATES_RND_EXCURSION_VAR states for TEST_RND_EXCURSION_VAR
 	long int *ex_var_partial_sums;		// array of n partial sums for TEST_RND_EXCURSION_VAR
 
 	BitSequence *linear_b;			// LFSR array b for TEST_LINEARCOMPLEXITY

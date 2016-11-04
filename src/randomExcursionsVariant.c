@@ -43,10 +43,10 @@
  * Private stats - stats.txt information for this test
  */
 struct RandomExcursionsVariant_private_stats {
-	bool excursion_success[EXCURSION_VAR_STATES];	// Success or failure of iteration test for an excursion state
-	long int J;		// Number of zero crossings (cycles) for this iteration
-	long int counter[EXCURSION_VAR_STATES];	// times when partial sun matches the excursion state
-	bool test_possible;	// true --> test is possible for this iteration
+	bool success[NUMBER_OF_STATES_RND_EXCURSION_VAR]; 	// Success or failure of iteration test for each excursion state
+	long int counter[NUMBER_OF_STATES_RND_EXCURSION_VAR];	// Counters of visits to each excursion state
+	bool test_possible;					// true --> test is possible for this iteration
+	long int number_of_cycles;				// Number of cycles (and zero crossings) for this iteration
 };
 
 
@@ -80,6 +80,7 @@ static void RandomExcursionsVariant_metric_print(struct state *state, long int s
 void
 RandomExcursionsVariant_init(struct state *state)
 {
+	long int n;		// Length of a single bit stream
 	int i;
 
 	/*
@@ -101,7 +102,21 @@ RandomExcursionsVariant_init(struct state *state)
 		err(160, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
-	// TODO n >= 10^6
+
+	/*
+	 * Collect parameters from state
+	 */
+	n = state->tp.n;
+
+	/*
+	 * Disable test if conditions do not permit this test from being run
+	 */
+	if (n < MIN_LENGTH_RND_EXCURSION_VAR) {
+		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		     state->testNames[test_num], test_num, n, MIN_LENGTH_RND_EXCURSION_VAR);
+		state->testVector[test_num] = false;
+		return;
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -112,16 +127,20 @@ RandomExcursionsVariant_init(struct state *state)
 	}
 
 	/*
-	 * Allocate and initialize excursion states
+	 * Allocate and initialize excursion states mapping array
 	 */
-	state->excursion_var_stateX = malloc(EXCURSION_VAR_STATES * sizeof(state->excursion_var_stateX[0]));
-	if (state->excursion_var_stateX == NULL) {
-		errp(160, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->excursion_var_stateX",
-		     (long int) EXCURSION_VAR_STATES, sizeof(long int));
+	state->rnd_excursion_var_stateX = malloc(NUMBER_OF_STATES_RND_EXCURSION_VAR * sizeof(state->rnd_excursion_var_stateX[0]));
+	if (state->rnd_excursion_var_stateX == NULL) {
+		errp(160, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_var_stateX",
+		     (long int) NUMBER_OF_STATES_RND_EXCURSION_VAR, sizeof(long int));
 	}
-	for (i = 1; i <= MAX_EXCURSION_VAR; ++i) {
-		state->excursion_var_stateX[i - 1] = -MAX_EXCURSION_VAR + i - 1;
-		state->excursion_var_stateX[EXCURSION_VAR_STATES - MAX_EXCURSION_VAR + i - 1] = i;
+
+	/*
+	 * Store the values of each excursion state in order (to later retrieve the value of a state from its index)
+	 */
+	for (i = 1; i <= MAX_EXCURSION_RND_EXCURSION_VAR; ++i) {
+		state->rnd_excursion_var_stateX[i - 1] = -MAX_EXCURSION_RND_EXCURSION_VAR + i - 1;
+		state->rnd_excursion_var_stateX[NUMBER_OF_STATES_RND_EXCURSION_VAR - MAX_EXCURSION_RND_EXCURSION_VAR + i - 1] = i;
 	}
 
 	/*
@@ -138,8 +157,8 @@ RandomExcursionsVariant_init(struct state *state)
 	 */
 	state->stats[test_num] = create_dyn_array(sizeof(struct RandomExcursionsVariant_private_stats),
 	                                          DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
-	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK,
-	                                          EXCURSION_VAR_STATES * state->tp.numOfBitStreams, false);	// results.txt
+	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK, NUMBER_OF_STATES_RND_EXCURSION_VAR *
+			state->tp.numOfBitStreams, false);						// results.txt
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
@@ -175,10 +194,10 @@ RandomExcursionsVariant_iterate(struct state *state)
 {
 	struct RandomExcursionsVariant_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
-	long int *S_k;		// partial sums working array
+	long int *S;		// Array of the partial sums of the -1/+1 states
 	double p_value;		// p_value iteration test result(s)
-	long int p;
 	long int i;
+	long int j;
 
 	/*
 	 * Check preconditions (firewall)
@@ -193,8 +212,8 @@ RandomExcursionsVariant_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(161, __FUNCTION__, "state->epsilon is NULL");
 	}
-	if (state->excursion_var_stateX == NULL) {
-		err(161, __FUNCTION__, "state->excursion_var_stateX is NULL");
+	if (state->rnd_excursion_var_stateX == NULL) {
+		err(161, __FUNCTION__, "state->rnd_excursion_var_stateX is NULL");
 	}
 	if (state->ex_var_partial_sums == NULL) {
 		err(161, __FUNCTION__, "state->ex_var_partial_sums is NULL");
@@ -211,31 +230,53 @@ RandomExcursionsVariant_iterate(struct state *state)
 	/*
 	 * Collect parameters from state
 	 */
-	S_k = state->ex_var_partial_sums;
+	S = state->ex_var_partial_sums;
 	n = state->tp.n;
 
 	/*
-	 * setup excursion state machine for this iteration
-	 *
-	 * Count the number of zero crossings for this iteration
+	 * Set the initial value of the counter of the number of cycles
 	 */
-	stat.J = 0;
-	S_k[0] = 2 * (long int) state->epsilon[0] - 1; // TODO change considering DFT implementation
-	for (i = 1; i < n; i++) {
-		S_k[i] = S_k[i - 1] + 2 * state->epsilon[i] - 1;
-		if (S_k[i] == 0) {
-			stat.J++;
+	stat.number_of_cycles = 0;
+
+	/*
+	 * Step 2: compute the partial sums of successively larger sub-sequences
+	 */
+	if ((int) state->epsilon[0] == 1) {
+		S[0] = 1;
+	} else if ((int) state->epsilon[0] == 0) {
+		S[0] = - 1;
+	} else {
+		err(41, __FUNCTION__, "found a bit different than 1 or 0 in the sequence");
+	}
+	for (j = 1; j < n; j++) {
+		if ((int) state->epsilon[j] == 1) {
+			S[j] = S[j - 1] + 1;
+		} else if ((int) state->epsilon[j] == 0) {
+			S[j] = S[j - 1] - 1;
+		} else {
+			err(41, __FUNCTION__, "found a bit different than 1 or 0 in the sequence");
+		}
+
+		/*
+		 * Step 3a: whenever a 0 in the partial sums is found, which means that a cycle has
+		 * ended, count a new cycle in the counter of cycles
+		 */
+		if (S[j] == 0) {
+			stat.number_of_cycles++;
 		}
 	}
 
-	if (S_k[n - 1] != 0) {
-		stat.J++;
+	/*
+	 * Step 3b: count the last cycle if it was not counted already
+	 */
+	if (S[n - 1] != 0) {
+		stat.number_of_cycles++;
 	}
 
 	/*
-	 * Determine if we still can test
+	 * Step 3c: determine if there are enough cycles
 	 */
-	stat.test_possible = (stat.J < state->c.min_zero_crossings) ? false : true;
+	stat.test_possible = (stat.number_of_cycles < state->c.min_zero_crossings) ? false : true;
 
 	/*
 	 * Perform and record the test if it is possible to test
@@ -243,31 +284,26 @@ RandomExcursionsVariant_iterate(struct state *state)
 	if (stat.test_possible == true) {
 
 		/*
-		 * NOTE: Mathematical expression code rewrite, old code commented out below:
-		 *
-		 * for (p = 0; p <= EXCURSION_VAR_STATES-1; p++) {
-		 * x = stateX[p];
-		 * ...
-		 * }
+		 * For each of the state values, compute the test statistic and the p-value
 		 */
-		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
+		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION_VAR; i++) {
 
 			/*
-			 * Count times when the partial sum S_k[i] matches the excursion state state->excursion_var_stateX[p]
+			 * Step 4: count times when the partial sum matches this excursion state value
 			 */
-			stat.counter[p] = 0;
-			for (i = 0; i < n; i++) {
-				if (S_k[i] == state->excursion_var_stateX[p]) {
-					stat.counter[p]++;
+			stat.counter[i] = 0;
+			for (j = 0; j < n; j++) {
+				if (S[j] == state->rnd_excursion_var_stateX[i]) {
+					stat.counter[i]++;
 				}
 			}
+
 			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * p_value = erfc(fabs(count-J)/(sqrt(2.0*J*(4.0*fabs(x)-2))));
+			 * Step 5: compute the test p-value for this excursion state value
 			 */
-			p_value = erfc(labs(stat.counter[p] - stat.J) /
-				       (sqrt(2.0 * stat.J * (4.0 * labs(state->excursion_var_stateX[p]) - 2.0))));
+			p_value = erfc(labs(stat.counter[i] - stat.number_of_cycles)
+				       / (sqrt(2.0 * stat.number_of_cycles
+					       * (4.0 * labs(state->rnd_excursion_var_stateX[i]) - 2.0))));
 
 			/*
 			 * Record success or failure for this iteration
@@ -276,38 +312,38 @@ RandomExcursionsVariant_iterate(struct state *state)
 			state->valid[test_num]++;	// Count this valid iteration
 			if (isNegative(p_value)) {
 				state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
-				stat.excursion_success[p] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (isGreaterThanOne(p_value)) {
 				state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
-				stat.excursion_success[p] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 				warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 				     state->curIteration, state->testNames[test_num], test_num, p_value);
 			} else if (p_value < state->tp.alpha) {
 				state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 				state->failure[test_num]++;	// Valid p_value but too low is a failure
-				stat.excursion_success[p] = false;	// FAILURE
+				stat.success[i] = false;	// FAILURE
 			} else {
 				state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 				state->success[test_num]++;	// Valid p_value not too low is a success
-				stat.excursion_success[p] = true;	// SUCCESS
+				stat.success[i] = true;		// SUCCESS
 			}
 
 			/*
-			 * results.txt accounting
+			 * Record values computed during this iteration
 			 */
 			append_value(state->p_val[test_num], &p_value);
 		}
 
 		/*
-		 * stats.txt accounting
+		 * Record stats of this iteration
 		 */
 		append_value(state->stats[test_num], &stat);
 	}
 
 	/*
-	 * accounting for tests that cannot be performed
+	 * Record values when the test could not be performed
 	 */
 	else {
 
@@ -317,28 +353,21 @@ RandomExcursionsVariant_iterate(struct state *state)
 		state->count[test_num]++;
 
 		/*
-		 * results.txt accounting
+		 * Record statistics of this invalid iteration
 		 */
-		p_value = NON_P_VALUE;
-		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
-			append_value(state->p_val[test_num], &p_value);
+		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION_VAR; i++) {
+			stat.success[i] = false;	// FAILURE
 		}
-
-		/*
-		 * stats.txt accounting
-		 */
-		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
-			stat.excursion_success[p] = false;	// FAILURE
-		}
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < EXCURSION_VAR_STATES; i++) {
-		 *      stat.counter[i] = 0;
-		 * }
-		 */
 		memset(stat.counter, 0, sizeof(stat.counter));
 		append_value(state->stats[test_num], &stat);
+
+		/*
+		 * Record non p-value of this invalid iteration
+		 */
+		p_value = NON_P_VALUE;
+		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION_VAR; i++) {
+			append_value(state->p_val[test_num], &p_value);
+		}
 	}
 
 	/*
@@ -367,7 +396,7 @@ RandomExcursionsVariant_iterate(struct state *state)
  *      true --> no errors
  *      false --> an I/O error occurred
  *
- * Unlike most *_print_stat() functions, the EXCURSION_VAR_STATES number of p_values
+ * Unlike most *_print_stat() functions, the NUMBER_OF_STATES_RND_EXCURSION_VAR number of p_values
  * will be printed by repeated calls to RandomExcursionsVariant_print_stat2()
  * if the test was possible.
  */
@@ -420,7 +449,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) Number Of Cycles (J) = %ld\n", stat->J);
+	io_ret = fprintf(stream, "\t\t(a) Number Of Cycles (J) = %ld\n", stat->number_of_cycles);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -467,7 +496,7 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
 				return false;
 			}
 			io_ret = fprintf(stream, "\t\texcessive cycles, J: %ld >= max expected: %lu\n\n",
-					 stat->J, state->c.min_zero_crossings);
+					 stat->number_of_cycles, state->c.min_zero_crossings);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -488,14 +517,14 @@ RandomExcursionsVariant_print_stat(FILE * stream, struct state *state, struct Ra
  *      stream          // open writable FILE stream
  *      state           // run state to test under
  *      stat            // struct RandomExcursionsVariant_private_stats for format and print
- *      p               // excursion number to print [0,EXCURSION_VAR_STATES)
+ *      p               // excursion number to print [0,NUMBER_OF_STATES_RND_EXCURSION_VAR)
  *      p_value         // p_value iteration test result(s)
  *
  * returns:
  *      true --> no errors
  *      false --> an I/O error occurred
  *
- * Unlike most *_print_stat() functions, the EXCURSION_VAR_STATES number of p_values
+ * Unlike most *_print_stat() functions, the NUMBER_OF_STATES_RND_EXCURSION_VAR number of p_values
  * will be printed by repeated calls to RandomExcursionsVariant_print_stat2()
  * with different excursion numbers.
  *
@@ -521,14 +550,14 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	if (stat == NULL) {
 		err(163, __FUNCTION__, "stat arg is NULL");
 	}
-	if (state->excursion_var_stateX == NULL) {
-		err(163, __FUNCTION__, "state->excursion_var_stateX is NULL");
+	if (state->rnd_excursion_var_stateX == NULL) {
+		err(163, __FUNCTION__, "state->rnd_excursion_var_stateX is NULL");
 	}
 	if (p < 0) {
 		err(163, __FUNCTION__, "p arg: %ld must be > 0", p);
 	}
-	if (p >= EXCURSION_VAR_STATES) {
-		err(163, __FUNCTION__, "p arg: %ld must be < %d", p, EXCURSION_VAR_STATES);
+	if (p >= NUMBER_OF_STATES_RND_EXCURSION_VAR) {
+		err(163, __FUNCTION__, "p arg: %ld must be < %d", p, NUMBER_OF_STATES_RND_EXCURSION_VAR);
 	}
 
 	/*
@@ -537,14 +566,14 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	if (stat->test_possible != true) {
 		return true;
 	}
-	if (p_value == NON_P_VALUE && stat->excursion_success[p] == true) {
-		err(163, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->excursion_success[%ld] == true", p);
+	if (p_value == NON_P_VALUE && stat->success[p] == true) {
+		err(163, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success[%ld] == true", p);
 	}
 
 	/*
 	 * Print stat to a file
 	 */
-	if (stat->excursion_success[p] == true) {
+	if (stat->success[p] == true) {
 		io_ret = fprintf(stream, "SUCCESS\t\t");
 		if (io_ret <= 0) {
 			return false;
@@ -558,13 +587,13 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	if (state->legacy_output == true) {
 		if (p_value == NON_P_VALUE) {
 			io_ret = fprintf(stream, "(x = %2ld) Total visits = %4ld; p-value = __INVALID__\n",
-					 state->excursion_var_stateX[p], stat->counter[p]);
+					 state->rnd_excursion_var_stateX[p], stat->counter[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
 			io_ret = fprintf(stream, "(x = %2ld) Total visits = %4ld; p-value = %f\n",
-					 state->excursion_var_stateX[p], stat->counter[p], p_value);
+					 state->rnd_excursion_var_stateX[p], stat->counter[p], p_value);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -572,20 +601,20 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 	} else {
 		if (p_value == NON_P_VALUE) {
 			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = __INVALID__\n",
-					 state->excursion_var_stateX[p], stat->counter[p]);
+					 state->rnd_excursion_var_stateX[p], stat->counter[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
 			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = %f\n",
-					 state->excursion_var_stateX[p], stat->counter[p], p_value);
+					 state->rnd_excursion_var_stateX[p], stat->counter[p], p_value);
 			if (io_ret <= 0) {
 				return false;
 			}
 		}
 	}
 	// extra newline on the last excursion state
-	if (p >= EXCURSION_VAR_STATES - 1) {
+	if (p >= NUMBER_OF_STATES_RND_EXCURSION_VAR - 1) {
 		io_ret = fputc('\n', stream);
 		if (io_ret == EOF) {
 			return false;
@@ -656,17 +685,17 @@ void
 RandomExcursionsVariant_print(struct state *state)
 {
 	struct RandomExcursionsVariant_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 	long int p;
@@ -723,7 +752,7 @@ RandomExcursionsVariant_print(struct state *state)
 	/*
 	 * Write results.txt and stats.txt files
 	 */
-	for (i = 0, j = 0; i < state->stats[test_num]->count; ++i, j += EXCURSION_VAR_STATES) {
+	for (i = 0, j = 0; i < state->stats[test_num]->count; ++i, j += NUMBER_OF_STATES_RND_EXCURSION_VAR) {
 
 		/*
 		 * Locate stat for this iteration
@@ -742,7 +771,7 @@ RandomExcursionsVariant_print(struct state *state)
 		/*
 		 * Print all of the excursion states for this iteration
 		 */
-		for (p = 0; p < EXCURSION_VAR_STATES; p++) {
+		for (p = 0; p < NUMBER_OF_STATES_RND_EXCURSION_VAR; p++) {
 
 			/*
 			 * Get p_value for this excursion state of this iteration
@@ -882,7 +911,7 @@ RandomExcursionsVariant_print(struct state *state)
  * RandomExcursionsVariant_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
+ *      state          		 // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
  *      freqPerBin              // Uniformity frequency bins
@@ -890,14 +919,14 @@ RandomExcursionsVariant_print(struct state *state)
 static void
 RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*
@@ -937,11 +966,6 @@ RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, 
 	} else {
 		// Sum chi squared of the frequency bins
 		for (i = 0; i < state->tp.uniformity_bins; ++i) {
-			/*
-			 * NOTE: Mathematical expression code rewrite, old code commented out below:
-			 *
-			 * chi2 += pow(freqPerBin[j]-expCount, 2)/expCount;
-			 */
 			chi2 += (freqPerBin[i] - expCount) * (freqPerBin[i] - expCount) / expCount;
 		}
 		// Uniformity threshold level
@@ -1066,13 +1090,6 @@ RandomExcursionsVariant_metrics(struct state *state)
 		 */
 		toolow = 0;
 		sampleCount = 0;
-		/*
-		 * NOTE: Logical code rewrite, old code commented out below:
-		 *
-		 * for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		 *      freqPerBin[i] = 0;
-		 * }
-		 */
 		memset(freqPerBin, 0, state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 
 		/*
@@ -1199,9 +1216,9 @@ RandomExcursionsVariant_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	if (state->excursion_var_stateX != NULL) {
-		free(state->excursion_var_stateX);
-		state->excursion_var_stateX = NULL;
+	if (state->rnd_excursion_var_stateX != NULL) {
+		free(state->rnd_excursion_var_stateX);
+		state->rnd_excursion_var_stateX = NULL;
 	}
 	if (state->ex_var_partial_sums != NULL) {
 		free(state->ex_var_partial_sums);
