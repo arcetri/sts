@@ -170,16 +170,6 @@ OverlappingTemplateMatchings_init(struct state *state)
 		     state->testNames[test_num], test_num, N * min_pi, MIN_PROD_N_min_pi_OVERLAPPING);
 		state->testVector[test_num] = false;
 		return;
-	} else if (m < MINTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld >= MINTEMPLEN: %d",
-		     state->testNames[test_num], test_num, m, MINTEMPLEN);
-		state->testVector[test_num] = false;
-		return;
-	} else if (m > MAXTEMPLEN) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires template length(m): %ld <= MAXTEMPLEN: %d",
-		     state->testNames[test_num], test_num, m, MAXTEMPLEN);
-		state->testVector[test_num] = false;
-		return;
 	}
 
 	/*

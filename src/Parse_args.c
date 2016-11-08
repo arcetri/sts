@@ -191,7 +191,7 @@ static struct state const defaultstate = { // TODO check if all the values and c
 		 1,			// TEST_LONGEST_RUN = 5
 		 1,			// TEST_RANK = 6
 		 1,			// TEST_FFT = 7
-		 MAXNUMOFTEMPLATES,	// TEST_NON_OVERLAPPING = 8
+		 MAX_NUMOFTEMPLATES,	// TEST_NON_OVERLAPPING = 8
 					// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
 		 1,			// TEST_OVERLAPPING = 9
 		 1,			// TEST_UNIVERSAL = 10
@@ -205,8 +205,7 @@ static struct state const defaultstate = { // TODO check if all the values and c
 		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		},
 
-		// freq, stats, p_val - per test dynamic arrays
-		NULL,
+		// stats, p_val - per test dynamic arrays
 		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		},

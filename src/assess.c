@@ -479,8 +479,7 @@ main(int argc, char *argv[])
 	if (io_ret <= 0) {
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
-	io_ret =
-	    fprintf(run_state.finalRept, " C1	C2  C3	C4  C5	C6  C7	C8  C9 C10  P-VALUE  PROPORTION	 STATISTICAL TEST\n");
+	io_ret = fprintf(run_state.finalRept, " C1  C2  C3  C4  C5  C6  C7  C8  C9 C10  P-VALUE  PROPORTION  STATISTICAL TEST\n");
 	if (io_ret <= 0) {
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
