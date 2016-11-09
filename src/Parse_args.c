@@ -40,348 +40,346 @@
 
 #define GENERATOR_COUNT NUMOFGENERATORS
 
-// forward declarations
+/*
+ * Forward static function declarations
+ */
 static void change_params(struct state *state, long int parameter, long int value, double d_value);
 
 /*
- * default run state
+ * Default run state
  *
- * set the default state for options,
- * default state allows assess to run without any modifications
+ * Default state allows assess to run without any modifications
  */
-static struct state const defaultstate = { // TODO check if all the values and comments are matching and in the right position
+static struct state const defaultstate = {
 /* *INDENT-OFF* */
 
-		// batchmode
-		false,					// classic (interactive) mode
+	// batchmode
+	false,				// Classic (interactive) mode
 
-		// testVectorFlag & testVector
-		false,				// no -t test1[,test2].. was given
-		{false,
-		 false, false, false, false, false,
-		 false, false, false, false, false,
-		 false, false, false, false, false,
-		},				// run no tests
+	// testVectorFlag & testVector
+	false,				// No -t test1[,test2].. was given
+	{false, false, false, false,
+	 false, false, false, false,
+	 false, false, false, false,
+	 false, false, false, false,
+	},				// Do not invoke any test
 
-		// generatorFlag & generator
-		false,					// no -g generator was given
-		0,					    // default read data from a file (-g 0)
+	// generatorFlag & generator
+	false,				// No -g generator was given
+	GENERATOR_FROM_FILE,		// Read data from a file (-g 0)
 
-		// iterationFlag
-		false,					// no -i iterations was given
+	// iterationFlag
+	false,				// No -i iterations was given
 
-		// reportCycleFlag & reportCycle
-		false,					// no -I reportCycle was given
-		0,					    // do not report on iteration progress
+	// reportCycleFlag & reportCycle
+	false,				// No -I reportCycle was given
+	0,				// Do not report on iteration progress
 
-		// runModeFlag & runMode
-		false,					// no -m mode was given
-		MODE_ITERATE_AND_ASSESS,    // no -m mode, iterate and assess
+	// runModeFlag & runMode
+	false,				// No -m mode was given
+	MODE_ITERATE_AND_ASSESS,	// Iterate and assess only
 
-		// workDirFlag & workDir
-		false,				    // no -w workDir was given
-		"experiments",			    // default is to write results under experiments
-		// depending on -b and -g gen, this may become ./experiments/generator
+	// workDirFlag & workDir
+	false,				// No -w workDir was given
+	"experiments",			// Write results under experiments
+					// Depending on -b and -g gen, this may become ./experiments/generator
 
-		// subDirsFlag & subDirs
-		false,					// no -c was given
-		true,				    // default is to create directories
+	// subDirsFlag & subDirs
+	false,				// No -c was given
+	true,				// Create directories
 
-		// resultstxtFlag
-		true,					// no -n, create results.txt, data*.txt and stats.txt files
+	// resultstxtFlag
+	true,				// No -n, create results.txt, data*.txt and stats.txt files
 
-		// randomDataFlag & randomDataPath
-		false,					// no -f randdata was given
-		"/dev/null",			    // default input file is /dev/null
+	// randomDataFlag & randomDataPath
+	false,				// No -f randdata was given
+	"/dev/null",			// Input file is /dev/null
 
-		// dataFormatFlag & dataFormat
-		false,				    // if -F format was given
-		FORMAT_RAW_BINARY,		// 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')
+	// dataFormatFlag & dataFormat
+	false,				// -F format was not given
+	FORMAT_RAW_BINARY,		// Read data as raw binary
 
-		// jobnumFlag & jobnum
-		false,				// no -j jobnum was given
-		0,					// -j 0: begin at start of randdata
+	// jobnumFlag & jobnum
+	false,				// No -j jobnum was given
+	0,				// Begin at start of randdata (-j 0)
 
-		// tp & promptFlag
-		{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
-		 DEFAULT_NON_OVERLAPPING,	// -P 2=m, NonOverlapping Template Test - block length
-		 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
-		 DEFAULT_APEN,			// -P 4=m, Approximate Entropy Test - block length
-		 DEFAULT_SERIAL,		// -P 5=m, Serial Test - block length
-		 DEFAULT_LINEARCOMPLEXITY,	// -P 6=M, Linear Complexity Test - block length
-		 DEFAULT_ITERATIONS,		// -P 7=iterations (-i iterations)
-		 DEFAULT_UNIFORMITY_BINS,	// -P 8=bins, uniformity test is thru this many bins
-		 DEFAULT_BITCOUNT,		// -P 9=bitcount, Length of a single bit stream
-		 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
-		 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
-		},
-		false,			// no -p, prompt for change of parameters if no -b
+	// tp & promptFlag
+	{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
+	 DEFAULT_NON_OVERLAPPING,	// -P 2=m, NonOverlapping Template Test - block length
+	 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
+	 DEFAULT_APEN,			// -P 4=m, Approximate Entropy Test - block length
+	 DEFAULT_SERIAL,		// -P 5=m, Serial Test - block length
+	 DEFAULT_LINEARCOMPLEXITY,	// -P 6=M, Linear Complexity Test - block length
+	 DEFAULT_ITERATIONS,		// -P 7=iterations (-i iterations)
+	 DEFAULT_UNIFORMITY_BINS,	// -P 8=bins, uniformity test is thru this many bins
+	 DEFAULT_BITCOUNT,		// -P 9=bitcount, Length of a single bit stream
+	 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
+	 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
+	},
+	false,				// No -p, prompt for change of parameters if no -b
 
-		// c, cSetup
-		{UNSET_DOUBLE,		// Square root of 2 - used by several tests
-		 UNSET_DOUBLE,		// log(2) - used by many tests
-		 UNSET_DOUBLE,		// Square root of n - used by TEST_FREQUENCY
-		 UNSET_DOUBLE,		// Square root of (n / 4.0 * 0.95 * 0.05) - used by TEST_FFT
-		 UNSET_DOUBLE,		// Square root of ln(20) * n - used by TEST_FFT
-		 UNSET_DOUBLE,		// Square root of (2*n) - used by TEST_RUNS
-		 UNSET_DOUBLE,		// 2 / Square root of n - used by TEST_RUNS
-		 UNSET_DOUBLE,		// Probability of rank NUMBER_OF_ROWS_RANK - used by RANK_TEST
-		 UNSET_DOUBLE,		// Probability of rank NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
-		 UNSET_DOUBLE,		// Probability of rank < NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
-		 UNSET_DOUBLE,		// log(n) - used by many tests
-		 0,			// Number of crossings required to complete the test -
-					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
-		 0,			// Total possible matrix for a given bit stream length - used by RANK_TEST
-		},
-		false,			// init() has not yet initialized c
+	// c, cSetup
+	{UNSET_DOUBLE,			// Square root of 2
+	 UNSET_DOUBLE,			// log(2)
+	 UNSET_DOUBLE,			// Square root of n
+	 UNSET_DOUBLE,			// Square root of (n / 4.0 * 0.95 * 0.05)
+	 UNSET_DOUBLE,			// Square root of ln(20) * n
+	 UNSET_DOUBLE,			// Square root of (2*n)
+	 UNSET_DOUBLE,			// 2 / Square root of n
+	 UNSET_DOUBLE,			// Probability of rank NUMBER_OF_ROWS_RANK
+	 UNSET_DOUBLE,			// Probability of rank NUMBER_OF_ROWS_RANK-1
+	 UNSET_DOUBLE,			// Probability of rank < NUMBER_OF_ROWS_RANK-1
+	 UNSET_DOUBLE,			// log(n)
+	 0,				// Number of crossings required to complete the test
+	 0,				// Total possible matrix for a given bit stream length
+	},
+	false,				// init() has not yet initialized c
 
-		// streamFile, finalReptPath, finalRept, freqFilePath, finalRept
-		NULL,			// initially the randomDataPath is not open
-		NULL,			// path of finalAnalysisReport.txt
-		NULL,			// initially finalAnalysisReport.txt is not open
-		NULL,			// path of freq.txt
-		NULL,			// initially freq.txt is not open
+	// streamFile, finalReptPath, finalRept, freqFilePath, finalRept
+	NULL,				// Initially the randomDataPath is not open
+	NULL,				// Path of finalAnalysisReport.txt
+	NULL,				// Initially finalAnalysisReport.txt is not open
+	NULL,				// Path of freq.txt
+	NULL,				// Initially freq.txt is not open
 
-		// generatorDir
-		{"AlgorithmTesting",	// -g 0, Read from file
-		 "LCG",			// -g 1, Linear Congruential
-		 "QCG1",		// -g 2, Quadratic Congruential I
-		 "QCG2",		// -g 3, Quadratic Congruential II
-		 "CCG",			// -g 4, Cubic Congruential
-		 "XOR",			// -g 5, XOR
-		 "MODEXP",		// -g 6, Modular Exponentiation
-		 "BBS",			// -g 7, Blum-Blum-Shub
-		 "MS",			// -g 8, Micali-Schnorr
-		 "G-SHA1",		// -g 9, G Using SHA-1
-		},
+	// generatorDir
+	{"AlgorithmTesting",		// -g 0, Read from file
+	 "LCG",				// -g 1, Linear Congruential
+	 "QCG1",			// -g 2, Quadratic Congruential I
+	 "QCG2",			// -g 3, Quadratic Congruential II
+	 "CCG",				// -g 4, Cubic Congruential
+	 "XOR",				// -g 5, XOR
+	 "MODEXP",			// -g 6, Modular Exponentiation
+	 "BBS",				// -g 7, Blum-Blum-Shub
+	 "MS",				// -g 8, Micali-Schnorr
+	 "G-SHA1",			// -g 9, G Using SHA-1
+	},
 
-		// testNames, subDir, driver_state
-		{"((all_tests))",		// TEST_ALL = 0, convention for indicating run all tests
-		 "Frequency",			// TEST_FREQUENCY = 1, Frequency test (frequency.c)
-		 "BlockFrequency",		// TEST_BLOCK_FREQUENCY = 2, Block Frequency test (blockFrequency.c)
-		 "CumulativeSums",		// TEST_CUSUM = 3, Cumulative Sums test (cusum.c)
-		 "Runs",			// TEST_RUNS = 4, Runs test (runs.c)
-		 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
-		 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
-		 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
-		 "NonOverlappingTemplate",	// TEST_NON_OVERLAPPING = 8,
-						//    Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
-		 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
-		 "Universal",			// TEST_UNIVERSAL = 10, Universal test (universal.c)
-		 "ApproximateEntropy",		// TEST_APEN = 11, Approximate Entropy test (approximateEntropy.c)
-		 "RandomExcursions",		// TEST_RND_EXCURSION = 12, Random Excursions test (randomExcursions.c)
-		 "RandomExcursionsVariant",	// TEST_RND_EXCURSION_VAR = 13,
-						//    Random Excursions Variant test (randomExcursionsVariant.c)
-		 "Serial",			// TEST_SERIAL = 14, Serial test (serial.c)
-		 "LinearComplexity",		// TEST_LINEARCOMPLEXITY = 15, Linear Complexity test (linearComplexity.c)
-		},
-		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		},
-		{DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
-		 DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
-		},
+	// testNames, subDir, driver_state
+	{"((all_tests))",		// TEST_ALL = 0, convention for indicating run all tests
+	 "Frequency",			// TEST_FREQUENCY = 1, Frequency test (frequency.c)
+	 "BlockFrequency",		// TEST_BLOCK_FREQUENCY = 2, Block Frequency test (blockFrequency.c)
+	 "CumulativeSums",		// TEST_CUSUM = 3, Cumulative Sums test (cusum.c)
+	 "Runs",			// TEST_RUNS = 4, Runs test (runs.c)
+	 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
+	 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
+	 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
+	 "NonOverlappingTemplate",	// TEST_NON_OVERLAPPING = 8, Non-overlapping Template Matchings test
+					// (nonOverlappingTemplateMatchings.c)
+	 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
+	 "Universal",			// TEST_UNIVERSAL = 10, Universal test (universal.c)
+	 "ApproximateEntropy",		// TEST_APEN = 11, Approximate Entropy test (approximateEntropy.c)
+	 "RandomExcursions",		// TEST_RND_EXCURSION = 12, Random Excursions test (randomExcursions.c)
+	 "RandomExcursionsVariant",	// TEST_RND_EXCURSION_VAR = 13, Random Excursions Variant test (randomExcursionsVariant.c)
+	 "Serial",			// TEST_SERIAL = 14, Serial test (serial.c)
+	 "LinearComplexity",		// TEST_LINEARCOMPLEXITY = 15, Linear Complexity test (linearComplexity.c)
+	},
+	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	},
+	{DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
+	 DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
+	},
 
-		// partitionCount - how much to partition the p_value / results.txt file, datatxt_fmt
-		{0,			// TEST_ALL = 0 - not a real test
-		 1,			// TEST_FREQUENCY = 1
-		 1,			// TEST_BLOCK_FREQUENCY = 2
-		 2,			// TEST_CUSUM = 3
-		 1,			// TEST_RUNS = 4
-		 1,			// TEST_LONGEST_RUN = 5
-		 1,			// TEST_RANK = 6
-		 1,			// TEST_FFT = 7
-		 MAX_NUMOFTEMPLATES,	// TEST_NON_OVERLAPPING = 8
-					// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
-		 1,			// TEST_OVERLAPPING = 9
-		 1,			// TEST_UNIVERSAL = 10
-		 1,			// TEST_APEN = 11
-		 NUMBER_OF_STATES_RND_EXCURSION,	// TEST_RND_EXCURSION = 12
-		 NUMBER_OF_STATES_RND_EXCURSION_VAR,	// TEST_RND_EXCURSION_VAR = 13
-		 2,			// TEST_SERIAL = 14
-		 1,			// TEST_LINEARCOMPLEXITY = 15
-		},
-		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		},
+	// partitionCount, datatxt_fmt
+	{0,					// TEST_ALL = 0 - not a real test
+	 1,					// TEST_FREQUENCY = 1
+	 1,					// TEST_BLOCK_FREQUENCY = 2
+	 2,					// TEST_CUSUM = 3
+	 1,					// TEST_RUNS = 4
+	 1,					// TEST_LONGEST_RUN = 5
+	 1,					// TEST_RANK = 6
+	 1,					// TEST_FFT = 7
+	 MAX_NUMOFTEMPLATES,			// TEST_NON_OVERLAPPING = 8
+						// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
+	 1,					// TEST_OVERLAPPING = 9
+	 1,					// TEST_UNIVERSAL = 10
+	 1,					// TEST_APEN = 11
+	 NUMBER_OF_STATES_RND_EXCURSION,	// TEST_RND_EXCURSION = 12
+	 NUMBER_OF_STATES_RND_EXCURSION_VAR,	// TEST_RND_EXCURSION_VAR = 13
+	 2,					// TEST_SERIAL = 14
+	 1,					// TEST_LINEARCOMPLEXITY = 15
+	},
+	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	},
 
-		// stats, p_val - per test dynamic arrays
-		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		},
-		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-		},
+	// stats, p_val - per test dynamic arrays
+	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	},
+	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	},
 
-		// is_excursion
-		{false, false, false, false, false, false, false, false,
-		 false, false, false, false, true, true, false, false,
-		},
+	// is_excursion
+	{false, false, false, false, false, false, false, false,
+	 false, false, false, false, true, true, false, false,
+	},
 
-		// epsilon, tmpepsilon
-		NULL,
-		NULL,
+	// epsilon, tmpepsilon
+	NULL,
+	NULL,
 
-		// Count, valid, success, failure, valid_p_val
-		{0, 0, 0, 0, 0, 0, 0, 0,
-		 0, 0, 0, 0, 0, 0, 0, 0,
-		},
-		{0, 0, 0, 0, 0, 0, 0, 0,
-		 0, 0, 0, 0, 0, 0, 0, 0,
-		},
-		{0, 0, 0, 0, 0, 0, 0, 0,
-		 0, 0, 0, 0, 0, 0, 0, 0,
-		},
-		{0, 0, 0, 0, 0, 0, 0, 0,
-		 0, 0, 0, 0, 0, 0, 0, 0,
-		},
-		{0, 0, 0, 0, 0, 0, 0, 0,
-		 0, 0, 0, 0, 0, 0, 0, 0,
-		},
+	// count, valid, success, failure, valid_p_val
+	{0, 0, 0, 0, 0, 0, 0, 0,
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	},
+	{0, 0, 0, 0, 0, 0, 0, 0,
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	},
+	{0, 0, 0, 0, 0, 0, 0, 0,
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	},
+	{0, 0, 0, 0, 0, 0, 0, 0,
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	},
+	{0, 0, 0, 0, 0, 0, 0, 0,
+	 0, 0, 0, 0, 0, 0, 0, 0,
+	},
 
-		// uniformity_failure, proportional_failure
-		{false, false, false, false, false, false, false, false,
-		 false, false, false, false, false, false, false, false,
-		},
-		{false, false, false, false, false, false, false, false,
-		 false, false, false, false, false, false, false, false,
-		},
+	// uniformity_failure, proportional_failure
+	{false, false, false, false, false, false, false, false,
+	 false, false, false, false, false, false, false, false,
+	},
+	{false, false, false, false, false, false, false, false,
+	 false, false, false, false, false, false, false, false,
+	},
 
-		// maxGeneralSampleSize, maxRandomExcursionSampleSize
-		0,
-		0,
+	// maxGeneralSampleSize, maxRandomExcursionSampleSize
+	0,
+	0,
 
-		// nonovTemplates
-		NULL,
+	// nonovTemplates
+	NULL,
 
-		// fft_m, fft_X
-		NULL,
-		NULL,
+	// fft_m, fft_X
+	NULL,
+	NULL,
 
-		// fft_wsave
 # if defined(LEGACY_FFT)
-		NULL,
-
-		// fftw_p and fftw_out
+	// fft_wsave
+	NULL,
 #else /* LEGACY_FFT */
-		NULL,
-		NULL,
+	// fftw_p and fftw_out
+	NULL,
+	NULL,
 #endif /* LEGACY_FFT */
 
-		// rank_matrix
-		NULL,
+	// rank_matrix
+	NULL,
 
-		// rnd_excursion_var_stateX, ex_var_partial_sums
-		NULL,
-		NULL,
+	// rnd_excursion_var_stateX, ex_var_partial_sums
+	NULL,
+	NULL,
 
-		// linear_b, linear_c, linear_t
-		NULL,
-		NULL,
-		NULL,
+	// linear_b, linear_c, linear_t
+	NULL,
+	NULL,
+	NULL,
 
-		// apen_C, apen_C_len
-		NULL,
-		0,
+	// apen_C, apen_C_len
+	NULL,
+	0,
 
-		// serial_v, serial_v_len
-		NULL,
-		0,
+	// serial_v, serial_v_len
+	NULL,
+	0,
 
-		// nonper_seq
-		NULL,
+	// nonper_seq
+	NULL,
 
-		// universal_L, universal_T
-		0,
-		0,
+	// universal_L, universal_T
+	0,
+	0,
 
-		// rnd_excursion_S, rnd_excursion_cycle, rnd_excursion_stateX, rnd_excursion_pi_terms
-		NULL,
-		NULL,
-		NULL,
-		NULL,
+	// rnd_excursion_S, rnd_excursion_cycle, rnd_excursion_stateX, rnd_excursion_pi_terms
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 
-		// legacy_output
-		false,
+	// legacy_output
+	false,
 
-		// curIteration
-		0,			// no interaction completed so far
+	// curIteration
+	0,			// No interaction completed so far
 /* *INDENT-ON* */
 };
 
 
 /*
- * command line usage information
+ * Command line usage information
  */
 /* *INDENT-OFF* */
 static const char * const usage =
-"[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
-		"		[-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
-		"		[-w workDir] [-c] [-n] [-f randdata] [-F format] [-j jobnum]\n"
-		"		[-s statePath] [-r stateDir] [-R] [-m mode]\n"
-		"		[-h]\n"
-		"		bitcount\n"
-		"\n"
-		"    -v	 debuglevel	debug level (def: 0 -> no debug messages)\n"
-		"    -b			batch mode - no stdin (def: prompt when needed)\n"
-		"    -t test1[,test2].. tests to invoke, 0-15 (def: 0 -> run all tests)\n"
-		"\n"
-		"	 0: Run all tests (1-15)\n"
-		"	 1: Frequency			     2: Block Frequency\n"
-		"	 3: Cumulative Sums		     4: Runs\n"
-		"	 5: Longest Run of Ones		     6: Rank\n"
-		"	 7: Discrete Fourier Transform	     8: Nonperiodic Template Matchings\n"
-		"	 9: Overlapping Template Matchings  10: Universal Statistical\n"
-		"	11: Approximate Entropy		    12: Random Excursions\n"
-		"	13: Random Excursions Variant	    14: Serial\n"
-		"	15: Linear Complexity\n"
-		"\n"
-		"    -g generator	generator to use, 0-9 (if -b, def: 0)\n"
-		"\n"
-		"	0: Read from file		1: Linear Congruential\n"
-		"	2: Quadratic Congruential I	3: Quadratic Congruential II\n"
-		"	4: Cubic Congruential		5: XOR\n"
-		"	6: Modular Exponentiation	7: Blum-Blum-Shub\n"
-		"	8: Micali-Schnorr		9: G Using SHA-1\n"
-		"\n"
-		"    -P num=value[,num=value]..	    change parameter num to value (def: keep defaults)\n"
-		"\n"
-		"	1: Block Frequency Test - block length(M):	      128\n"
-		"	2: NonOverlapping Template Test - block length(m):	9\n"
-		"	3: Overlapping Template Test - block length(m):		9\n"
-		"	4: Approximate Entropy Test - block length(m):	       10\n"
-		"	5: Serial Test - block length(m):		       16\n"
-		"	6: Linear Complexity Test - block length(M):	      500\n"
-		"	7: Number of bitcount runs (same as -i iterations):	1\n"
-		"	8: Uniformity bins				       10\n"
-		"	9: Length of a single bit stream (bitcount):	  1000000\n"
-		"      10: Uniformity Cutoff Level			   0.0001\n"
-		"      11: Alpha Confidence Level:			     0.01\n"
-		"\n"
-		"    -p	   In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
-		"\n"
-		"    -i iterations    number of bitstream runs (if -b, def: 1)\n"
-		"\n"
-		"	NOTE: -i iterations is the same as -P 7=iterations\n"
-		"\n"
-		"    -I reportCycle   Report after completion of reportCycle iterations (def: 0: do not report)\n"
-		"    -O		      try to mimic output format of legacy code (def: don't be output compatible)\n"
-		"\n"
-		"    -w workDir	      write experiment results under workDir (def: .)\n"
-		"    -c		      don't create any directories needed for creating files (def: do create)\n"
-		"    -n		      don't create result.txt, data*.txt, nor stats.txt (def: do create)\n"
-		"    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
-		"    -F format	      randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
-		"    -j jobnum	      seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
-		"\n"
-		"    -m mode	      w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
-		"		      i --> iterate only (not currently implemented)\n"
-		"		      a --> assess only (not currently implemented)\n"
-		"		      b --> iterate and then assess (default: b)\n"
-		"\n"
-		"    -h		      print this message and exit\n"
-		"\n"
-		"    bitcount	      Length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
+    "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
+"               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
+"               [-w workDir] [-c] [-n] [-f randdata] [-F format] [-j jobnum]\n"
+"               [-s statePath] [-r stateDir] [-R] [-m mode]\n"
+"               [-h]\n"
+"               bitcount\n"
+"\n"
+"    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
+"    -b                 batch mode - no stdin (def: prompt when needed)\n"
+"    -t test1[,test2].. tests to invoke, 0-15 (def: 0 -> run all tests)\n"
+"\n"
+"        0: Run all tests (1-15)\n"
+"        1: Frequency                        2: Block Frequency\n"
+"        3: Cumulative Sums                  4: Runs\n"
+"        5: Longest Run of Ones              6: Rank\n"
+"        7: Discrete Fourier Transform       8: Nonperiodic Template Matchings\n"
+"        9: Overlapping Template Matchings  10: Universal Statistical\n"
+"       11: Approximate Entropy             12: Random Excursions\n"
+"       13: Random Excursions Variant       14: Serial\n"
+"       15: Linear Complexity\n"
+"\n"
+"    -g generator       generator to use, 0-9 (if -b, def: 0)\n"
+"\n"
+"       0: Read from file               1: Linear Congruential\n"
+"       2: Quadratic Congruential I     3: Quadratic Congruential II\n"
+"       4: Cubic Congruential           5: XOR\n"
+"       6: Modular Exponentiation       7: Blum-Blum-Shub\n"
+"       8: Micali-Schnorr               9: G Using SHA-1\n"
+"\n"
+"    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
+"\n"
+"       1: Block Frequency Test - block length(M):            128\n"
+"       2: NonOverlapping Template Test - block length(m):      9\n"
+"       3: Overlapping Template Test - block length(m):         9\n"
+"       4: Approximate Entropy Test - block length(m):         10\n"
+"       5: Serial Test - block length(m):                      16\n"
+"       6: Linear Complexity Test - block length(M):          500\n"
+"       7: Number of bitcount runs (same as -i iterations):     1\n"
+"       8: Uniformity bins                                     10\n"
+"       9: Length of a single bit stream (bitcount):      1000000\n"
+"      10: Uniformity Cutoff Level                         0.0001\n"
+"      11: Alpha Confidence Level:                           0.01\n"
+"\n"
+"    -p    In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
+"\n"
+"    -i iterations    number of bitstream runs (if -b, def: 1)\n"
+"\n"
+"       NOTE: -i iterations is the same as -P 7=iterations\n"
+"\n"
+"    -I reportCycle   Report after completion of reportCycle iterations (def: 0: do not report)\n"
+"    -O		      try to mimic output format of legacy code (def: don't be output compatible)\n"
+"\n"
+"    -w workDir       write experiment results under workDir (def: .)\n"
+"    -c               don't create any directories needed for creating files (def: do create)\n"
+"    -n               don't create result.txt, data*.txt, nor stats.txt (def: do create)\n"
+"    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
+"    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
+"    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
+"\n"
+"    -m mode          w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
+"                     i --> iterate only (not currently implemented)\n"
+"                     a --> assess only (not currently implemented)\n"
+"                     b --> iterate and then assess (default: b)\n"
+"\n"
+"    -h               print this message and exit\n"
+"\n"
+"    bitcount         Length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
 /* *INDENT-ON* */
 
 
@@ -399,43 +397,51 @@ void
 Parse_args(struct state *state, int argc, char *argv[])
 {
 	int option;		// getopt() parsed option
-	extern char *optarg;	// parsed option argument
-	extern int optind;	// index to the next argv element to parse
+	extern char *optarg;	// Parsed option argument
+	extern int optind;	// Index to the next argv element to parse
 	extern int opterr;	// 0 ==> disable internal getopt() error messages
-	extern int optopt;	// last known option character returned by getopt()
+	extern int optopt;	// Last known option character returned by getopt()
 	int scan_cnt;		// Number of items scanned by sscanf()
-	char *brkt;		// last state of strtok_r()
-	char *phrase;		// string without separator as parsed by strtok_r()
-	long int testnum;	// parsed test number
-	long int num;		// parsed parameter number
-	long int value;		// parsed parameter integer value
-	double d_value;		// parsed parameter floating point
-	bool success = false;	// if str2longtint was successful
+	char *brkt;		// Last state of strtok_r()
+	char *phrase;		// String without separator as parsed by strtok_r()
+	long int testnum;	// Parsed test number
+	long int num;		// Parsed parameter number
+	long int value;		// Parsed parameter integer value
+	double d_value;		// Parsed parameter floating point
+	bool success = false;	// true if str2longtint was successful
 	int snprintf_ret;	// snprintf return value
 	int test_cnt = 0;
 	long int i;
 	size_t j;
 
-	// record the program name
+	/*
+	 * Record the program name
+	 */
 	program = argv[0];
 	if (program == NULL) {
 		program = "((NULL))";	// paranoia
 	} else if (program[0] == '\0') {
 		program = "((empty))";	// paranoia
 	}
-	// firewall
+
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (argc <= 0 || state == NULL) {
 		err(1, __FUNCTION__, "called with bogus args");
 	}
-	// initialize state to defaults
+
+	/*
+	 * Initialize state to default state
+	 */
 	*state = defaultstate;
 
 	/*
-	 * parse the command line
+	 * Parse the command line arguments
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:" "P:pi:I:O" "w:cnf:F:j:" "m:" "h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:cnf:F:j:m:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -453,17 +459,25 @@ Parse_args(struct state *state, int argc, char *argv[])
 			break;
 
 		case 't':	// -t test1[,test2]..
-			// parse each comma separated arg
 			state->testVectorFlag = true;
+
+			/*
+			 * Parse each comma separated arg
+			 */
 			for (phrase = strtok_r(optarg, ",", &brkt); phrase != NULL; phrase = strtok_r(NULL, ",", &brkt)) {
 
-				// determine test number
+				/*
+			 	 * Determine test number
+			 	 */
 				testnum = str2longint(&success, phrase);
 				if (success == false) {
 					usage_errp(usage, 1, __FUNCTION__,
-						   "-t test1[,test2].. must only have " "comma separated integers: %s", phrase);
+						   "-t test1[,test2].. must only have comma separated integers: %s", phrase);
 				}
-				// 0 is special case, enable all tests
+
+				/*
+				 * Enable all tests if testnum is 0 (special case)
+				 */
 				if (testnum == 0) {
 					for (i = 0; i <= NUMOFTESTS; i++) {
 						state->testVector[i] = true;
@@ -474,7 +488,6 @@ Parse_args(struct state *state, int argc, char *argv[])
 				} else {
 					state->testVector[testnum] = true;
 				}
-
 			}
 			break;
 
@@ -492,58 +505,66 @@ Parse_args(struct state *state, int argc, char *argv[])
 			break;
 
 		case 'P':	// -P num=value[,num=value]..
-			// parse each comma separated arg
+
+			/*
+			 * Parse each comma separated arg
+			 */
 			for (phrase = strtok_r(optarg, ",", &brkt); phrase != NULL; phrase = strtok_r(NULL, ",", &brkt)) {
 
-				// parse parameter number
+				/*
+				 * Parse parameter number
+				 */
 				scan_cnt = sscanf(phrase, "%ld=", &num);
 				if (scan_cnt == EOF) {
 					usage_errp(usage, 1, __FUNCTION__,
-						   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
+						   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 				} else if (scan_cnt != 2) {
 					usage_err(usage, 1, __FUNCTION__,
 						  "-P num=value[,num=value].. "
-						  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
+						  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 				}
 				if (num < MIN_PARAM || num > MAX_PARAM) {
 					usage_err(usage, 1, __FUNCTION__,
 						  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 						  MAX_PARAM);
 				}
-				// parse parameter value
+
+				/*
+				 * Parse parameter value
+				 */
 				if (num <= MAX_INT_PARAM) {
 
-					// parse parameter number as an integer
+					// Parse parameter number as an integer
 					scan_cnt = sscanf(phrase, "%ld=%ld", &num, &value);
 					if (scan_cnt == EOF) {
 						usage_errp(usage, 1, __FUNCTION__,
-							   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
+							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
 						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
-							  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
+							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(usage, 1, __FUNCTION__,
-							  "-P num=value[,num=value].. " "num: %lu must be in the range [1-%d]", num,
+							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 							  MAX_PARAM);
 					}
 					change_params(state, num, value, 0.0);
 				} else {
 
-					// parse parameter number as an floating point number
+					// Parse parameter number as a floating point number
 					scan_cnt = sscanf(phrase, "%ld=%lf", &num, &d_value);
 					if (scan_cnt == EOF) {
 						usage_errp(usage, 1, __FUNCTION__,
-							   "-P num=value[,num=value].. " "error parsing a num=value: %s", phrase);
+							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
 						usage_err(usage, 1, __FUNCTION__,
 							  "-P num=value[,num=value].. "
-							  "failed to parse a num=value, " "expecting integer=integer: %s", phrase);
+							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(usage, 1, __FUNCTION__,
-							  "-P num=value[,num=value].. " "num: %lu must be in the range [1-%d]", num,
+							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 							  MAX_PARAM);
 					}
 					change_params(state, num, 0, d_value);
@@ -583,7 +604,10 @@ Parse_args(struct state *state, int argc, char *argv[])
 			break;
 
 		case 'w':	// -w workDir
-			// write experiment results under workDir
+
+			/*
+			 * Write experiment results under workDir
+			 */
 			state->workDirFlag = true;
 			state->workDir = strdup(optarg);
 			if (state->workDir == NULL) {
@@ -593,7 +617,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 
 		case 'c':	// -c (do not create directories)
 			state->subDirsFlag = true;
-			state->subDirs = false;	// do not create directorties
+			state->subDirs = false;	// do not create directories
 			break;
 
 		case 'n':	// -n (don't create result.txt or stats.txt)
@@ -699,23 +723,21 @@ Parse_args(struct state *state, int argc, char *argv[])
 	}
 
 	/*
-	 * ask how many bitstreams unless batch mode (-b) and no -i bitstreams was given
+	 * Ask how many iterations have to be performed unless batch mode (-b) is enabled or -i bitstreams was given
 	 */
 	if (state->batchmode == false && state->iterationFlag == false) {
-		// prompt
+		// Prompt
 		printf("   How many bitstreams? ");
 		fflush(stdout);
 
-		// read number
+		// Read number
 		state->tp.numOfBitStreams = getNumber(stdin, stdout);
 		putchar('\n');
 		fflush(stdout);
 	}
 
 	/*
-	 * post processing
-	 *
-	 * make sure complimentary/conflicting options are set/not set
+	 * Post processing: make sure complimentary/conflicting options are set/not set
 	 */
 	if (state->batchmode == true) {
 		if (state->generatorFlag == true) {
@@ -742,19 +764,19 @@ Parse_args(struct state *state, int argc, char *argv[])
 	}
 
 	/*
-	 * if -b and no -t test given, enable all tests
+	 * If -b and no -t test given, enable all tests
 	 *
-	 * Also test 0 is a historical alias for all tests enabled.
+	 * Test 0 is an historical alias for all tests enabled.
 	 */
 	if ((state->batchmode == true && state->testVectorFlag == false) || state->testVector[0] == true) {
-		// under -b without and -t test, enable all tests
+		// Under -b without and -t test, enable all tests
 		for (i = 0; i <= NUMOFTESTS; i++) {
 			state->testVector[i] = true;
 		}
 	}
 
 	/*
-	 * check on the number of tests enabled
+	 * Count the number of tests enabled
 	 *
 	 * We do not count test 0 (historical alias for all tests enabled).
 	 */
@@ -770,7 +792,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	}
 
 	/*
-	 * set the workDir if no -w workdir was given
+	 * Set the workDir if no -w workdir was given
 	 */
 	if (state->workDirFlag != true) {
 
@@ -782,11 +804,12 @@ Parse_args(struct state *state, int argc, char *argv[])
 			if (state->workDir == NULL) {
 				errp(1, __FUNCTION__, "strdup of %s failed", state->generatorDir[state->generator]);
 			}
+		}
 
-			/*
-			 * classic mode (no -b): default workdir is experiments/__generator_name__
-			 */
-		} else {
+		/*
+		 * Classic mode (no -b): default workdir is experiments/__generator_name__
+		 */
+		else {
 			j = strlen("experiments/") + strlen(state->generatorDir[state->generator]) + 1;	// string + NUL
 			state->workDir = malloc(j + 1);	// +1 for later paranoia
 			if (state->workDir == NULL) {
@@ -818,13 +841,15 @@ Parse_args(struct state *state, int argc, char *argv[])
 static void
 change_params(struct state *state, long int parameter, long int value, double d_value)
 {
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(2, __FUNCTION__, "state arg is NULL");
 	}
 
 	/*
-	 * load integer or floating point value into a parameter
+	 * Load integer or floating point value into a parameter
 	 */
 	switch (parameter) {
 	case PARAM_blockFrequencyBlockLength:
@@ -874,7 +899,9 @@ print_option_summary(struct state *state, char *where)
 	int j;
 	int test_cnt = 0;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(3, __FUNCTION__, "state arg is NULL");
 	}
@@ -897,16 +924,16 @@ print_option_summary(struct state *state, char *where)
 				switch (state->dataFormat) {
 				case FORMAT_ASCII_01:
 				case FORMAT_0:
-					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
+					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
 					    state->randomDataPath, "ASCII '0' and '1' character bits");
 					break;
 				case FORMAT_RAW_BINARY:
 				case FORMAT_1:
-					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
+					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
 					    state->randomDataPath, "raw 8 binary bits per byte");
 					break;
 				default:
-					dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s"
+					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s"
 					    "in -F format: unknown: %c", state->randomDataPath, (char) state->dataFormat);
 					break;
 				}
@@ -971,7 +998,7 @@ print_option_summary(struct state *state, char *where)
 	 */
 	if (state->generatorFlag == true) {
 
-		// sts should use enum for generator numbers, but it doesn't: sorry!
+		// STS should use enum for generator numbers, but it doesn't: sorry! // TODO doesn't it?
 		switch (state->generator) {
 
 		case GENERATOR_FROM_FILE:
@@ -984,39 +1011,39 @@ print_option_summary(struct state *state, char *where)
 			break;
 
 		case GENERATOR_LCG:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Linear Congruential\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Linear Congruential\n", state->generator);
 			break;
 
 		case GENERATOR_QCG1:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Quadratic Congruential I\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Quadratic Congruential I\n", state->generator);
 			break;
 
 		case GENERATOR_QCG2:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Quadratic Congruential II\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Quadratic Congruential II\n", state->generator);
 			break;
 
 		case GENERATOR_CCG:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Cubic Congruential\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Cubic Congruential\n", state->generator);
 			break;
 
 		case GENERATOR_XOR:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "XOR\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: XOR\n", state->generator);
 			break;
 
 		case GENERATOR_MODEXP:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Modular Exponentiation\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Modular Exponentiation\n", state->generator);
 			break;
 
 		case GENERATOR_BBS:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Blum-Blum-Shub\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Blum-Blum-Shub\n", state->generator);
 			break;
 
 		case GENERATOR_MS:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "Micali-Schnorr\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: Micali-Schnorr\n", state->generator);
 			break;
 
 		case GENERATOR_SHA1:
-			dbg(DBG_LOW, "Using builtin generator [%d]: " "G Using SHA-1\n", state->generator);
+			dbg(DBG_LOW, "Using builtin generator [%d]: G Using SHA-1\n", state->generator);
 			break;
 
 		default:
@@ -1031,7 +1058,7 @@ print_option_summary(struct state *state, char *where)
 	if (state->jobnumFlag == true) {
 		dbg(DBG_LOW, "\tJob number: %ld", state->jobnum);
 		dbg(DBG_LOW,
-		    "\t	   Will skip %lld bytes of data before processing\n",
+		    "\t    Will skip %lld bytes of data before processing\n",
 		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
 	} else {
 		dbg(DBG_LOW, "\tno -j numnum was given");
@@ -1039,7 +1066,7 @@ print_option_summary(struct state *state, char *where)
 	}
 
 	/*
-	 * detailed state summary
+	 * Report detailed state summary
 	 */
 	dbg(DBG_MED, "Details of run state:");
 	dbg(DBG_MED, "\tgenerator: -g %d", state->generator);
@@ -1048,7 +1075,7 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -i iterations was given");
 	}
-	dbg(DBG_MED, "\t	iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
+	dbg(DBG_MED, "\t    iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
 	if (state->reportCycleFlag == true) {
 		dbg(DBG_MED, "\t-I reportCycle was given");
 	} else {
@@ -1074,16 +1101,16 @@ print_option_summary(struct state *state, char *where)
 		switch (state->dataFormat) {
 		case FORMAT_ASCII_01:
 		case FORMAT_0:
-			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "ASCII '0' and '1' character bits");
 			break;
 		case FORMAT_RAW_BINARY:
 		case FORMAT_1:
-			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "raw 8 binary bits per byte");
 			break;
 		default:
-			dbg(DBG_MED, "\t	-m w: only write generated data to -f file: %s in -F format: unknown: %c",
+			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: unknown: %c",
 			    state->randomDataPath, (char) state->dataFormat);
 			break;
 		}
@@ -1101,7 +1128,7 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\t    -m %c: unknown runMode", state->runMode);
 		break;
 	}
-	dbg(DBG_MED, "\t	workDir: -w %s", state->workDir);
+	dbg(DBG_MED, "\t    workDir: -w %s", state->workDir);
 	if (state->subDirsFlag == true) {
 		dbg(DBG_MED, "\t-c was given");
 	} else {
@@ -1124,7 +1151,7 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -f was given");
 	}
-	dbg(DBG_MED, "\t	randomDataPath: -f %s", state->randomDataPath);
+	dbg(DBG_MED, "\t    randomDataPath: -f %s", state->randomDataPath);
 	if (state->dataFormatFlag == true) {
 		dbg(DBG_MED, "\t-F format was given");
 	} else {
@@ -1168,9 +1195,9 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\talpha = %f", state->tp.alpha);
 		if (state->promptFlag == true) {
-			dbg(DBG_LOW, "\t	-p was given: will NOT prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t    -p was given: will NOT prompt for any changes to default parameters\n");
 		} else {
-			dbg(DBG_LOW, "\t	no -p was given: will prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t    no -p was given: will prompt for any changes to default parameters\n");
 		}
 	}
 

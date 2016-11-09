@@ -324,7 +324,7 @@ typedef struct _testParameters {
  * In some cases the constants are simply numeric (such as the square root of 2).
  * In some cases the constants depend on test parameters (such as TP.n or TP.numOfBitStreams, etc.)
  *
- * NOTE: In the comments below, n is TP.n.
+ * NOTE: In the comments below, n is TP.n. // TODO Are all these test constants necessary to precompute at the beginning? Can't they be computed by the init of the tests that need them?
  */
 typedef struct _const {
 	double sqrt2;			// Square root of 2 - used by several tests

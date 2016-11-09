@@ -334,8 +334,8 @@ getString(FILE * stream)
  * given:
  *      path             // path to check
  *
- * retuen
- *      true --> path is writiable by the effecive user
+ * return
+ *      true --> path is writable by the effective user
  *      false --> path does not exist, is not writable, or some other error
  *
  * Check the write permissions of a path for the current user group and return
@@ -344,32 +344,37 @@ getString(FILE * stream)
 bool
 checkWritePermissions(char *path)
 {
-	bool permissions = false;
 	int writable = 0;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (path == NULL) {
 		warn(__FUNCTION__, "path arg was NULL");
 		return false;
 	}
-	// check if path has write permissions
+
+	/*
+	 * Check if path has write permissions
+	 */
 	writable = faccessat(AT_FDCWD, path, W_OK, AT_EACCESS);
 	if (writable == 0) {
-		permissions = true;
-	} else {
-		switch (errno) {
-		case EACCES:
-			dbg(DBG_VHIGH, "%s: path: %s is not writable", __FUNCTION__, path);
-			break;
-		case ENOENT:
-			dbg(DBG_VHIGH, "%s: path: %s does not exist", __FUNCTION__, path);
-			break;
-		default:
-			dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __FUNCTION__, path, errno, strerror(errno));
-			break;
-		}
+		return true;
 	}
-	return (permissions);
+
+	switch (errno) {
+	case EACCES:
+		dbg(DBG_VHIGH, "%s: path: %s is not writable", __FUNCTION__, path);
+		break;
+	case ENOENT:
+		dbg(DBG_VHIGH, "%s: path: %s does not exist", __FUNCTION__, path);
+		break;
+	default:
+		dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __FUNCTION__, path, errno, strerror(errno));
+		break;
+	}
+
+	return false;
 }
 
 
@@ -379,8 +384,8 @@ checkWritePermissions(char *path)
  * given:
  *      path             // path to check
  *
- * retuen
- *      true --> path is readable by the effecive user
+ * return
+ *      true --> path is readable by the effective user
  *      false --> path does not exist, is not readable, or some other error
  *
  * Check the write permissions of a path for the current user group and return
@@ -424,7 +429,7 @@ checkReadPermissions(char *path)
  * given:
  *      filename         // the filename to check for truncate and write permissions
  *
- * retuen
+ * return
  *      non-NULL --> open FILE descritor of a truncted file
  *      NULL --> path was not a file, or could not be created, or was not writable
  *
@@ -740,11 +745,11 @@ makePath(char *dir)
  * If the state->subDirs is true (no -c), then dir will be checked if it exists.
  * If it does not exist, then there will be an attempt to create dir.  If dir cannot
  * be created, then is function will report an error and not return.  If dir exists
- * but is not writiable, then this function will report an error and not return.
+ * but is not writable, then this function will report an error and not return.
  *
  * If the state->subDirs is false (-c), then dir will be checked if is exists.
  * If it does not exist, then this function will report an error and not return. If dir
- * exists but is not writiable, then this function will report an error and not return.
+ * exists but is not writable, then this function will report an error and not return.
  */
 void
 precheckPath(struct state *state, char *dir)

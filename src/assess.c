@@ -40,25 +40,10 @@
  *      Tom Gilgan
  *      Riccardo Paccagnella
  *
- * See the README.txt and the initial comment in assess.c for more information.
- *
- * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
- * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
- * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- *
- * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
- *
- * Share and enjoy! :-)
- *
  * Our code review identified more than 67 issues (as of 2015 July) in the original code to which we attempted to fix.
  * A fair number of these issues results in incorrect statistical analysis, core dump / process crashing, or permitted an
  * external user to compromise the integrity of the process (in some cases to the point where a system cracker could
- * force the execution of arbitrary code.  We identified a number of cases where the code assumed a 32-bit machine
+ * force the execution of arbitrary code).  We identified a number of cases where the code assumed a 32-bit machine
  * such that on 64 bit or more systems, the code produced bogus results.  We also identified limitations where testing
  * data sets that approached or exceeded 2^31 bits would completely fail.  And that is just a partial list of some of the
  * significant issues we identified!
@@ -158,7 +143,7 @@
  *          result, and destroy the initialization of the test.  One might say this was applying a more
  *          consistent object-method-like interface to these tests.
  *
- *      11) Improve the memory allocation patters of each test
+ *      11) Improve the memory allocation patterns of each test
  *
  *          We attempted to load allocation of required data into the initialization function of each test.
  *          In many cases the original code would allocate and free memory on each iteration.  We created
@@ -247,7 +232,7 @@
  *          or that were not freed.  We used memory allocation checking tools and cleaned up
  *          cases where memory leaks were found.
  *
- *      22) other issues not listed
+ *      22) Other issues not listed
  *
  *          The above list of 16 goals is incomplete.  In the interest of not extending this long comment
  *          much further, we will just mention that other important goals were attempted to be reached.
@@ -323,9 +308,10 @@
  * Our bug fixes are an expression of gratitude for the original authors efforts.  The bugs we introduced along
  * the way come with our additional apology as well as this disclaimer:
  *
- * TOM GILGAN AND LANDON CURT NOLL DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
- * EVENT SHALL TOM GILGAN NOR LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
+ * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
  * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
  * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
@@ -343,9 +329,9 @@
  *
  * You MUST use the following phrase in the subject of your Email (or risk your Email being ignored):
  *
- *          please subscribe me to the sts-announce list
+ *          Please subscribe me to the sts-announce list
  *
- * Please include the body of that that EMail:
+ * Please include the body of that that Email:
  *
  *          Your name
  *          Your interest in this sts code
@@ -379,7 +365,7 @@
  *
  * You MUST use the following phrase in the subject of your Email (or risk your Email being ignored):
  *
- *      sts patch request
+ *      STS patch request
  */
 
 
@@ -395,21 +381,22 @@
 #include "externs.h"
 #include "debug.h"
 
-// sts_version-edit_number
+
+// STS version
 const char *const version = "sts-2.1.2.5.cisco";
 
-// our name
+// Program name
 char *program = "assess";
 
-// do not debug by default
+// Do not debug by default
 long int debuglevel = DBG_NONE;
 
 
 int
 main(int argc, char *argv[])
 {
-	struct state run_state;	/* options set and dynamic arrays for this run */
-	int io_ret;		/* I/O return status */
+	struct state run_state;		// Options set and dynamic arrays for this run
+	int io_ret;			// I/O return status
 
 	/*
 	 * Set default test parameters and parse command line
@@ -457,7 +444,7 @@ main(int argc, char *argv[])
 	print(&run_state);
 
 	/*
-	 * final result processing
+	 * Process final result
 	 */
 	io_ret = fprintf(run_state.finalRept, "------------------------------------------------------------------------------\n");
 	if (io_ret <= 0) {
@@ -488,6 +475,9 @@ main(int argc, char *argv[])
 		errp(5, __FUNCTION__, "error in writing to finalRept");
 	}
 
+	/*
+	 * Perform metrics processing for each test
+	 */
 	metrics(&run_state);
 	errno = 0;		// paranoia
 	io_ret = fflush(run_state.finalRept);
@@ -501,7 +491,7 @@ main(int argc, char *argv[])
 	}
 
 	/*
-	 * finish / destroy storage no longer needed
+	 * Free memory no longer needed
 	 */
 	destroy(&run_state);
 
