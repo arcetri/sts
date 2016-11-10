@@ -245,7 +245,7 @@ getNumberOrDie(FILE * stream)
 		errp(212, __FUNCTION__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(212, __FUNCTION__, "getline did not return a NULL terminated string");
+		err(212, __FUNCTION__, "getline did not return a NUL terminated string");
 	}
 
 	/*
@@ -272,7 +272,7 @@ getNumberOrDie(FILE * stream)
  *      stream          FILE stream to read
  *
  * returns:
- *      NULL terminated line read from stream, w/o and trailing newline or return.
+ *      NUL terminated line read from stream, w/o and trailing newline or return.
  *
  * This function does not return on error.
  */
@@ -302,7 +302,7 @@ getString(FILE * stream)
 		errp(213, __FUNCTION__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(213, __FUNCTION__, "getline did not return a NULL terminated string");
+		err(213, __FUNCTION__, "getline did not return a NUL terminated string");
 	}
 
 	/*
@@ -453,7 +453,7 @@ openTruncate(char *filename)
 	}
 
 	/*
-	 * attempt to truncate file
+	 * Attempt to truncate file
 	 */
 	errno = 0;		// paranoia
 	stream = fopen(filename, "w");
@@ -481,7 +481,7 @@ openTruncate(char *filename)
 char *
 filePathName(char *head, char *tail)
 {
-	char *fullpath;		// dir/file
+	char *fullpath;		// Path of the dir/file
 	size_t len;		// Length of fullpath
 	int snprintf_ret;	// snprintf return value
 
@@ -506,7 +506,7 @@ filePathName(char *head, char *tail)
 	}
 
 	/*
-	 * form full path
+	 * Form full path
 	 */
 	errno = 0;		// paranoia
 	snprintf_ret = snprintf(fullpath, len, "%s/%s", head, tail);
@@ -516,7 +516,7 @@ filePathName(char *head, char *tail)
 	}
 
 	/*
-	 * return malloced path
+	 * Return malloced path
 	 */
 	return fullpath;
 }
@@ -535,9 +535,9 @@ filePathName(char *head, char *tail)
 char *
 data_filename_format(int partitionCount)
 {
-	char *buf;		// allocated buffer
-	int digits;		// decimal digits contained in partitionCount
-	int len;		// Length of the format
+	char *buf;		// Allocated buffer
+	int digits;		// Decimal digits contained in partitionCount
+	long int len;		// Length of the format
 	int snprintf_ret;	// snprintf return value
 
 	/*
@@ -560,17 +560,17 @@ data_filename_format(int partitionCount)
 		}
 	}
 	if (digits < 1) {
-		len = strlen("data.txt") + 1;	// data.txt: + 1 for NUL
+		len = (long int) strlen("data.txt") + 1;	// data.txt: + 1 for NUL
 	} else if (digits < 10) {
-		len = strlen("data%0") + 1 + strlen("d.txt") + 1;	// data%0[0-9]d.txt: + 1 for NUL
+		len = (long int) strlen("data%0") + 1 + strlen("d.txt") + 1;	// data%0[0-9]d.txt: + 1 for NUL
 	} else {
-		len = strlen("data%0") + 2 + strlen("d.txt") + 1;	// data%0[0-9][0-9]d.txt: + 1 for NUL
+		len = (long int) strlen("data%0") + 2 + strlen("d.txt") + 1;	// data%0[0-9][0-9]d.txt: + 1 for NUL
 	}
 
 	/*
 	 * Allocate the format
 	 */
-	buf = malloc(len + 1);	// + 1 for paranoia
+	buf = malloc((size_t) len + 1);	// + 1 for paranoia
 	if (buf == NULL) {
 		errp(215, __FUNCTION__, "cannot malloc of %d elements of %ld bytes each for data%%0*d.txt", len + 1,
 		     sizeof(buf[0]));
@@ -610,26 +610,27 @@ data_filename_format(int partitionCount)
 void
 makePath(char *dir)
 {
-	// set tmp string to length of dir
-	char *tmp;		// copy of dir, //'s turned into /, trailing / removed
-	char *p = NULL;		// working pointer
+	char *tmp;		// Copy of dir, //'s turned into /, trailing / removed
+	char *p = NULL;		// Working pointer
 	size_t len;		// Length of tmp copy of dir
-	struct stat statbuf;	// sub-directory status
+	struct stat statbuf;	// Sub-directory status
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (dir == NULL) {
 		err(216, __FUNCTION__, "dir arg is NULL");
 	}
 	dbg(DBG_VHIGH, "called %s on path: %s", __FUNCTION__, dir);
 
 	/*
-	 * optimization - if dir exists
+	 * Check if dir exists
 	 */
 	if (stat(dir, &statbuf) == 0) {
 		if (S_ISDIR(statbuf.st_mode)) {
 			// dir exists
 			if (checkWritePermissions(dir)) {
-				// all is well, nothing to do
+				// All is good, nothing to do
 				dbg(DBG_VHIGH, "dir is already a writable directory: %s", dir);
 				return;
 			} else {
@@ -643,16 +644,14 @@ makePath(char *dir)
 	}
 
 	/*
-	 * copy dir into tmp converting multiple /'s into a single /
+	 * Copy dir into tmp converting multiple /'s into a single /
 	 */
-	// allocate max possible storage for tmp
-	len = strlen(dir);
+	len = strlen(dir); // Allocate max possible storage for tmp
 	tmp = malloc(len + 1);	// +1 for paranoia below
 	if (tmp == NULL) {
 		errp(216, __FUNCTION__, "unable to allocate a string of length %lu", len + 1);
 	}
 	tmp[len] = '\0';	// paranoia
-	// copy directory path into tmp, converting multiple /'s into a single /
 	for (p = dir, len = 0; *p; ++p) {
 		if (*p == '/' && *(p + 1) == '/') {
 			++p;
@@ -662,22 +661,23 @@ makePath(char *dir)
 	}
 	tmp[len] = '\0';
 
-	// if final character(s) is a / replace it with NUL
+	// If final character(s) is a / replace it with NUL
 	if (len > 0 && tmp[len - 1] == '/') {
 		tmp[len--] = '\0';
 	}
 	dbg(DBG_VHIGH, "will use canonical path: %s", tmp);
 
-	// in case: empty path or just /
+	// In case empty path or just /
 	if (len == 0 || (tmp[0] == '/' && len == 1)) {
-		// path was empty or just /'s, nothing to do
+
+		// Path was empty or just /'s, nothing to do
 		free(tmp);
 		dbg(DBG_VHIGH, "empty path or just /, nothing to do");
 		return;
 	}
 
 	/*
-	 * iterate through directory string creating each directory
+	 * Iterate through directory string creating each directory
 	 *
 	 * NOTE: We start with the 2nd character because dir starts with /,
 	 *       by definition of the filesystem / exists and does not need
@@ -687,16 +687,18 @@ makePath(char *dir)
 	 *       bottom of this function.
 	 */
 	for (p = tmp + 1; *p; p++) {
+
+		// Check if we just passed a directory name in the path
 		if (*p == '/') {
 
-			// cap directory string at the current directory
+			// Terminate directory string at the current directory
 			*p = '\0';
 			dbg(DBG_VVHIGH, "working sub-path: %s", tmp);
 
-			// optimization - if sub-path already exists
+			// Check if sub-path already exists
 			if (stat(tmp, &statbuf) == 0) {
 				if (S_ISDIR(statbuf.st_mode)) {
-					// sub-path is a dir, just keep going
+					// Sub-path is a dir, just keep going
 					dbg(DBG_VVHIGH, "sub-path already a directory: %s", tmp);
 					*p = '/';
 					continue;
@@ -707,7 +709,8 @@ makePath(char *dir)
 					return;
 				}
 			}
-			// new element in sub-path does not exist, so mkdir it
+
+			// New element in sub-path does not exist, so mkdir it
 			dbg(DBG_VVHIGH, "about to mkdir %s", tmp);
 			errno = 0;	// paranoia
 			if (mkdir(tmp, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) < 0) {
@@ -715,13 +718,13 @@ makePath(char *dir)
 			}
 			dbg(DBG_VVHIGH, "just created %s", tmp);
 
-			// restore string for next possible directory
+			// Restore string for next possible directory
 			*p = '/';
 		}
 	}
 
 	/*
-	 * make final directory (wasn't created in loop due to replacing '/' or lack of one to begin with)
+	 * Make final directory (wasn't created in loop due to replacing '/' or lack of one to begin with)
 	 */
 	dbg(DBG_VVHIGH, "about to do the final mkdir %s", tmp);
 	errno = 0;		// paranoia
@@ -772,7 +775,7 @@ precheckPath(struct state *state, char *dir)
 	 */
 	if (state->subDirs == true) {
 
-		// make the directory if it does not exist (or not writable)
+		// Make the directory if it does not exist (or not writable)
 		dbg(DBG_VVHIGH, "no -c, check if %s is a writeable directory", dir);
 		if (checkWritePermissions(dir) != true) {
 			dbg(DBG_VVHIGH, "it is not, so try to mkdir %s", dir);
@@ -783,7 +786,7 @@ precheckPath(struct state *state, char *dir)
 	}
 
 	/*
-	 * if -c, then verify that directory exists and is writable
+	 * If -c, then verify that directory exists and is writable
 	 */
 	dbg(DBG_VVHIGH, "with -c, %s must be a writeable directory", dir);
 	if (checkWritePermissions(dir) != true) {
@@ -829,18 +832,18 @@ precheckSubdir(struct state *state, char *subdir)
 	}
 
 	/*
-	 * form full path
+	 * Form full path
 	 */
 	fullpath = filePathName(state->workDir, subdir);
 	dbg(DBG_VHIGH, "will verify that subdir exists and is writable: %s", fullpath);
 
 	/*
-	 * ensure that a workDir sub-directory exists and is writable
+	 * Ensure that a workDir sub-directory exists and is writable
 	 */
 	precheckPath(state, fullpath);
 
 	/*
-	 * return malloced fullpath
+	 * Return malloced fullpath
 	 */
 	return fullpath;
 }
@@ -876,21 +879,21 @@ str2longint(bool * success_p, char *string)
 	}
 
 	/*
-	 * attempt to convert to a number
+	 * Attempt to convert to a number
 	 */
 	errno = 0;
 	number = strtol(string, NULL, 0);
 	saved_errno = errno;
 	if (saved_errno != 0) {
 
-		// cleanup and report failure
+		// Cleanup and report failure
 		dbg(DBG_LOW, "error in parsing string to integer: '%s'", string);
 		*success_p = false;
 		return saved_errno;
 	}
 
 	/*
-	 * cleanup and report success
+	 * Cleanup and report success
 	 */
 	*success_p = true;
 	return number;
@@ -921,7 +924,7 @@ str2longint_or_die(char *string)
 	}
 
 	/*
-	 * attempt to convert to a number
+	 * Attempt to convert to a number
 	 */
 	errno = 0;
 	number = strtol(string, NULL, 0);
@@ -930,7 +933,7 @@ str2longint_or_die(char *string)
 	}
 
 	/*
-	 * cleanup and report success
+	 * Cleanup and report success
 	 */
 	return number;
 }
@@ -954,15 +957,23 @@ str2longint_or_die(char *string)
 void
 generatorOptions(struct state *state)
 {
-	long int generator;	// generator number
-	bool success;		// if we read a valid file format
-	char *src;		// potential src of random file data
-	char *line;		// random file data line
+	long int generator;	// Generator number
+	bool success;		// If we read a valid file format
+	char *src;		// Potential src of random file data
+	char *line;		// Random file data line
 
 	/*
-	 * case: write to file (-m w)
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(221, __FUNCTION__, "state arg is NULL");
+	}
+
+	/*
+	 * Case: write to file (-m w)
 	 */
 	if (state->runMode == MODE_WRITE_ONLY) {
+
 		// Open the input file for writing
 		state->streamFile = fopen(state->randomDataPath, "w");
 		if (state->streamFile == NULL) {
@@ -971,13 +982,15 @@ generatorOptions(struct state *state)
 	}
 
 	/*
-	 * case: read from file
+	 * Case: read from file
 	 */
 	else if (state->generator == GENERATOR_FROM_FILE) {
-		// verify the input file is readable
+
+		// Verify the input file is readable
 		if (checkReadPermissions(state->randomDataPath) == false) {
 			err(221, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
 		}
+
 		// Open the input file for reading
 		state->streamFile = fopen(state->randomDataPath, "r");
 		if (state->streamFile == NULL) {
@@ -986,45 +999,46 @@ generatorOptions(struct state *state)
 	}
 
 	/*
-	 * batch mode, nothing to do here
+	 * Batch mode, nothing to do here
 	 */
 	if (state->batchmode == true) {
-		// nothing else to do
 		return;
 	}
 
 	/*
-	 * non-batch mode
+	 * Non-batch mode, ask for generator selection
 	 */
 	do {
-		// if -g was used, do not prompt for generator
+		// If -g was used, do not ask for generator selection
 		if (state->generatorFlag == true) {
 
-			// use the generator number passed in on the command line
+			// Use the generator number passed in on the command line
 			generator = state->generator;
+		}
 
-			// -g was not used, prompt for generator
-		} else {
-			// prompt
-			printf("	       G E N E R A T O R    S E L E C T I O N \n");
-			printf("	       ______________________________________\n\n");
+		// -g was not used, ask for generator selection
+		else {
+
+			// Ask for a selection
+			printf("           G E N E R A T O R    S E L E C T I O N \n");
+			printf("           ______________________________________\n\n");
 			if (state->runMode == MODE_WRITE_ONLY) {
-				printf("				   [1] Linear Congruential\n");
+				printf("                                   [1] Linear Congruential\n");
 			} else {
-				printf("    [0] Input File		   [1] Linear Congruential\n");
+				printf("    [0] Input File                 [1] Linear Congruential\n");
 			}
-			printf("	[2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
-			printf("	[4] Cubic Congruential	       [5] XOR\n");
-			printf("	[6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
-			printf("	[8] Micali-Schnorr	       [9] G Using SHA-1\n\n");
+			printf("    [2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
+			printf("    [4] Cubic Congruential         [5] XOR\n");
+			printf("    [6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
+			printf("    [8] Micali-Schnorr             [9] G Using SHA-1\n\n");
 			printf("   Enter Choice: ");
 			fflush(stdout);
 
-			// read number
+			// Read answer
 			generator = getNumber(stdin, stdout);
 			putchar('\n');
 
-			// help if they gave us a wrong number
+			// Help if they gave us a wrong number
 			if (generator < 0 || generator > NUMOFGENERATORS) {
 				printf("\ngenerator number must be from 0 to %d inclusive, try again\n\n", NUMOFGENERATORS);
 				fflush(stdout);
@@ -1032,22 +1046,23 @@ generatorOptions(struct state *state)
 			}
 		}
 
-		// cannot use read from file when in -m w runMode
+		// Cannot use read from file when in -m w runMode
 		if (state->runMode == MODE_WRITE_ONLY && generator == GENERATOR_FROM_FILE) {
 			printf("\nbecause -m w (write-only) was given, generator 0 (read from file) cannot be used, try again\n\n");
 			fflush(stdout);
 			continue;
 		}
-		// for non-zero generator and -m w runMode, ask for the filename
+
+		// For non-zero generator and -m w runMode, ask for the filename
 		if (state->runMode == MODE_WRITE_ONLY && generator != GENERATOR_FROM_FILE) {
 
-			// if no -f randdata, ask for the filename
+			// If no -f randdata, ask for the filename
 			if (state->randomDataFlag == false) {
 
 				printf("\t\tOutput generator file: ");
 				fflush(stdout);
 
-				// read filename
+				// Read filename
 				src = getString(stdin);
 				putchar('\n');
 
@@ -1059,11 +1074,13 @@ generatorOptions(struct state *state)
 					free(src);
 					continue;
 				}
-				// set the randomData filename
-				state->randomDataPath = src;
 
-				// we have -f randdata, open randdata for writing/truncation
-			} else {
+				// Set the randomData filename
+				state->randomDataPath = src;
+			}
+
+			// We have -f randdata, open randdata for writing/truncation
+			else {
 				state->streamFile = openTruncate(state->randomDataPath);
 				if (state->streamFile == NULL) {
 					printf("\ncould not create/open for writing/truncation: %s, try again\n\n",
@@ -1073,29 +1090,33 @@ generatorOptions(struct state *state)
 				}
 			}
 		}
-		// for generator 0 (read from a file) and no -f randdata, ask for the filename
+
+		// For generator 0 (read from a file) and no -f randdata, ask for the filename
 		if (generator == GENERATOR_FROM_FILE && state->randomDataFlag == false) {
 
-			// prompt
+			// Ask for the filename
 			printf("\t\tUser Prescribed Input File: ");
 			fflush(stdout);
 
-			// read filename
+			// Read filename
 			src = getString(stdin);
 			putchar('\n');
 
-			// sanity check to see if we can read the file
+			// Sanity check to see if we can read the file
 			if (checkReadPermissions(src) != true) {
 				printf("\nfile: %s does not exist or is not readable, try again\n\n", src);
 				fflush(stdout);
 				free(src);
 				continue;
 			}
-			// set the randomData filename
+
+			// Set the randomData filename
 			state->randomDataPath = src;
 		}
-		// for generator 0 (read from a file), open the file
+
+		// For generator 0 (read from a file), open the file
 		if (generator == GENERATOR_FROM_FILE) {
+
 			// Open the input file for reading
 			state->streamFile = fopen(state->randomDataPath, "r");
 			if (state->streamFile == NULL) {
@@ -1107,25 +1128,25 @@ generatorOptions(struct state *state)
 				}
 				continue;
 			}
-			// promot for input format if -F was NOT used
+
+			// Ask for input format if -F was NOT used
 			if (state->dataFormatFlag == false) {
 
-				// determine generator 0 (read from a file), open the file format
+				// Determine generator 0 (read from a file), open the file format
 				success = false;
 				do {
-					// prompt
+					// Ask for input file format
 					printf("   Input File Format:\n");
-					printf("	[0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
-					printf
-					    ("	[1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
+					printf("    [0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
+					printf("    [1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
 					printf("   Select input mode:  ");
 					fflush(stdout);
 
-					// read a line
+					// Read answer
 					line = getString(stdin);
 					putchar('\n');
 
-					// parse format
+					// Parse answer
 					switch (line[0]) {
 					case '0':
 						success = true;
@@ -1153,51 +1174,84 @@ generatorOptions(struct state *state)
 
 	} while (generator < 0 || generator > NUMOFGENERATORS);
 
-	// set the generator option
+	// Set the generator option
 	dbg(DBG_LOW, "will use generator %s[%ld]", state->generatorDir[generator], generator);
 	state->generator = (enum gen) generator;
 	return;
 }
 
 
+/*
+ * chooseTests - determine tests to enable
+ *
+ * given:
+ *      state           // pointer to run state
+ *
+ * Ask the user which tests to enable.
+ * 
+ * This function does not return on error.
+ */
 void
 chooseTests(struct state *state)
 {
-	long int run_all;
+	long int run_all;	// Whether the
 	char *run_test;
-	bool success;		// if parse in the input line was successful
+	bool success;		// true if parse in the input line was successful
 	int i;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
-		err(222, __FUNCTION__, "state arg is NULL");
+		err(223, __FUNCTION__, "state arg is NULL");
 	}
+
 	// If -t was used, tests are already chosen, just return
 	if (state->testVectorFlag == true) {
 		return;
 	}
-	// prompt
-	printf("		    S T A T I S T I C A L   T E S T S\n");
-	printf("		    _________________________________\n\n");
-	printf("	[01] Frequency			     [02] Block Frequency\n");
-	printf("	[03] Cumulative Sums		     [04] Runs\n");
-	printf("	[05] Longest Run of Ones	     [06] Rank\n");
-	printf("	[07] Discrete Fourier Transform	     [08] Nonperiodic Template Matchings\n");
-	printf("	[09] Overlapping Template Matchings  [10] Universal Statistical\n");
-	printf("	[11] Approximate Entropy	     [12] Random Excursions\n");
-	printf("	[13] Random Excursions Variant	     [14] Serial\n");
-	printf("	[15] Linear Complexity\n\n");
-	printf("	     INSTRUCTIONS\n");
-	printf("		Enter 0 if you DO NOT want to apply all of the\n");
-	printf("		statistical tests to each sequence and 1 if you DO.\n\n");
-	printf("   Enter Choice: ");
-	fflush(stdout);
 
-	// read number
-	run_all = getNumber(stdin, stdout);
-	putchar('\n');
+	// Give instructions
+	printf("                S T A T I S T I C A L   T E S T S\n");
+	printf("                _________________________________\n\n");
+	printf("    [01] Frequency                       [02] Block Frequency\n");
+	printf("    [03] Cumulative Sums                 [04] Runs\n");
+	printf("    [05] Longest Run of Ones             [06] Rank\n");
+	printf("    [07] Discrete Fourier Transform      [08] Nonperiodic Template Matchings\n");
+	printf("    [09] Overlapping Template Matchings  [10] Universal Statistical\n");
+	printf("    [11] Approximate Entropy             [12] Random Excursions\n");
+	printf("    [13] Random Excursions Variant       [14] Serial\n");
+	printf("    [15] Linear Complexity\n\n");
+	printf("         INSTRUCTIONS\n");
+	printf("            Enter 0 if you DO NOT want to apply all of the\n");
+	printf("            statistical tests to each sequence and 1 if you DO.\n\n");
 
-	state->testVector[0] = ((run_all == 1) ? true : false);
+	do {
+		// Ask question
+		printf("   Enter Choice: ");
+		fflush(stdout);
+
+		// Read numeric answer
+		run_all = getNumber(stdin, stdout);
+		putchar('\n');
+
+		success = true;	// hope for the best
+		switch (run_all) {
+		case 0:
+			state->testVector[0] = false;
+			break;
+		case 1:
+			state->testVector[0] = true;
+			break;
+		default:
+			success = false;	// must ask again
+			printf("\nUnexpected answer, please enter only 0 or 1\n", i);
+			fflush(stdout);
+			break;
+		}
+
+	} while (success != true);
+
 	putchar('\n');
 	if (state->testVector[0] == true) {
 		for (i = 1; i <= NUMOFTESTS; i++) {
@@ -1205,20 +1259,20 @@ chooseTests(struct state *state)
 		}
 	} else {
 		do {
-			// prompt
-			printf("	     INSTRUCTIONS\n");
-			printf("		Enter a 0 or 1 to indicate whether or not the numbered statistical\n");
-			printf("		test should be applied to each sequence.\n\n");
-			printf("		   111111\n");
-			printf("	  123456789012345\n");
-			printf("	  ");
+			// Ask for individual test numbers
+			printf("         INSTRUCTIONS\n");
+			printf("            Enter a 0 or 1 to indicate whether or not the numbered statistical\n");
+			printf("            test should be applied to each sequence.\n\n");
+			printf("               111111\n");
+			printf("      123456789012345\n");
+			printf("      ");
 			fflush(stdout);
 
-			// read the test string
+			// Read the answer string
 			run_test = getString(stdin);
 			putchar('\n');
 
-			// parse 0's and 1's
+			// Parse 0's and 1's
 			success = true;	// hope for the best
 			for (i = 1; i <= NUMOFTESTS; i++) {
 				switch (run_test[i - 1]) {
@@ -1229,13 +1283,13 @@ chooseTests(struct state *state)
 					state->testVector[i] = true;
 					break;
 				case '\0':
-					success = false;	// must prompt again
+					success = false;	// must ask again
 					printf("\nYou must enter a 0 or 1 for all %d tests\n\n", NUMOFTESTS);
 					fflush(stdout);
 					break;
 				default:
-					success = false;	// must prompt again
-					printf("\nUnexpcted character for test %d, enter only 0 or 1 for each test\n", i);
+					success = false;	// must ask again
+					printf("\nUnexpected character for test %d, enter only 0 or 1 for each test\n", i);
 					fflush(stdout);
 					break;
 				}
@@ -1247,10 +1301,20 @@ chooseTests(struct state *state)
 }
 
 
+/*
+ * fixParameters - adjust test parameters
+ *
+ * given:
+ *      state           // pointer to run state
+ *
+ * Ask the user if he wants to update the test parameters.
+ *
+ * This function does not return on error.
+ */
 void
 fixParameters(struct state *state)
 {
-	int testid;
+	int testid;	// Number of the test whose parameters are being changed
 
 	/*
 	 * Check preconditions (firewall)
@@ -1260,38 +1324,38 @@ fixParameters(struct state *state)
 	}
 
 	/*
-	 * prompt for parameters
+	 * Ask for parameters
 	 *
 	 * We skip prompting any parameter that is only associated with a non-selected test
 	 */
 	do {
 		/*
-		 * prompt
+		 * Print instructions
 		 */
-		printf("	P a r a m e t e r   A d j u s t m e n t s\n");
-		printf("	-----------------------------------------\n");
+		printf("        P a r a m e t e r   A d j u s t m e n t s\n");
+		printf("        -----------------------------------------\n");
 		if (state->testVector[TEST_BLOCK_FREQUENCY] == true) {
-			printf("	[%d] Block Frequency Test - block length(M):	     %ld\n",
+			printf("    [%d] Block Frequency Test - block length(M):         %ld\n",
 			       PARAM_blockFrequencyBlockLength, state->tp.blockFrequencyBlockLength);
 		}
 		if (state->testVector[TEST_NON_OVERLAPPING] == true) {
-			printf("	[%d] NonOverlapping Template Test - block length(m): %ld\n",
+			printf("    [%d] NonOverlapping Template Test - block length(m): %ld\n",
 			       PARAM_nonOverlappingTemplateBlockLength, state->tp.nonOverlappingTemplateLength);
 		}
 		if (state->testVector[TEST_OVERLAPPING] == true) {
-			printf("	[%d] Overlapping Template Test - block length(m):    %ld\n",
+			printf("    [%d] Overlapping Template Test - block length(m):    %ld\n",
 			       PARAM_overlappingTemplateBlockLength, state->tp.overlappingTemplateLength);
 		}
 		if (state->testVector[TEST_APEN] == true) {
-			printf("	[%d] Approximate Entropy Test - block length(m):     %ld\n",
+			printf("    [%d] Approximate Entropy Test - block length(m):     %ld\n",
 			       PARAM_approximateEntropyBlockLength, state->tp.approximateEntropyBlockLength);
 		}
 		if (state->testVector[TEST_SERIAL] == true) {
-			printf("	[%d] Serial Test - block length(m):		     %ld\n",
+			printf("    [%d] Serial Test - block length(m):                  %ld\n",
 			       PARAM_serialBlockLength, state->tp.serialBlockLength);
 		}
 		if (state->testVector[TEST_LINEARCOMPLEXITY] == true) {
-			printf("	[%d] Linear Complexity Test - block length(M):	     %ld\n",
+			printf("    [%d] Linear Complexity Test - block length(M):       %ld\n",
 			       PARAM_linearComplexitySequenceLength, state->tp.linearComplexitySequenceLength);
 		}
 		printf("    [%d] bitstream iterations:				%ld\n", PARAM_numOfBitStreams,
@@ -1306,31 +1370,31 @@ fixParameters(struct state *state)
 		printf("   Select Test (%d to continue): ", PARAM_continue);
 		fflush(stdout);
 
-		// read number
-		testid = getNumber(stdin, stdout);
+		// Read numeric answer
+		testid = (int) getNumber(stdin, stdout);
 		putchar('\n');
 
 		/*
-		 * prompt for value according to testid
+		 * Ask for value according to testid
 		 */
 		switch (testid) {
 
 		case PARAM_continue:
-			break;	// stop prompting
+			break;	// Stop asking
 
 		case PARAM_blockFrequencyBlockLength:
 			do {
-				// prompt
+				// Ask for new value 
 				printf("   Enter Block Frequency Test block length (try: %d): ", DEFAULT_BITCOUNT);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.blockFrequencyBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.blockFrequencyBlockLength <= 0) {
-					printf("	Block Frequency Test block length %ld must be > 0, try again\n\n",
+					printf("    Block Frequency Test block length %ld must be > 0, try again\n\n",
 					       state->tp.blockFrequencyBlockLength);
 				}
 			} while (state->tp.blockFrequencyBlockLength <= 0);
@@ -1338,21 +1402,21 @@ fixParameters(struct state *state)
 
 		case PARAM_nonOverlappingTemplateBlockLength:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter NonOverlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.nonOverlappingTemplateLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.nonOverlappingTemplateLength < MINTEMPLEN) {
-					printf("	NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					printf("    NonOverlapping Template Test block Length %ld must be >= %d, try again\n\n",
 					       state->tp.nonOverlappingTemplateLength, MINTEMPLEN);
 				}
 				if (state->tp.nonOverlappingTemplateLength > MAXTEMPLEN) {
-					printf("	NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					printf("    NonOverlapping Template Test block Length %ld must be <= %d, try again\n\n",
 					       state->tp.nonOverlappingTemplateLength, MAXTEMPLEN);
 				}
 			} while ((state->tp.nonOverlappingTemplateLength < MINTEMPLEN) ||
@@ -1361,21 +1425,21 @@ fixParameters(struct state *state)
 
 		case PARAM_overlappingTemplateBlockLength:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Overlapping Template Test block Length (try: %d): ", DEFAULT_OVERLAPPING);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.overlappingTemplateLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.overlappingTemplateLength < MINTEMPLEN) {
-					printf("	Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
+					printf("    Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
 					       state->tp.overlappingTemplateLength, MINTEMPLEN);
 				}
 				if (state->tp.overlappingTemplateLength > MAXTEMPLEN) {
-					printf("	Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
+					printf("    Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
 					       state->tp.overlappingTemplateLength, MAXTEMPLEN);
 				}
 			} while ((state->tp.overlappingTemplateLength < MINTEMPLEN) ||
@@ -1384,17 +1448,17 @@ fixParameters(struct state *state)
 
 		case PARAM_approximateEntropyBlockLength:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Approximate Entropy Test block Length (try: %d): ", DEFAULT_APEN);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.approximateEntropyBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.approximateEntropyBlockLength <= 0) {
-					printf("	Approximate Entropy Test block Length %ld must be > 0, try again\n\n",
+					printf("    Approximate Entropy Test block Length %ld must be > 0, try again\n\n",
 					       state->tp.approximateEntropyBlockLength);
 				}
 			} while (state->tp.approximateEntropyBlockLength <= 0);
@@ -1402,17 +1466,17 @@ fixParameters(struct state *state)
 
 		case PARAM_serialBlockLength:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Serial Test block Length (try: %d): ", DEFAULT_SERIAL);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.serialBlockLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.serialBlockLength <= 0) {
-					printf("	Serial Test block Length %ld must be > 0, try again\n\n",
+					printf("    Serial Test block Length %ld must be > 0, try again\n\n",
 					       state->tp.serialBlockLength);
 				}
 			} while (state->tp.serialBlockLength <= 0);
@@ -1420,20 +1484,20 @@ fixParameters(struct state *state)
 
 		case PARAM_linearComplexitySequenceLength:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Linear Complexity Test block Length (try: %d): ", DEFAULT_LINEARCOMPLEXITY);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.linearComplexitySequenceLength = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.linearComplexitySequenceLength < MIN_M_LINEARCOMPLEXITY) {
-					printf("	linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
+					printf("    linear complexith sequence length(M): %ld must be >= %d, try again\n\n",
 					       state->tp.linearComplexitySequenceLength, MIN_M_LINEARCOMPLEXITY);
 				} else if (state->tp.linearComplexitySequenceLength > MAX_M_LINEARCOMPLEXITY + 1) {
-					printf("	linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
+					printf("    linear complexith sequence length(M): %ld must be <= %d, try again\n\n",
 					       state->tp.linearComplexitySequenceLength, MAX_M_LINEARCOMPLEXITY);
 				}
 			} while ((state->tp.linearComplexitySequenceLength < MIN_M_LINEARCOMPLEXITY) ||
@@ -1442,17 +1506,17 @@ fixParameters(struct state *state)
 
 		case PARAM_numOfBitStreams:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter the number bitstream iterations (try: %d): ", DEFAULT_UNIFORMITY_BINS);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.numOfBitStreams = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.numOfBitStreams <= 0) {
-					printf("	Number of uniformity bins %ld must be > 0, try again\n\n",
+					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
 					       state->tp.numOfBitStreams);
 				}
 			} while (state->tp.numOfBitStreams <= 0);
@@ -1460,17 +1524,17 @@ fixParameters(struct state *state)
 
 		case PARAM_uniformity_bins:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter the number of uniformity bins (try: %d): ", DEFAULT_UNIFORMITY_BINS);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.uniformity_bins = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.uniformity_bins <= 0) {
-					printf("	Number of uniformity bins %ld must be > 0, try again\n\n",
+					printf("    Number of uniformity bins %ld must be > 0, try again\n\n",
 					       state->tp.uniformity_bins);
 				}
 			} while (state->tp.uniformity_bins <= 0);
@@ -1478,20 +1542,20 @@ fixParameters(struct state *state)
 
 		case PARAM_n:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter the length of a single bit stream (try: %d): ", DEFAULT_BITCOUNT);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.n = getNumber(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.n < MIN_BITCOUNT) {
-					printf("	Length of a single bit stream %ld must be >= %d, try again\n\n",
+					printf("    Length of a single bit stream %ld must be >= %d, try again\n\n",
 					       state->tp.n, MIN_BITCOUNT);
 				} else if (state->tp.n > MAX_BITCOUNT) {
-					printf("	Length of a single bit stream %ld must be <= %d, try again\n\n",
+					printf("    Length of a single bit stream %ld must be <= %d, try again\n\n",
 					       state->tp.n, MAX_BITCOUNT);
 				}
 			} while ((state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT));
@@ -1499,41 +1563,41 @@ fixParameters(struct state *state)
 
 		case PARAM_uniformity_level:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Uniformity Cutoff Level (try: %f): ", DEFAULT_UNIFORMITY_LEVEL);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.uniformity_level = getDouble(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.uniformity_level <= 0.0) {
-					printf("	Uniformity Cutoff Level must be > 0.0: %f, try again\n\n",
+					printf("    Uniformity Cutoff Level must be > 0.0: %f, try again\n\n",
 					       state->tp.uniformity_level);
 				} else if (state->tp.uniformity_level > 0.1) {
-					printf("	Uniformity Cutoff Level must be <= 0.1: %f, try again\n\n",
+					printf("    Uniformity Cutoff Level must be <= 0.1: %f, try again\n\n",
 					       state->tp.uniformity_level);
 				}
 			} while (state->tp.uniformity_level <= 0.0 || state->tp.uniformity_level > 0.1);
 			break;
-
-			// prompt is for any test
+				
+		// Ask for new value is for any test
 		case PARAM_alpha:
 			do {
-				// prompt
+				// Ask for new value
 				printf("   Enter Alpha Confidence Level (try: %f): ", DEFAULT_ALPHA);
 				fflush(stdout);
 
-				// read number
+				// Read numeric answer
 				state->tp.alpha = getDouble(stdin, stdout);
 				putchar('\n');
 
-				// error range check
+				// Check error range
 				if (state->tp.alpha <= 0.0) {
-					printf("	Alpha must be > 0.0: %f, try again\n\n", state->tp.alpha);
+					printf("    Alpha must be > 0.0: %f, try again\n\n", state->tp.alpha);
 				} else if (state->tp.alpha > 0.1) {
-					printf("	Alpha must be <= 0.1: %f, try again\n\n", state->tp.alpha);
+					printf("    Alpha must be <= 0.1: %f, try again\n\n", state->tp.alpha);
 				}
 			} while (state->tp.alpha <= 0.0 || state->tp.alpha > 0.1);
 			break;
@@ -1566,12 +1630,12 @@ fileBasedBitStreams(struct state *state)
 	}
 
 	/*
-	 * case: parse a set of ASCII '0' and '1' characters
+	 * Case: parse a set of ASCII '0' and '1' characters
 	 */
 	if (state->dataFormat == FORMAT_ASCII_01) {
 
 		/*
-		 * set file pointer after jobnum chunks into file
+		 * Set file pointer after jobnum chunks into file
 		 */
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
@@ -1582,12 +1646,12 @@ fileBasedBitStreams(struct state *state)
 			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		}
 		/*
-		 * parse data
+		 * Parse data
 		 */
 		readBinaryDigitsInASCIIFormat(state);
 
 		/*
-		 * close file
+		 * Close file
 		 */
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
@@ -1599,12 +1663,12 @@ fileBasedBitStreams(struct state *state)
 	}
 
 	/*
-	 * case: parse raw 8-bit binary bytes
+	 * Case: parse raw 8-bit binary bytes
 	 */
 	else if (state->dataFormat == FORMAT_RAW_BINARY) {
 
 		/*
-		 * bytes that hold a given set of consecutive bits
+		 * Get number of bytes that hold a given set of consecutive bits
 		 *
 		 * We need to round up the byte count to the next whole byte.
 		 * However if the bit count is a multiple of 8, then we do
@@ -1614,7 +1678,7 @@ fileBasedBitStreams(struct state *state)
 		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8;
 
 		/*
-		 * set file pointer after jobnum chunks into file
+		 * Set file pointer after jobnum chunks into file
 		 */
 		dbg(DBG_LOW, "seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
@@ -1623,12 +1687,12 @@ fileBasedBitStreams(struct state *state)
 			err(224, __FUNCTION__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
 		}
 		/*
-		 * parse data
+		 * Parse data
 		 */
 		readHexDigitsInBinaryFormat(state);
 
 		/*
-		 * close file
+		 * Close file
 		 */
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
@@ -1639,7 +1703,7 @@ fileBasedBitStreams(struct state *state)
 	}
 
 	/*
-	 * case: should not get here
+	 * Case: should not get here
 	 */
 	else {
 		err(224, __FUNCTION__, "Input file format selection is invalid");
@@ -1657,7 +1721,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	long int num_0s;
 	long int num_1s;
 	long int bitsRead;
-	long int bit;
+	int bit;
 	int io_ret;		// I/O return status
 
 	/*
@@ -1671,19 +1735,19 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	}
 
 	/*
-	 * iterate reading bitstream sized binary digits in ASCII
+	 * Perform iterations on consecutive bitstreams read from the streamFile as binary digits in ASCII
 	 */
 	dbg(DBG_LOW, "start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
-		 * read octets from the bitstream and count 0 and 1 bits
+		 * Copy the next n bits from the streamFile to epsilon
 		 */
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
 		for (j = 0; j < state->tp.n; j++) {
-			io_ret = fscanf(state->streamFile, "%ld", &bit);
+			io_ret = fscanf(state->streamFile, "%d", &bit);
 			if (io_ret == EOF) {
 				warn(__FUNCTION__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
 				     bitsRead);
@@ -1695,7 +1759,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 				} else {
 					num_1s++;
 				}
-				state->epsilon[j] = bit;
+				state->epsilon[j] = (BitSequence) bit;
 			}
 		}
 
@@ -1753,20 +1817,20 @@ readHexDigitsInBinaryFormat(struct state *state)
 	}
 
 	/*
-	 * iterate reading bitstream in octets
+	 * Perform iterations on consecutive bitstreams read from the streamFile as octets
 	 */
 	dbg(DBG_LOW, "start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
-		 * read octets from the bitstream and count 0 and 1 bits
+		 * Copy the next n bits from the streamFile to epsilon
 		 */
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
 		do {
 			/*
-			 * read the next binary octet
+			 * Read the next binary octet
 			 */
 			io_ret = fgetc(state->streamFile);
 			if (io_ret < 0) {
@@ -1775,7 +1839,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 			byte = (BYTE) io_ret;
 
 			/*
-			 * add bits to the epsilon bit stream
+			 * Add bits of the octet to the epsilon bit stream
 			 */
 			done = convertToBits(state, &byte, BITS_N_BYTE, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
@@ -1826,7 +1890,7 @@ convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bits
 	long int i;
 	long int j;
 	long int count;
-	long int bit;
+	int bit;
 	BYTE mask;
 	long int zeros;
 	long int ones;
@@ -1856,7 +1920,7 @@ convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bits
 				zeros++;
 			}
 			mask >>= 1;
-			state->epsilon[*bitsRead] = bit;
+			state->epsilon[*bitsRead] = (BitSequence) bit;
 			(*bitsRead)++;
 			if (*bitsRead == bitsNeeded) {
 				return true;
@@ -1884,7 +1948,7 @@ invokeTestSuite(struct state *state)
 	}
 
 	/*
-	 * case: prep for writing to the datafile // TODO understand these following 2 cases
+	 * Case: prep for writing to the datafile
 	 */
 	if (state->runMode == MODE_WRITE_ONLY) {
 
@@ -1893,7 +1957,7 @@ invokeTestSuite(struct state *state)
 		 */
 		switch (state->dataFormat) {
 		case FORMAT_RAW_BINARY:
-			/* Compression BITS_N_BYTE:1 */
+			// Compression BITS_N_BYTE:1
 			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
 				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
@@ -1918,7 +1982,7 @@ invokeTestSuite(struct state *state)
 	}
 
 	/*
-	 * case: prep for reading from a file or from a generator
+	 * Case: prep for reading from a file or from a generator
 	 */
 	else {
 		/*
@@ -1930,8 +1994,8 @@ invokeTestSuite(struct state *state)
 			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 		}
 		if (state->generator == 0) {
-			io_ret =
-			    fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n", state->randomDataPath, state->tp.alpha);
+			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+					 state->randomDataPath, state->tp.alpha);
 			if (io_ret <= 0) {
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
@@ -1954,7 +2018,7 @@ invokeTestSuite(struct state *state)
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Statistical Testing In Progress.........");
 		} else {
-			printf("	 Statistical Testing In Progress.........\n\n");
+			printf("     Statistical Testing In Progress.........\n\n");
 			fflush(stdout);
 		}
 	}
@@ -2014,7 +2078,7 @@ invokeTestSuite(struct state *state)
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Exiting, completed writes to %s", state->randomDataPath);
 		} else {
-			printf("	 Exiting completed writes to %s\n", state->randomDataPath);
+			printf("     Exiting completed writes to %s\n", state->randomDataPath);
 			fflush(stdout);
 		}
 		destroy(state);
@@ -2034,7 +2098,7 @@ invokeTestSuite(struct state *state)
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Exiting iterate only");
 		} else {
-			printf("	 Exiting iterate only\n");
+			printf("     Exiting iterate only\n");
 			fflush(stdout);
 		}
 		destroy(state);
@@ -2050,7 +2114,7 @@ invokeTestSuite(struct state *state)
 		if (state->batchmode == true) {
 			dbg(DBG_LOW, "     Statistical Testing Complete!!!!!!!!!!!!");
 		} else {
-			printf("	 Statistical Testing Complete!!!!!!!!!!!!\n");
+			printf("     Statistical Testing Complete!!!!!!!!!!!!\n");
 			fflush(stdout);
 		}
 
@@ -2062,7 +2126,7 @@ invokeTestSuite(struct state *state)
 	 * -m b: iterate and then assess
 	 */
 	if (state->batchmode == true) {
-		dbg(DBG_LOW, "	   About to start assessment");
+		dbg(DBG_LOW, "     About to start assessment");
 	} else {
 		printf("     About to start assessment\n");
 		fflush(stdout);
@@ -2140,7 +2204,7 @@ nist_test_suite(struct state *state)
 	}
 
 	/*
-	 * if you "like to watch", report the very beginning
+	 * If you "like to watch", report the very beginning
 	 */
 	if (state->reportCycle > 0 && state->curIteration == 0) {
 		getTimestamp(buf, BUFSIZ);
@@ -2185,7 +2249,9 @@ write_sequence(struct state *state)
 	long int i;
 	int j;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(231, __FUNCTION__, "state arg was NULL");
 	}
@@ -2203,11 +2269,11 @@ write_sequence(struct state *state)
 	case FORMAT_RAW_BINARY:
 
 		/*
-		 * store output as binary bits
+		 * Store output as binary bits
 		 */
 		for (i = 0, j = 0, count = 0, state->tmpepsilon[0] = 0; i < state->tp.n; i++) {
 
-			// store bit in current output byte
+			// Store bit in current output byte
 			if (state->epsilon[i] == 1) {
 				state->tmpepsilon[j] |= (1 << count);
 			} else if (state->epsilon[i] != 0) {
@@ -2217,7 +2283,7 @@ write_sequence(struct state *state)
 
 			// When an output byte is complete
 			if (count >= BITS_N_BYTE) {
-				// prep for next byte
+				// Prep for next byte
 				count = 0;
 				if (j >= (state->tp.n / BITS_N_BYTE)) {
 					break;
@@ -2231,7 +2297,7 @@ write_sequence(struct state *state)
 		 * Write output buffer
 		 */
 		errno = 0;	// paranoia
-		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), j, state->streamFile);
+		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) j, state->streamFile);
 		if (io_ret < j) {
 			errp(231, __FUNCTION__, "write of %d elements of %ld bytes to %s failed",
 			     j, sizeof(BitSequence), state->randomDataPath);
@@ -2246,7 +2312,7 @@ write_sequence(struct state *state)
 	case FORMAT_ASCII_01:
 
 		/*
-		 * store output as ASCII string of numbers
+		 * Store output as ASCII string of numbers
 		 */
 		for (i = 0; i < state->tp.n; i++) {
 			if (state->epsilon[i] == 0) {
@@ -2262,7 +2328,7 @@ write_sequence(struct state *state)
 		 * Write file as ASCII string of numbers
 		 */
 		errno = 0;	// paranoia
-		io_ret = fwrite(state->tmpepsilon, sizeof(BitSequence), state->tp.n, state->streamFile);
+		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) state->tp.n, state->streamFile);
 		if (io_ret < state->tp.n) {
 			errp(231, __FUNCTION__, "write of %ld elements of %ld bytes to %s failed",
 			     state->tp.n, sizeof(BitSequence), state->randomDataPath);

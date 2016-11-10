@@ -252,8 +252,8 @@ enum format {
 
 // Run modes
 enum run_mode {
-	MODE_WRITE_ONLY = 'w',		// Only write generated data to -f randata in -F format
-	MODE_ITERATE_ONLY = 'i',	// Iterate only, write state to -s statePath and exit
+	MODE_WRITE_ONLY = 'w',		// Only write generated data to -f randata in -F format, without testing it
+	MODE_ITERATE_ONLY = 'i',	// Iterate only, write state to -s statePath and exit, without assessing results
 	MODE_ASSESS_ONLY = 'a',		// Assess only, read state from *.state files under -r stateDir and assess results
 	MODE_ITERATE_AND_ASSESS = 'b',	// Iterate and then assess, no *.state files written
 };
