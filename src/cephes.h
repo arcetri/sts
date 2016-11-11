@@ -42,3 +42,7 @@ extern double cephes_erfc(double x);
 extern double cephes_normal(double x);
 
 #endif				/* _CEPHES_H_ */
+
+extern const double MACHEP;	// 2**-53
+extern const double MAXLOG;	// ln(2**1024*(1-MACHEP))
+extern const double MAXNUM;	// 2**1024*(1-MACHEP)

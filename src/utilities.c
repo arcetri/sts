@@ -1245,7 +1245,7 @@ chooseTests(struct state *state)
 			break;
 		default:
 			success = false;	// must ask again
-			printf("\nUnexpected answer, please enter only 0 or 1\n", i);
+			printf("\nUnexpected answer, please enter only 0 or 1\n");
 			fflush(stdout);
 			break;
 		}
@@ -1365,7 +1365,7 @@ fixParameters(struct state *state)
 		printf("    [%d] Length of a single bit stream:			%ld\n", PARAM_n, state->tp.n);
 		printf("    [%d] Uniformity Cutoff Level:			%f\n", PARAM_uniformity_level,
 		       state->tp.uniformity_level);
-		printf("    [%d] Alpha - confidence level:			%f\n", PARAM_alpha, state->tp.alpha);
+		printf("    [%d] Alpha - confidence level:       		%f\\n", PARAM_alpha, state->tp.alpha);
 		putchar('\n');
 		printf("   Select Test (%d to continue): ", PARAM_continue);
 		fflush(stdout);

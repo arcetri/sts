@@ -600,13 +600,13 @@ RandomExcursionsVariant_print_stat2(FILE * stream, struct state *state, struct R
 		}
 	} else {
 		if (p_value == NON_P_VALUE) {
-			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = __INVALID__\n",
+			io_ret = fprintf(stream, "x = %2ld  visits = %4ld  p_value = __INVALID__\n",
 					 state->rnd_excursion_var_stateX[p], stat->counter[p]);
 			if (io_ret <= 0) {
 				return false;
 			}
 		} else {
-			io_ret = fprintf(stream, "x = %2ld	visits = %4ld  p_value = %f\n",
+			io_ret = fprintf(stream, "x = %2ld  visits = %4ld  p_value = %f\n",
 					 state->rnd_excursion_var_stateX[p], stat->counter[p], p_value);
 			if (io_ret <= 0) {
 				return false;
@@ -914,7 +914,7 @@ RandomExcursionsVariant_print(struct state *state)
  *      state          		 // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 RandomExcursionsVariant_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

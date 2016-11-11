@@ -365,7 +365,7 @@ BlockFrequency_print_stat(FILE * stream, struct state *state, struct BlockFreque
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) Chi^2	      = %f\n", stat->chi_squared);
+	io_ret = fprintf(stream, "\t\t(a) Chi^2           = %f\n", stat->chi_squared);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -481,17 +481,17 @@ void
 BlockFrequency_print(struct state *state)
 {
 	struct BlockFrequency_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -698,7 +698,7 @@ BlockFrequency_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 BlockFrequency_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

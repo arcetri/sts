@@ -88,23 +88,23 @@
  * Compiler independent Bool definitions
  */
 #      if !defined(__bool_true_false_are_defined) || __bool_true_false_are_defined==0
-#         	  undef bool
-#         	  undef true
-#         	  undef false
-#         	  if defined(__cplusplus)
-#         	     define bool bool
-#         	     define true true
-#         	     define false false
-#         	  else
-#         	     if __STDC_VERSION__ >= 199901L
-#         		define bool _Bool
-#         	     else
-#         		define bool unsigned char
-#         	     endif
-#         	     define true 1
-#         	     define false 0
-#         	  endif
-#         	  define __bool_true_false_are_defined 1
+#         undef bool
+#         undef true
+#         undef false
+#         if defined(__cplusplus)
+#            define bool bool
+#            define true true
+#            define false false
+#         else
+#            if __STDC_VERSION__ >= 199901L
+#               define bool _Bool
+#            else
+#               define bool unsigned char
+#            endif
+#            define true 1
+#            define false 0
+#         endif
+#         define __bool_true_false_are_defined 1
 #      endif
 
 #      define msg(...) fprintf(stderr, __VA_ARGS__)

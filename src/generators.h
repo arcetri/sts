@@ -61,7 +61,8 @@ extern void SHA1(struct state *state);
 
 #   define  expand(x)  Wbuff[x%16] = CS1(Wbuff[(x - 3)%16 ] ^ Wbuff[(x - 8)%16 ] ^ Wbuff[(x - 14)%16] ^ Wbuff[x%16])
 
-#   define sub1Round1(count)	  { \
+#   define sub1Round1(count) \
+	 { \
 	 temp = CS5(A) + f1(B, C, D) + E + Wbuff[count] + K0; \
 	 E = D; \
 	 D = C; \

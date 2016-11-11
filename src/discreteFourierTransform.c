@@ -497,15 +497,15 @@ DiscreteFourierTransform_print_stat(FILE * stream, struct state *state, struct D
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) N_1	 = %ld\n", stat->N_1);
+	io_ret = fprintf(stream, "\t\t(b) N_1        = %ld\n", stat->N_1);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) N_0	 = %f\n", stat->N_0);
+	io_ret = fprintf(stream, "\t\t(c) N_0        = %f\n", stat->N_0);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(d) d		 = %f\n", stat->d);
+	io_ret = fprintf(stream, "\t\t(d) d          = %f\n", stat->d);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -815,7 +815,7 @@ DiscreteFourierTransform_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 DiscreteFourierTransform_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

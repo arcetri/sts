@@ -40,17 +40,17 @@
 
 
 /*****************************************
-** greater - Test if x > y		 *
-**					 *
+** greater - Test if x > y               *
+**                                       *
 ** Returns TRUE (1) if x greater than y, *
-** otherwise FALSE (0).			 *
-**					 *
-** Parameters:				 *
-**					 *
-**  x	   Address of array x		 *
-**  y	   Address of array y		 *
-**  l	   Length both x and y in bytes	 *
-**					 *
+** otherwise FALSE (0).                  *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  x      Address of array x            *
+**  y      Address of array y            *
+**  l      Length both x and y in bytes  *
+**                                       *
 ******************************************/
 int
 greater(BYTE * x, BYTE * y, int l)
@@ -76,17 +76,17 @@ greater(BYTE * x, BYTE * y, int l)
 
 
 /*****************************************
-** less - Test if x < y			 *
-**					 *
-** Returns TRUE (1) if x less than y,	 *
-** otherwise FALSE (0).			 *
-**					 *
-** Parameters:				 *
-**					 *
-**  x	   Address of array x		 *
-**  y	   Address of array y		 *
-**  l	   Length both x and y in bytes	 *
-**					 *
+** less - Test if x < y                  *
+**                                       *
+** Returns TRUE (1) if x less than y,    *
+** otherwise FALSE (0).                  *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  x      Address of array x            *
+**  y      Address of array y            *
+**  l      Length both x and y in bytes  *
+**                                       *
 ******************************************/
 int
 less(BYTE * x, BYTE * y, int l)
@@ -112,16 +112,16 @@ less(BYTE * x, BYTE * y, int l)
 
 
 /*****************************************
-** bshl - shifts array left		 *
-**		    by one bit.		 *
-**					 *
-** x = x * 2				 *
-**					 *
-** Parameters:				 *
-**					 *
-**  x	   Address of array x		 *
-**  l	   Length array x in bytes	 *
-**					 *
+** bshl - shifts array left              *
+**                  by one bit.          *
+**                                       *
+** x = x * 2                             *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  x      Address of array x            *
+**  l      Length array x in bytes       *
+**                                       *
 ******************************************/
 BYTE
 bshl(BYTE * x, int l)
@@ -159,16 +159,16 @@ bshl(BYTE * x, int l)
 
 
 /*****************************************
-** bshr - shifts array right		 *
-**		     by one bit.	 *
-**					 *
-** x = x / 2				 *
-**					 *
-** Parameters:				 *
-**					 *
-**  x	   Address of array x		 *
-**  l	   Length array x in bytes	 *
-**					 *
+** bshr - shifts array right             *
+**                   by one bit.         *
+**                                       *
+** x = x / 2                             *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  x      Address of array x            *
+**  l      Length array x in bytes       *
+**                                       *
 ******************************************/
 void
 bshr(BYTE * x, int l)
@@ -201,20 +201,20 @@ bshr(BYTE * x, int l)
 
 
 /*****************************************
-** Mult - Multiply two integers		 *
-**					 *
-** A = B * C				 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of the result	 *
-**  B	   Address of the multiplier	 *
-**  C	   Address of the multiplicand	 *
-**  LB	    Length of B in bytes	 *
-**  LC	    Length of C in bytes	 *
-**					 *
-**  NOTE:  A MUST be LB+LC in length	 *
-**					 *
+** Mult - Multiply two integers          *
+**                                       *
+** A = B * C                             *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of the result         *
+**  B      Address of the multiplier     *
+**  C      Address of the multiplicand   *
+**  LB      Length of B in bytes         *
+**  LC      Length of C in bytes         *
+**                                       *
+**  NOTE:  A MUST be LB+LC in length     *
+**                                       *
 ******************************************/
 int
 Mult(BYTE * A, BYTE * B, int LB, BYTE * C, int LC)
@@ -256,19 +256,19 @@ ModMult(BYTE * A, BYTE * B, int LB, BYTE * C, int LC, BYTE * M, int LM)
 
 
 /*****************************************
-** smult - Multiply array by a scalar.	 *
-**					 *
-** A = b * C				 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of the result	 *
-**  b	   Scalar (1 BYTE)		 *
-**  C	   Address of the multiplicand	 *
-**  L	   Length of C in bytes		 *
-**					 *
-**  NOTE:  A MUST be L+1 in length	 *
-**					 *
+** smult - Multiply array by a scalar.   *
+**                                       *
+** A = b * C                             *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of the result         *
+**  b      Scalar (1 BYTE)               *
+**  C      Address of the multiplicand   *
+**  L      Length of C in bytes          *
+**                                       *
+**  NOTE:  A MUST be L+1 in length       *
+**                                       *
 ******************************************/
 void
 smult(BYTE * A, BYTE b, BYTE * C, int L)
@@ -285,18 +285,18 @@ smult(BYTE * A, BYTE b, BYTE * C, int L)
 }
 
 /*****************************************
-** Square() - Square an integer		 *
-**					 *
-** A = B^2				 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of the result	 *
-**  B	   Address of the operand	 *
-**  L	   Length of B in bytes		 *
-**					 *
-**  NOTE:  A MUST be 2*L in length	 *
-**					 *
+** Square() - Square an integer          *
+**                                       *
+** A = B^2                               *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of the result         *
+**  B      Address of the operand        *
+**  L      Length of B in bytes          *
+**                                       *
+**  NOTE:  A MUST be 2*L in length       *
+**                                       *
 ******************************************/
 void
 Square(BYTE * A, BYTE * B, int L)
@@ -305,26 +305,26 @@ Square(BYTE * A, BYTE * B, int L)
 }
 
 /*****************************************
-** ModExp - Modular Exponentiation	 *
-**					 *
-** A = B ** C (MOD M)			 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of result		 *
-**  B	   Address of mantissa		 *
-**  C	   Address of exponent		 *
-**  M	   Address of modulus		 *
-**  LB	   Length of B in bytes		 *
-**  LC	   Length of C in bytes		 *
-**  LM	   Length of M in bytes		 *
-**					 *
-**  NOTE: The integer B must be less	 *
-**	  than the modulus M.		 *
-**  NOTE: A must be at least 3*LM	 *
-**	  bytes long.  However, the	 *
-**	  result stored in A will be	 *
-**	  only LM bytes long.		 *
+** ModExp - Modular Exponentiation       *
+**                                       *
+** A = B ** C (MOD M)                    *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of result             *
+**  B      Address of mantissa           *
+**  C      Address of exponent           *
+**  M      Address of modulus            *
+**  LB     Length of B in bytes          *
+**  LC     Length of C in bytes          *
+**  LM     Length of M in bytes          *
+**                                       *
+**  NOTE: The integer B must be less     *
+**        than the modulus M.      	 *
+**  NOTE: A must be at least 3*LM        *
+**        bytes long.  However, the      *
+**        result stored in A will be     *
+**        only LM bytes long.            *
 ******************************************/
 void
 ModExp(BYTE * A, BYTE * B, int LB, BYTE * C, int LC, BYTE * M, int LM)
@@ -559,21 +559,21 @@ Div(BYTE * x, int lenx, BYTE * n, int lenn)
 
 
 /*****************************************
-** sub - Subtract two integers		 *
-**					 *
-** A = A - B				 *
-**					 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of subtrahend integer *
-**  B	   Address of subtractor integer *
-**  L	   Length of A and B in bytes	 *
-**					 *
-**  NOTE: In order to save RAM, B is	 *
-**	  two's complemented twice,	 *
-**	  rather than using a copy of B	 *
-**					 *
+** sub - Subtract two integers           *
+**                                       *
+** A = A - B                             *
+**                                       *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of subtrahend integer *
+**  B      Address of subtractor integer *
+**  L      Length of A and B in bytes    *
+**                                       *
+**  NOTE: In order to save RAM, B is     *
+**        two's complemented twice,      *
+**        rather than using a copy of B  *
+**                                       *
 ******************************************/
 void
 sub(BYTE * A, int LA, BYTE * B, int LB)
@@ -593,16 +593,16 @@ sub(BYTE * A, int LA, BYTE * B, int LB)
 
 
 /*****************************************
-** negate - Negate an integer		 *
-**					 *
-** A = -A				 *
-**					 *
-**					 *
-** Parameters:				 *
-**					 *
-**  A	   Address of integer to negate	 *
-**  L	   Length of A in bytes		 *
-**					 *
+** negate - Negate an integer            *
+**                                       *
+** A = -A                                *
+**                                       *
+**                                       *
+** Parameters:                           *
+**                                       *
+**  A      Address of integer to negate  *
+**  L      Length of A in bytes          *
+**                                       *
 ******************************************/
 int
 negate(BYTE * A, int L)

@@ -48,14 +48,14 @@
 
 
 /*
- * driver interface - how each test is performed at each phase
+ * Driver interface - defines how each test is performed at each phase
  */
 struct driver {
-	void (*init) (struct state * state);	// initialize test
-	void (*iterate) (struct state * state);	// perform a single iteration of a bitstream
-	void (*print) (struct state * state);	// log iteration info into stats.txt, data*.txt, results.txt unless -n
-	void (*metrics) (struct state * state);	// Uniformity and proportional analysis of a test
-	void (*destroy) (struct state * state);	// final test cleanup and deallocation
+	void (*init) (struct state * state);		// Initialize the test and check input size recommendations
+	void (*iterate) (struct state * state);		// Perform a single iteration test on the bitstream
+	void (*print) (struct state * state);		// Log iteration info into stats.txt, data*.txt, results.txt unless -n
+	void (*metrics) (struct state * state);		// Uniformity and proportional analysis of a test
+	void (*destroy) (struct state * state);		// Final test cleanup and memory de-allocation
 };
 static const struct driver testDriver[NUMOFTESTS + 1] = {
 
@@ -190,7 +190,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 
 
 /*
- * init - free memory, undo init operations and other post processing
+ * Init - initialize the variables needed for each test and check if the input size recommendations are respected
  *
  * given:
  *      state           // current processing state
@@ -198,7 +198,7 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 void
 init(struct state *state)
 {
-	int r;			// row count to consider
+	int r;			// Row count to consider
 	double product;		// Probability product
 	int test_count;		// Number of tests enabled after initialization
 	int i;
@@ -215,30 +215,31 @@ init(struct state *state)
 	dbg(DBG_LOW, "start of init phase");
 
 	/*
-	 * prep the top of the working directory
+	 * Prepare the top of the working directory
 	 */
 	precheckPath(state, state->workDir);
 
 	/*
-	 * in classic mode (no -b), ask for test parameters
-	 *      if reading from file (-g 0), we open that file
-	 * in batch mode (-b) we just
-	 *      if reading from file (-g 0), we open that file
+	 * Get number generators to be tested
 	 */
 	generatorOptions(state);
 
 	/*
-	 * in classic mode (no -b), ask for test parameters
+	 * Get which tests to perform
 	 */
 	if (state->batchmode == false) {
 		chooseTests(state);
 		if (state->promptFlag == false) {
+
+			/*
+			 * Check if the user wants to adjust the parameters
+			 */
 			fixParameters(state);
 		}
 	}
 
 	/*
-	 * create the path if required
+	 * Create the path if required
 	 */
 	if (state->workDirFlag == true) {
 		makePath(state->workDir);
@@ -267,7 +268,7 @@ init(struct state *state)
 	}
 
 	/*
-	 * Initialize test constants
+	 * Initialize test constants // TODO consider moving
 	 *
 	 * NOTE: This must be done after the command line arguments are parsed,
 	 *       AND after any test parameters are established (by default or via interactive prompt),
@@ -356,7 +357,7 @@ init(struct state *state)
 	state->c.min_zero_crossings = (long int) MAX(0.005 * state->c.sqrtn, 500.0);
 
 	/*
-	 * indicate that the test constants have been initialized
+	 * Indicate that the test constants have been initialized
 	 */
 	state->cSetup = true;
 
@@ -366,7 +367,7 @@ init(struct state *state)
 	for (i = 1; i <= NUMOFTESTS; i++) {
 		if (state->testVector[i] == true && testDriver[i].init != NULL) {
 
-			// initialize a test
+			// Initialize a test
 			testDriver[i].init(state);
 		}
 	}
@@ -398,8 +399,12 @@ init(struct state *state)
 		errp(50, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->tp.n,
 		     sizeof(BitSequence));
 	}
-	// - end of phase
+
+	/*
+	 * Report the end of the init phase
+	 */
 	dbg(DBG_LOW, "end of init phase");
+
 	return;
 }
 
@@ -423,23 +428,20 @@ iterate(struct state *state)
 	}
 
 	/*
-	 * iterate for each test
+	 * Perform an iteration for each test on the current bitstream
 	 */
 	dbg(DBG_VHIGH, "before an iteration: %ld", state->curIteration);
 	for (i = 1; i <= NUMOFTESTS; ++i) {
 
 		/*
-		 * call if enabled
+		 * Call test iterate function if the test is enabled
 		 */
 		if (state->testVector[i] == true && testDriver[i].iterate != NULL) {
-
-			/*
-			 * iterate for a test
-			 */
 			testDriver[i].iterate(state);
 		}
 	}
 	dbg(DBG_VHIGH, "after an iteration: %ld", state->curIteration);
+
 	return;
 }
 
@@ -476,8 +478,11 @@ print(struct state *state)
 		}
 	}
 
-	// - end of phase
+	/*
+	 * Report the end of the print phase
+	 */
 	dbg(DBG_LOW, "end of print phase");
+
 	return;
 }
 
@@ -487,8 +492,6 @@ print(struct state *state)
  *
  * given:
  *      state           // current processing state
- *
- * XXX - consider writing to a report.txt file with better formatting and more useful data
  */
 void
 metrics(struct state *state)
@@ -513,18 +516,18 @@ metrics(struct state *state)
 	dbg(DBG_LOW, "start of metrics phase");
 	for (i = 1; i <= NUMOFTESTS; i++) {	// FOR EACH TEST
 
-		// for each enabld test
+		// Check if the test is enabled
 		if (state->testVector[i] == true) {
 
-			// case: driver tests
+			// Process metrics of the test
 			if (testDriver[i].metrics != NULL) {
-				testDriver[i].metrics(state);	// process metrics of a test
+				testDriver[i].metrics(state);
 			}
 		}
 	}
 
-	io_ret =
-	    fprintf(state->finalRept, "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
+	io_ret = fprintf(state->finalRept,
+			 "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 	if (io_ret <= 0) {
 		errp(53, __FUNCTION__, "error in writing to finalRept");
 	}
@@ -642,7 +645,10 @@ metrics(struct state *state)
 			errp(53, __FUNCTION__, "error in writing to finalRept");
 		}
 	}
-	// - end of phase
+
+	/*
+	 * Report the end of the metric phase
+	 */
 	dbg(DBG_LOW, "end of metrics phase");
 	return;
 }
@@ -666,13 +672,15 @@ destroy(struct state *state)
 	}
 
 	/*
-	 * finish / destroy storage no longer needed
+	 * Perform clean up for each test
 	 */
 	dbg(DBG_LOW, "start of destroy phase");
 	for (i = 1; i <= NUMOFTESTS; i++) {
+
+		// Check if the test is enabled
 		if (state->testVector[i] == true && testDriver[i].destroy != NULL) {
 
-			// destroy state of a completed test
+			// Perform destroy of the test
 			testDriver[i].destroy(state);
 		}
 	}
@@ -700,7 +708,10 @@ destroy(struct state *state)
 		free(state->finalReptPath);
 		state->finalReptPath = NULL;
 	}
-	// - end of phase
+
+	/*
+	 * Report the end of the metric phase
+	 */
 	dbg(DBG_LOW, "end of destroy phase");
 	return;
 }

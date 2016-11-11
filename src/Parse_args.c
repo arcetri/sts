@@ -726,11 +726,11 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 * Ask how many iterations have to be performed unless batch mode (-b) is enabled or -i bitstreams was given
 	 */
 	if (state->batchmode == false && state->iterationFlag == false) {
-		// Prompt
+		// Ask question
 		printf("   How many bitstreams? ");
 		fflush(stdout);
 
-		// Read number
+		// Read numberic answer
 		state->tp.numOfBitStreams = getNumber(stdin, stdout);
 		putchar('\n');
 		fflush(stdout);

@@ -495,27 +495,27 @@ Universal_print_stat(FILE * stream, struct state *state, struct Universal_privat
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) L		= %ld\n", L);
+	io_ret = fprintf(stream, "\t\t(a) L         = %ld\n", L);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) Q		= %ld\n", stat->Q);
+	io_ret = fprintf(stream, "\t\t(b) Q         = %ld\n", stat->Q);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) K		= %ld\n", stat->K);
+	io_ret = fprintf(stream, "\t\t(c) K         = %ld\n", stat->K);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(d) sum	= %f\n", stat->sum);
+	io_ret = fprintf(stream, "\t\t(d) sum       = %f\n", stat->sum);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(e) sigma	= %f\n", stat->sigma);
+	io_ret = fprintf(stream, "\t\t(e) sigma     = %f\n", stat->sigma);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f) variance	= %f\n", variance[L]);
+	io_ret = fprintf(stream, "\t\t(f) variance  = %f\n", variance[L]);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -523,7 +523,7 @@ Universal_print_stat(FILE * stream, struct state *state, struct Universal_privat
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(h) phi	= %f\n", stat->f_n);
+	io_ret = fprintf(stream, "\t\t(h) phi       = %f\n", stat->f_n);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -841,10 +841,10 @@ Universal_print(struct state *state)
  * Universal_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
- *      sampleCount             // Number of bitstreams in which we counted p_values
+ *      state           	// run state to test under
+ *      sampleCount             // number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 Universal_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

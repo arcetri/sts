@@ -455,7 +455,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(a) m (block length)	  = %ld\n", state->tp.approximateEntropyBlockLength);
+	io_ret = fprintf(stream, "\t\t(a) m (block length)    = %ld\n", state->tp.approximateEntropyBlockLength);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -463,7 +463,7 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) Chi^2		  = %f\n", stat->chi_squared);
+	io_ret = fprintf(stream, "\t\t(c) Chi^2               = %f\n", stat->chi_squared);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -475,12 +475,12 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f) ApEn		  = %f\n", stat->ApEn);
+	io_ret = fprintf(stream, "\t\t(f) ApEn                = %f\n", stat->ApEn);
 	if (io_ret <= 0) {
 		return false;
 	}
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t(g) Log(2)	      = %f\n", state->c.log2);
+		io_ret = fprintf(stream, "\t\t(g) Log(2)              = %f\n", state->c.log2);
 		if (io_ret <= 0) {
 			return false;
 		}

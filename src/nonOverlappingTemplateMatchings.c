@@ -434,15 +434,15 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 {
 	struct NonOverlappingTemplateMatchings_private_stats stat;	// Stats for this iteration
 	struct nonover_stats nonover_stat;	// Stats for a template of this iteration
-	long int n;			// Length of a single bit stream
-	long int m;			// NonOverlapping Template Test - block length
-	unsigned int W_obs;		// Counter of the number of occurrences of a template in a block
-	double chi2_term;		// Term used to compute chi squared
-	bool match;			// Indicator of a match of a template in a block
+	long int n;				// Length of a single bit stream
+	long int m;				// NonOverlapping Template Test - block length
+	unsigned int W_obs;			// Counter of the number of occurrences of a template in a block
+	double chi2_term;			// Term used to compute chi squared
+	bool match;				// Indicator of a match of a template in a block
 	long int i;
 	long int j;
 	long int jj;
-	int k;
+	long int k;
 
 	/*
 	 * Check preconditions (firewall)
@@ -683,7 +683,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 	 * Print head of stat to a file
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	NONPERIODIC TEMPLATES TEST\n");
+		io_ret = fprintf(stream, "\t\t  NONPERIODIC TEMPLATES TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -691,7 +691,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	COMPUTATIONAL INFORMATION\n");
+		io_ret = fprintf(stream, "\t\t  COMPUTATIONAL INFORMATION\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -713,7 +713,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Template   W_1  W_2  W_3  W_4	 W_5  W_6  W_7	W_8    Chi^2   P_value Assignment Index\n");
+		io_ret = fprintf(stream, "Template   W_1  W_2  W_3  W_4  W_5  W_6  W_7  W_8    Chi^2   P_value Assignment Index\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -722,7 +722,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	Non-periodic templates test\n");
+		io_ret = fprintf(stream, "\t\t  Non-periodic templates test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -758,7 +758,7 @@ NonOverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state,
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "Template   W[1] W[2] W[3] W[4] W[5] W[6] W[7] W[8]   Chi^2   P_value	     Index\n");
+		io_ret = fprintf(stream, "Template   W[1] W[2] W[3] W[4] W[5] W[6] W[7] W[8]   Chi^2   P_value       Index\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -915,17 +915,17 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 {
 	struct NonOverlappingTemplateMatchings_private_stats *stat;	// Pointer to statistics of an iteration
 	struct nonover_stats *nonover_stat;	// current nonover_stats for a given iteration
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
-	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	long int nonstat_index;	// starting index into state->nonstat from which to print
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	FILE *stats = NULL;			// Open stats.txt file
+	FILE *results = NULL;			// Open results.txt file
+	FILE *data = NULL;			// Open data*.txt file
+	char *stats_txt = NULL;			// Pathname for stats.txt
+	char *results_txt = NULL;		// Pathname for results.txt
+	char *data_txt = NULL;			// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];		// Basename for a given data*.txt pathname
+	bool ok;				// true -> I/O was OK
+	long int nonstat_index;			// Starting index into state->nonstat from which to print
+	int snprintf_ret;			// snprintf return value
+	int io_ret;				// I/O return status
 	long int i;
 	long int j;
 
@@ -1143,7 +1143,7 @@ NonOverlappingTemplateMatchings_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

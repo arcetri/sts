@@ -390,11 +390,11 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b)	      P_%d = %f\n", NUMBER_OF_ROWS_RANK - 1, state->c.p_31);
+	io_ret = fprintf(stream, "\t\t(b)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 1, state->c.p_31);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c)	      P_%d = %f\n", NUMBER_OF_ROWS_RANK - 2, state->c.p_30);
+	io_ret = fprintf(stream, "\t\t(c)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 2, state->c.p_30);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -402,19 +402,19 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(e)	      F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 1, stat->F_M_minus_one);
+	io_ret = fprintf(stream, "\t\t(e)             F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 1, stat->F_M_minus_one);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f)	      F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 2, stat->F_remaining);
+	io_ret = fprintf(stream, "\t\t(f)             F_%d = %ld\n", NUMBER_OF_ROWS_RANK - 2, stat->F_remaining);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(g) # of matrices	   = %ld\n", state->c.matrix_count);
+	io_ret = fprintf(stream, "\t\t(g) # of matrices    = %ld\n", state->c.matrix_count);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(h) Chi^2		   = %f\n", stat->chi_squared);
+	io_ret = fprintf(stream, "\t\t(h) Chi^2            = %f\n", stat->chi_squared);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -524,17 +524,17 @@ void
 Rank_print(struct state *state)
 {
 	struct Rank_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
-	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	double p_value;				// p_value iteration test result(s)
+	FILE *stats = NULL;			// Open stats.txt file
+	FILE *results = NULL;			// Open results.txt file
+	FILE *data = NULL;			// Open data*.txt file
+	char *stats_txt = NULL;			// Pathname for stats.txt
+	char *results_txt = NULL;		// Pathname for results.txt
+	char *data_txt = NULL;			// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];		// Basename for a given data*.txt pathname
+	bool ok;				// true -> I/O was OK
+	int snprintf_ret;			// snprintf return value
+	int io_ret;				// I/O return status
 	long int i;
 	long int j;
 
@@ -735,21 +735,21 @@ Rank_print(struct state *state)
  *
  * given:
  *      state           	// run state to test under
- *      sampleCount             // Number of bitstreams in which we counted p_values
+ *      sampleCount             // number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 Rank_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*

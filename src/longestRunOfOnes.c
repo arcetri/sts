@@ -1,5 +1,5 @@
 /*****************************************************************************
-		      L O N G E S T   R U N S	T E S T
+		      L O N G E S T   R U N S   T E S T
  *****************************************************************************/
 
 /*
@@ -653,7 +653,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) Chi^2		   = %f\n", stat->chi2);
+	io_ret = fprintf(stream, "\t\t(c) Chi^2            = %f\n", stat->chi2);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -662,7 +662,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	    F R E Q U E N C Y\n");
+		io_ret = fprintf(stream, "\t\t      F R E Q U E N C Y\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -758,7 +758,7 @@ LongestRunOfOnes_print_stat(FILE * stream, struct state *state, struct LongestRu
 		/*
 		 * Print counter header
 		 */
-		io_ret = fprintf(stream, "\t\t	");
+		io_ret = fprintf(stream, "\t\t  ");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -903,17 +903,17 @@ void
 LongestRunOfOnes_print(struct state *state)
 {
 	struct LongestRunOfOnes_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
+	double p_value;			// p_value iteration test result(s)
+	FILE *stats = NULL;		// Open stats.txt file
+	FILE *results = NULL;		// Open results.txt file
+	FILE *data = NULL;		// Open data*.txt file
+	char *stats_txt = NULL;		// Pathname for stats.txt
 	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
+	char *data_txt = NULL;		// Pathname for data*.txt
 	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	bool ok;			// true -> I/O was OK
+	int snprintf_ret;		// snprintf return value
+	int io_ret;			// I/O return status
 	long int i;
 	long int j;
 
@@ -1116,19 +1116,19 @@ LongestRunOfOnes_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*

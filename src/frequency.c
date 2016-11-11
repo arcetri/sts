@@ -326,7 +326,7 @@ Frequency_print_stat(FILE * stream, struct state *state, struct Frequency_privat
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b) S_n/n		  = %f\n", (double) stat->S_n / state->tp.n);
+	io_ret = fprintf(stream, "\t\t(b) S_n/n               = %f\n", (double) stat->S_n / state->tp.n);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -423,17 +423,17 @@ void
 Frequency_print(struct state *state)
 {
 	struct Frequency_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// p_value iteration test result(s)
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
-	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	double p_value;				// p_value iteration test result(s)
+	FILE *stats = NULL;			// Open stats.txt file
+	FILE *results = NULL;			// Open results.txt file
+	FILE *data = NULL;			// Open data*.txt file
+	char *stats_txt = NULL;			// Pathname for stats.txt
+	char *results_txt = NULL;		// Pathname for results.txt
+	char *data_txt = NULL;			// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];		// Basename for a given data*.txt pathname
+	bool ok;				// true -> I/O was OK
+	int snprintf_ret;			// snprintf return value
+	int io_ret;				// I/O return status
 	long int i;
 	long int j;
 
@@ -641,14 +641,14 @@ Frequency_print(struct state *state)
 static void
 Frequency_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*
@@ -771,8 +771,8 @@ Frequency_metrics(struct state *state)
 		err(76, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
-		    test_num);
+		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false",
+		    state->testNames[test_num], test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {

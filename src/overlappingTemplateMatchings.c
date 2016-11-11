@@ -398,7 +398,7 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 	 * Print stat to a file
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	  OVERLAPPING TEMPLATE OF ALL ONES TEST\n");
+		io_ret = fprintf(stream, "\t\t    OVERLAPPING TEMPLATE OF ALL ONES TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -411,7 +411,7 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	  Overlapping template of all ones test\n");
+		io_ret = fprintf(stream, "\t\t    Overlapping template of all ones test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -437,20 +437,20 @@ OverlappingTemplateMatchings_print_stat(FILE * stream, struct state *state, stru
 		return false;
 	}
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	 F R E Q U E N C Y\n");
+		io_ret = fprintf(stream, "\t\t   F R E Q U E N C Y\n");
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	0   1	2   3	4 >=5	Chi^2	P-value	 Assignment\n");
+		io_ret = fprintf(stream, "\t\t  0   1   2   3   4 >=5   Chi^2   P-value  Assignment\n");
 		if (io_ret <= 0) {
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	 Frequency\n");
+		io_ret = fprintf(stream, "\t\t   Frequency\n");
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	   0	  1	 2	3      4    >=5	  Chi^2\n");
+		io_ret = fprintf(stream, "\t\t     0      1      2      3      4    >=5   Chi^2\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -786,7 +786,7 @@ OverlappingTemplateMatchings_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 OverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

@@ -411,7 +411,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	 * Print stat to a file for the forward test
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	    CUMULATIVE SUMS (FORWARD) TEST\n");
+		io_ret = fprintf(stream, "\t\t      CUMULATIVE SUMS (FORWARD) TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -424,7 +424,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	    Cumulative sums forward test\n");
+		io_ret = fprintf(stream, "\t\t      Cumulative sums forward test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -462,7 +462,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 	 * Print stat to a file for the backward test
 	 */
 	if (state->legacy_output == true) {
-		io_ret = fprintf(stream, "\t\t	    CUMULATIVE SUMS (BACKWARD) TEST\n");
+		io_ret = fprintf(stream, "\t\t      CUMULATIVE SUMS (BACKWARD) TEST\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -475,7 +475,7 @@ CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeS
 			return false;
 		}
 	} else {
-		io_ret = fprintf(stream, "\t\t	    Cumulative sums backward test\n");
+		io_ret = fprintf(stream, "\t\t      Cumulative sums backward test\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -795,7 +795,7 @@ CumulativeSums_print(struct state *state)
  *      state           	// run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)

@@ -21,15 +21,13 @@
  * Share and enjoy! :-)
  */
 
-#include <stdio.h>
 #include <math.h>
 #include "cephes.h"
-#include "defs.h"
-#include "externs.h"
 #include "debug.h"
 
-static const double MACHEP = (double) 1.11022302462515654042363e-16;	// 2**-53
-static const double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(2**1024*(1-MACHEP))
+const double MACHEP = (double) 1.11022302462515654042363e-16;	// 2**-53
+const double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(2**1024*(1-MACHEP))
+const double MAXNUM = (double) 1.79769313486231570814527e308;	// 2**1024*(1-MACHEP)
 
 // Use C defined value of PI if available
 #if defined(M_PI)
@@ -53,7 +51,7 @@ static int sgngam = 0;
 
 static double cephes_p1evl(double x, double *coef, int N);
 static double cephes_polevl(double x, double *coef, int N);
-#endif				/* HAVE_LGAMMA */
+#endif /* HAVE_LGAMMA */
 
 double
 cephes_igamc(double a, double x)
@@ -341,7 +339,7 @@ cephes_p1evl(double x, double *coef, int N)
 
 	return ans;
 }
-#endif				/* !HAVE_LGAMMA */
+#endif /* !HAVE_LGAMMA */
 
 #if 0
 static const double rel_error = 1E-12;

@@ -457,7 +457,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\tL I N E A R	 C O M P L E X I T Y\n");
+		io_ret = fprintf(stream, "\tL I N E A R  C O M P L E X I T Y\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -469,8 +469,8 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret =
-		    fprintf(stream, "\tN (number of substrings) = %ld\n", state->tp.n / state->tp.linearComplexitySequenceLength);
+		io_ret = fprintf(stream, "\tN (number of substrings) = %ld\n",
+				 state->tp.n / state->tp.linearComplexitySequenceLength);
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -478,7 +478,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "	  F R E Q U E N C Y			       \n");
+		io_ret = fprintf(stream, "        F R E Q U E N C Y                            \n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -486,7 +486,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "  C0	 C1   C2   C3	C4   C5	  C6	CHI2	P-value\n");
+		io_ret = fprintf(stream, "  C0   C1   C2   C3   C4   C5   C6    CHI2    P-value\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -512,12 +512,12 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret =
-		    fprintf(stream, "\t\tN (number of substrings) = %ld\n", state->tp.n / state->tp.linearComplexitySequenceLength);
+		io_ret = fprintf(stream, "\t\tN (number of substrings) = %ld\n",
+				 state->tp.n / state->tp.linearComplexitySequenceLength);
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\tbits discarded	       = %ld\n",
+		io_ret = fprintf(stream, "\t\tbits discarded           = %ld\n",
 				 state->tp.n % state->tp.linearComplexitySequenceLength);
 		if (io_ret <= 0) {
 			return false;
@@ -526,7 +526,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	      T range count\n");
+		io_ret = fprintf(stream, "\t\t        T range count\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -534,7 +534,7 @@ LinearComplexity_print_stat(FILE * stream, struct state *state, struct LinearCom
 		if (io_ret <= 0) {
 			return false;
 		}
-		io_ret = fprintf(stream, "\t\t	C0   C1	  C2   C3   C4	 C5   C6    CHI2\n");
+		io_ret = fprintf(stream, "\t\t  C0   C1   C2   C3   C4   C5   C6    CHI2\n");
 		if (io_ret <= 0) {
 			return false;
 		}
@@ -855,22 +855,22 @@ LinearComplexity_print(struct state *state)
  * LinearComplexity_metric_print - print uniformity and proportional information for a tallied count
  *
  * given:
- *      state           // run state to test under
- *      sampleCount             // Number of bitstreams in which we counted p_values
+ *      state           	// run state to test under
+ *      sampleCount             // number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 LinearComplexity_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
 {
-	long int passCount;	// p_values that pass
-	double p_hat;		// 1 - alpha
+	long int passCount;			// p_values that pass
+	double p_hat;				// 1 - alpha
 	double proportion_threshold_max;	// When passCount is too high
 	double proportion_threshold_min;	// When passCount is too low
-	double chi2;		// Sum of chi^2 for each tenth
-	double uniformity;	// Uniformity of frequency bins
-	double expCount;	// Sample size divided by frequency bin count
-	int io_ret;		// I/O return status
+	double chi2;				// Sum of chi^2 for each tenth
+	double uniformity;			// Uniformity of frequency bins
+	double expCount;			// Sample size divided by frequency bin count
+	int io_ret;				// I/O return status
 	long int i;
 
 	/*

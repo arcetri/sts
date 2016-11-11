@@ -490,23 +490,23 @@ Serial_print_stat(FILE * stream, struct state *state, struct Serial_private_stat
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c) Psi_m		  = %f\n", stat->psim0);
+	io_ret = fprintf(stream, "\t\t(c) Psi_m               = %f\n", stat->psim0);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(d) Psi_m-1		  = %f\n", stat->psim1);
+	io_ret = fprintf(stream, "\t\t(d) Psi_m-1             = %f\n", stat->psim1);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(e) Psi_m-2		  = %f\n", stat->psim2);
+	io_ret = fprintf(stream, "\t\t(e) Psi_m-2             = %f\n", stat->psim2);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(f) Del_1		  = %f\n", stat->del1);
+	io_ret = fprintf(stream, "\t\t(f) Del_1               = %f\n", stat->del1);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(g) Del_2		  = %f\n", stat->del2);
+	io_ret = fprintf(stream, "\t\t(g) Del_2               = %f\n", stat->del2);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -650,19 +650,19 @@ void
 Serial_print(struct state *state)
 {
 	struct Serial_private_stats *stat;	// Pointer to statistics of an iteration
-	double p_value;		// Generic p_value iteration
-	double p_value1;	// p_value iteration test result(s) - #1
-	double p_value2;	// p_value iteration test result(s) - #2
-	FILE *stats = NULL;	// Open stats.txt file
-	FILE *results = NULL;	// Open results.txt file
-	FILE *data = NULL;	// Open data*.txt file
-	char *stats_txt = NULL;	// Pathname for stats.txt
-	char *results_txt = NULL;	// Pathname for results.txt
-	char *data_txt = NULL;	// Pathname for data*.txt
-	char data_filename[BUFSIZ + 1];	// Basename for a given data*.txt pathname
-	bool ok;		// true -> I/O was OK
-	int snprintf_ret;	// snprintf return value
-	int io_ret;		// I/O return status
+	double p_value;				// Generic p_value iteration
+	double p_value1;			// p_value iteration test result(s) - #1
+	double p_value2;			// p_value iteration test result(s) - #2
+	FILE *stats = NULL;			// Open stats.txt file
+	FILE *results = NULL;			// Open results.txt file
+	FILE *data = NULL;			// Open data*.txt file
+	char *stats_txt = NULL;			// Pathname for stats.txt
+	char *results_txt = NULL;		// Pathname for results.txt
+	char *data_txt = NULL;			// Pathname for data*.txt
+	char data_filename[BUFSIZ + 1];		// Basename for a given data*.txt pathname
+	bool ok;				// true -> I/O was OK
+	int snprintf_ret;			// snprintf return value
+	int io_ret;				// I/O return status
 	long int i;
 	long int j;
 
@@ -875,7 +875,7 @@ Serial_print(struct state *state)
  *      state           // run state to test under
  *      sampleCount             // Number of bitstreams in which we counted p_values
  *      toolow                  // p_values that were below alpha
- *      freqPerBin              // Uniformity frequency bins
+ *      freqPerBin              // uniformity frequency bins
  */
 static void
 Serial_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
