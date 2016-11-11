@@ -26,5 +26,6 @@ osxmalloc
 miniosxmalloc
 # common testing ignore
 RMME
+.DS_Store
 CMakeLists.txt
 .idea
