@@ -184,18 +184,7 @@
 #   define MAX_EXCURSION_RND_EXCURSION_VAR	(9)		// Maximum excursion for state values in TEST_RND_EXCURSION_VAR
 #   define NUMBER_OF_STATES_RND_EXCURSION_VAR	(2*MAX_EXCURSION_RND_EXCURSION_VAR) // Number of states for TEST_RND_EXCURSION_VAR
 
-// TODO can I safely remove these two boundaries?
 #   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
-#   define MAX_BITCOUNT			(10000000)	// Section 2.0 max recommended length of a single bit stream
-
-// TODO can I remove this conditions (and also from utilities.c)? They are not in the paper
-#   if DEFAULT_OVERLAPPING < MINTEMPLEN
-// force syntax error if DEFAULT_OVERLAPPING is too small
-      -=*#@#*=- DEFAULT_OVERLAPPING must be >= MINTEMPLEN -=*#@#*=-
-#   elif DEFAULT_OVERLAPPING > MAXTEMPLEN
-// force syntax error if DEFAULT_OVERLAPPING is too large
-      -=*#@#*=- DEFAULT_OVERLAPPING must be <= MAXTEMPLEN -=*#@#*=-
-#   endif
 
 /* *INDENT-ON* */
 
@@ -324,7 +313,7 @@ typedef struct _testParameters {
  * In some cases the constants are simply numeric (such as the square root of 2).
  * In some cases the constants depend on test parameters (such as TP.n or TP.numOfBitStreams, etc.)
  *
- * NOTE: In the comments below, n is TP.n. // TODO Are all these test constants necessary to precompute at the beginning? Can't they be computed by the init of the tests that need them?
+ * NOTE: In the comments below, n is TP.n. // TODO Are all these test constants necessary to precompute at the beginning? Can't they be computed by the init of the tests that need them? static variables in test files
  */
 typedef struct _const {
 	double sqrt2;			// Square root of 2 - used by several tests

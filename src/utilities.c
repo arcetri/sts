@@ -1434,16 +1434,11 @@ fixParameters(struct state *state)
 				putchar('\n');
 
 				// Check error range
-				if (state->tp.overlappingTemplateLength < MINTEMPLEN) {
-					printf("    Overlapping Template Test block Length %ld must be >= %d, try again\n\n",
-					       state->tp.overlappingTemplateLength, MINTEMPLEN);
+				if (state->tp.overlappingTemplateLength <= 0) {
+					printf("    Overlapping Template Test block Length %ld must be > 0, try again\n\n",
+					       state->tp.overlappingTemplateLength);
 				}
-				if (state->tp.overlappingTemplateLength > MAXTEMPLEN) {
-					printf("    Overlapping Template Test block Length %ld must be <= %d, try again\n\n",
-					       state->tp.overlappingTemplateLength, MAXTEMPLEN);
-				}
-			} while ((state->tp.overlappingTemplateLength < MINTEMPLEN) ||
-				 (state->tp.overlappingTemplateLength > MAXTEMPLEN));
+			} while (state->tp.overlappingTemplateLength <= 0);
 			break;
 
 		case PARAM_approximateEntropyBlockLength:
@@ -1554,11 +1549,8 @@ fixParameters(struct state *state)
 				if (state->tp.n < MIN_BITCOUNT) {
 					printf("    Length of a single bit stream %ld must be >= %d, try again\n\n",
 					       state->tp.n, MIN_BITCOUNT);
-				} else if (state->tp.n > MAX_BITCOUNT) {
-					printf("    Length of a single bit stream %ld must be <= %d, try again\n\n",
-					       state->tp.n, MAX_BITCOUNT);
 				}
-			} while ((state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT));
+			} while (state->tp.n < MIN_BITCOUNT);
 			break;
 
 		case PARAM_uniformity_level:

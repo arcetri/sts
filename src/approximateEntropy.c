@@ -178,9 +178,9 @@ void
 ApproximateEntropy_iterate(struct state *state)
 {
 	struct ApproximateEntropy_private_stats stat;	// Stats for this iteration
-	long int m;		// Approximate Entropy Test - block length
-	long int n;		// Length of a single bit stream
-	double p_value;		// p_value iteration test result(s)
+	long int m;					// Approximate Entropy Test - block length
+	long int n;					// Length of a single bit stream
+	double p_value;					// p_value iteration test result(s)
 
 	/*
 	 * Check preconditions (firewall)
@@ -467,11 +467,11 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(d) Phi(m)	       = %f\n", stat->phi[0]);
+	io_ret = fprintf(stream, "\t\t(d) Phi(m)              = %f\n", stat->phi[0]);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(e) Phi(m+1)	       = %f\n", stat->phi[1]);
+	io_ret = fprintf(stream, "\t\t(e) Phi(m+1)            = %f\n", stat->phi[1]);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -832,7 +832,7 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	 * Check uniformity failure
 	 */
 	chi2 = 0.0;
-	expCount = sampleCount / state->tp.uniformity_bins;
+	expCount = sampleCount / state->tp.uniformity_bins; // TODO make uniformity bins to sqrt(i_count) by default
 	if (expCount <= 0.0) {
 		uniformity = 0.0;	// Not enough samples for uniformity check
 	} else {

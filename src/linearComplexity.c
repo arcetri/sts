@@ -217,6 +217,7 @@ LinearComplexity_iterate(struct state *state)
 	double mean;		// Theoretical mean under an assumption of randomness
 	double T;		// Value used to identify the class v to increment
 	double p_value;		// p_value iteration test result(s)
+	double class;		// Boundary of the lowest v[i] given T[i]
 	long int i;
 	long int j;
 	long int k;
@@ -338,22 +339,15 @@ LinearComplexity_iterate(struct state *state)
 
 		/*
 		 * Step 5: record the T value in v
+		 * This code computes the classes dynamically, depending on K.
 		 */
-		// TODO make k dependent: how should I handle when K is odd?
-		if (T <= -2.5) {
+		class = (double) (K_LINEARCOMPLEXITY - 1) / 2.0;
+		if (T <= - class) {
 			stat.v[0]++;
-		} else if (T > -2.5 && T <= -1.5) {
-			stat.v[1]++;
-		} else if (T > -1.5 && T <= -0.5) {
-			stat.v[2]++;
-		} else if (T > -0.5 && T <= 0.5) {
-			stat.v[3]++;
-		} else if (T > 0.5 && T <= 1.5) {
-			stat.v[4]++;
-		} else if (T > 1.5 && T <= 2.5) {
-			stat.v[5]++;
+		} else if (T > class) {
+			stat.v[K_LINEARCOMPLEXITY]++;
 		} else {
-			stat.v[6]++;
+			stat.v[(int) ceil(T + class)]++;
 		}
 	}
 

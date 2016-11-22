@@ -367,7 +367,7 @@ static const char * const usage =
 "\n"
 "    -w workDir       write experiment results under workDir (def: .)\n"
 "    -c               don't create any directories needed for creating files (def: do create)\n"
-"    -n               don't create result.txt, data*.txt, nor stats.txt (def: do create)\n"
+"    -n               don't create result.txt, data*.txt, nor stats.txt (def: do create)\n" // TODO invert this so that by default it does not create stuff. Also, remove the use of dyn_array for stats and results
 "    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
 "    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
@@ -714,12 +714,12 @@ Parse_args(struct state *state, int argc, char *argv[])
 		usage_errp(usage, 1, __FUNCTION__, "bitcount(n) must be a number: %s", argv[optind]);
 	}
 	if ((state->tp.n % 8) != 0) {
-		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must be a multiple of 8", state->tp.n);
+		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
+				"a sequence that starts or ends on a non-byte boundary outweighs the convenience of "
+				"permitting arbitrary bit lengths", state->tp.n);
 	}
-	if (state->tp.n < MIN_BITCOUNT) { // TODO double-check
+	if (state->tp.n < MIN_BITCOUNT) {
 		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, MIN_BITCOUNT);
-	} else if (state->tp.n > MAX_BITCOUNT) {
-		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must <= %d", state->tp.n, MAX_BITCOUNT);
 	}
 
 	/*
@@ -997,8 +997,6 @@ print_option_summary(struct state *state, char *where)
 	 * Report on generator (or file) to be used
 	 */
 	if (state->generatorFlag == true) {
-
-		// STS should use enum for generator numbers, but it doesn't: sorry! // TODO doesn't it?
 		switch (state->generator) {
 
 		case GENERATOR_FROM_FILE:

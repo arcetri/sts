@@ -391,8 +391,8 @@ init(struct state *state)
 	/*
 	 * Allocate bit stream
 	 */
-	if ((state->tp.n <= 0) || (state->tp.n < MIN_BITCOUNT) || (state->tp.n > MAX_BITCOUNT)) {
-		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d and <= %d", state->tp.n, MIN_BITCOUNT, MAX_BITCOUNT);
+	if ((state->tp.n <= 0) || (state->tp.n < MIN_BITCOUNT)) {
+		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d", state->tp.n, MIN_BITCOUNT);
 	}
 	state->epsilon = calloc((size_t) state->tp.n, sizeof(BitSequence));
 	if (state->epsilon == NULL) {
