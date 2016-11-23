@@ -198,8 +198,6 @@ static const struct driver testDriver[NUMOFTESTS + 1] = {
 void
 init(struct state *state)
 {
-	int r;			// Row count to consider
-	double product;		// Probability product
 	int test_count;		// Number of tests enabled after initialization
 	int i;
 
@@ -268,88 +266,33 @@ init(struct state *state)
 	}
 
 	/*
-	 * Initialize test constants // TODO consider moving
+	 * Indicate that the test constants have not been initialized yet
 	 *
-	 * NOTE: This must be done after the command line arguments are parsed,
+	 * NOTE: The initialization must be done after the command line arguments are parsed,
 	 *       AND after any test parameters are established (by default or via interactive prompt),
 	 *       AND before the individual test init functions are called
 	 *       (i.e., before the initialize all active tests section below).
 	 */
-	state->cSetup = false;	// note that the test constants are not yet initialized
-	// firewall - guard against taking the square root of a negative value
-	if (state->tp.n <= 0) {
+	state->cSetup = false;
+	
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state->tp.n <= 0) { // guard against taking the square root of a negative value
 		err(50, __FUNCTION__, "bogus n value: %ld should be > 0", state->tp.n);
 	}
-	// compute pure numerical constants
+	
+	/*
+	 * Compute pure numerical constants
+	 */
 	state->c.sqrt2 = sqrt(2.0);
 	state->c.log2 = log(2.0);
-	// compute constants related to the value of n
+	
+	/*
+	 * Compute constants related to the value of n
+	 */
 	state->c.sqrtn = sqrt((double) state->tp.n);
-	state->c.sqrtn4_095_005 = sqrt((double) state->tp.n / 4.0 * 0.95 * 0.05);
-	state->c.sqrt_log20_n = sqrt(log(20.0) * (double) state->tp.n);	// 2.995732274 * n
-	state->c.sqrt2n = sqrt(2.0 * (double) state->tp.n);
-	if (state->c.sqrtn == 0.0) {	// paranoia
-		state->c.two_over_sqrtn = 0.0;
-	} else {
-		state->c.two_over_sqrtn = 2.0 / state->c.sqrtn;
-	}
-	// Probability of rank NUMBER_OF_ROWS_RANK
-	r = NUMBER_OF_ROWS_RANK;
-	product = 1.0;
-	for (i = 0; i <= r - 1; i++) {
-		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
-			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
-	}
-	state->c.p_32 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
-				 - NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
-	if (state->c.p_32 <= 0.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_32 value: %f should be > 0.0", state->c.p_32);
-	}
-	if (state->c.p_32 >= 1.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", state->c.p_32);
-	}
-	// Probability of rank NUMBER_OF_ROWS_RANK-1
-	r = NUMBER_OF_ROWS_RANK - 1;
-	product = 1.0;
-	for (i = 0; i <= r - 1; i++) {
-		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
-			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
-	}
-	state->c.p_31 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
-				 - NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
-	if (state->c.p_31 <= 0.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_31 value: %f should be > 0.0", state->c.p_31);
-	}
-	if (state->c.p_31 >= 1.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", state->c.p_31);
-	}
-	// Probability of rank < NUMBER_OF_ROWS_RANK-1
-	state->c.p_30 = 1.0 - (state->c.p_32 + state->c.p_31);
-	if (state->c.p_30 <= 0.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
-		    state->c.p_30, state->c.p_31, state->c.p_32);
-	}
-	if (state->c.p_30 >= 1.0) {	// paranoia
-		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be < 1.0",
-		    state->c.p_30, state->c.p_31, state->c.p_32);
-	}
-	// Total possible matrix for a given bit stream length - used by RANK_TEST
-	if (NUMBER_OF_ROWS_RANK <= 0) {	// paranoia
-		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d must be > 0", NUMBER_OF_ROWS_RANK);
-	}
-	if (NUMBER_OF_COLS_RANK <= 0) {	// paranoia
-		err(50, __FUNCTION__, "NUMBER_OF_COLS_RANK: %d must be > 0", NUMBER_OF_COLS_RANK);
-	}
-	if (((long int) NUMBER_OF_ROWS_RANK * (long int) NUMBER_OF_COLS_RANK) > (long int) LONG_MAX) {	// paranoia
-		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d cannot fit into an int because"
-				    "the product is > %ld", NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, LONG_MAX);
-	}
-	if ((NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) == 0) {	// paranoia
-		err(50, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d == 0, perhaps due to overflow",
-		    NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK);
-	}
 	state->c.logn = log(state->tp.n);
-	state->c.matrix_count = state->tp.n / (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK);
 
 	/*
 	 * Compute the minimum number of zero crossings required by the random excursions test
@@ -391,8 +334,8 @@ init(struct state *state)
 	/*
 	 * Allocate bit stream
 	 */
-	if ((state->tp.n <= 0) || (state->tp.n < MIN_BITCOUNT)) {
-		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d", state->tp.n, MIN_BITCOUNT);
+	if ((state->tp.n <= 0) || (state->tp.n < GLOBAL_MIN_BITCOUNT)) {
+		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
 	}
 	state->epsilon = calloc((size_t) state->tp.n, sizeof(BitSequence));
 	if (state->epsilon == NULL) {

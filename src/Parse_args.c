@@ -122,16 +122,8 @@ static struct state const defaultstate = {
 	{UNSET_DOUBLE,			// Square root of 2
 	 UNSET_DOUBLE,			// log(2)
 	 UNSET_DOUBLE,			// Square root of n
-	 UNSET_DOUBLE,			// Square root of (n / 4.0 * 0.95 * 0.05)
-	 UNSET_DOUBLE,			// Square root of ln(20) * n
-	 UNSET_DOUBLE,			// Square root of (2*n)
-	 UNSET_DOUBLE,			// 2 / Square root of n
-	 UNSET_DOUBLE,			// Probability of rank NUMBER_OF_ROWS_RANK
-	 UNSET_DOUBLE,			// Probability of rank NUMBER_OF_ROWS_RANK-1
-	 UNSET_DOUBLE,			// Probability of rank < NUMBER_OF_ROWS_RANK-1
 	 UNSET_DOUBLE,			// log(n)
 	 0,				// Number of crossings required to complete the test
-	 0,				// Total possible matrix for a given bit stream length
 	},
 	false,				// init() has not yet initialized c
 
@@ -718,8 +710,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 				"a sequence that starts or ends on a non-byte boundary outweighs the convenience of "
 				"permitting arbitrary bit lengths", state->tp.n);
 	}
-	if (state->tp.n < MIN_BITCOUNT) {
-		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, MIN_BITCOUNT);
+	if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
+		usage_err(usage, 1, __FUNCTION__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
 	}
 
 	/*

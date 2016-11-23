@@ -140,6 +140,14 @@
 #   define NUMBER_OF_ROWS_RANK		(32)		// Number of rows in the rank_matrix used by TEST_RANK
 #   define NUMBER_OF_COLS_RANK		(32)		// Number of columns in the rank_matrix used by TEST_RANK
 #   define MIN_NUMBER_OF_MATRICES_RANK	(38)		// Minimum number of matrices required for TEST_RANK
+#   if NUMBER_OF_ROWS_RANK <= 0
+// force syntax error if NUMBER_OF_ROWS_RANK is not bigger than zero
+      -=*#@#*=- NUMBER_OF_ROWS_RANK must be > 0 -=*#@#*=-
+#   endif
+#   if NUMBER_OF_COLS_RANK <= 0
+// force syntax error if NUMBER_OF_COLS_RANK is not bigger than zero
+      -=*#@#*=- NUMBER_OF_COLS_RANK must be > 0 -=*#@#*=-
+#   endif
 
 #   define MIN_LENGTH_FFT		(1000)		// Minimum n for TEST_FFT
 
@@ -184,7 +192,11 @@
 #   define MAX_EXCURSION_RND_EXCURSION_VAR	(9)		// Maximum excursion for state values in TEST_RND_EXCURSION_VAR
 #   define NUMBER_OF_STATES_RND_EXCURSION_VAR	(2*MAX_EXCURSION_RND_EXCURSION_VAR) // Number of states for TEST_RND_EXCURSION_VAR
 
-#   define MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream, must be > 0
+#   define GLOBAL_MIN_BITCOUNT			(1000)		// Section 2.0 min recommended length of a single bit stream
+#   if GLOBAL_MIN_BITCOUNT <= 0
+// force syntax error if GLOBAL_MIN_BITCOUNT is not bigger than zero
+      -=*#@#*=- GLOBAL_MIN_BITCOUNT must be > 0 -=*#@#*=-
+#   endif
 
 /* *INDENT-ON* */
 
@@ -313,23 +325,14 @@ typedef struct _testParameters {
  * In some cases the constants are simply numeric (such as the square root of 2).
  * In some cases the constants depend on test parameters (such as TP.n or TP.numOfBitStreams, etc.)
  *
- * NOTE: In the comments below, n is TP.n. // TODO Are all these test constants necessary to precompute at the beginning? Can't they be computed by the init of the tests that need them? static variables in test files
+ * NOTE: In the comments below, n is TP.n.
  */
 typedef struct _const {
-	double sqrt2;			// Square root of 2 - used by several tests
+	double sqrt2;			// Square root of 2 - used by many tests
 	double log2;			// log(2) - used by many tests
-	double sqrtn;			// Square root of n - used by TEST_FREQUENCY
-	double sqrtn4_095_005;		// Square root of (n / 4.0 * 0.95 * 0.05) - used by TEST_FFT
-	double sqrt_log20_n;		// Square root of ln(20) * n - used by TEST_FFT
-	double sqrt2n;			// Square root of (2*n) - used by TEST_RUNS
-	double two_over_sqrtn;		// 2 / Square root of n - used by TEST_RUNS
-	double p_32;			// Probability of rank NUMBER_OF_ROWS_RANK - used by RANK_TEST
-	double p_31;			// Probability of rank NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
-	double p_30;			// Probability of rank < NUMBER_OF_ROWS_RANK-1 - used by RANK_TEST
+	double sqrtn;			// Square root of n - used by many tests
 	double logn;			// log(n) - used by many tests
-	long int min_zero_crossings;	// Number of crossings required to complete the test -
-					// used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
-	long int matrix_count;		// Total possible matrix for a given bit stream length - used by RANK_TEST
+	long int min_zero_crossings;	// Min number of crossings required - used by TEST_RND_EXCURSION_VAR and TEST_RND_EXCURSION
 } T_CONST;
 
 #   define UNSET_DOUBLE		((double)(0.0))		// Un-initialized floating point constant

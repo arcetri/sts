@@ -1121,7 +1121,6 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			}
 			free(data_txt);
 			data_txt = NULL;
-
 		}
 	}
 
@@ -1212,7 +1211,7 @@ NonOverlappingTemplateMatchings_metric_print(struct state *state, long int sampl
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) {
+	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
 		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;

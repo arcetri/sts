@@ -66,11 +66,20 @@ struct LongestRunOfOnes_private_stats {
 static const enum test test_num = TEST_LONGEST_RUN;	// This test number
 
 /*
- * p_tbl - theoretical probabilities of the longest run in a bit string
+ * Theoretical probabilities of the longest run in a bit string
  *
  * This structure replaces the old if-then-else logic filled
  * with magic constants that once was in the iteration code.
- *
+ */
+struct runs_table {
+	const long int min_n;	// Minimum n from test table
+	const long int M;	// Length of each block to be tested
+	const int min_class;	// Minimum length to consider (0 < min_class)
+	const int max_class;	// Maximum length to consider (min_class + CLASS_COUNT_LONGEST_RUN)
+	const double pi_term[CLASS_COUNT_LONGEST_RUN + 1]; // Theoretical probabilities (see comment above)
+};
+
+/*
  * The runs_table[] constants were computing using calc:
  *
  *    http://www.isthe.com/chongo/tech/comp/calc/index.html
@@ -96,17 +105,11 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
  *      pi_term[K] is the probability that length of the the longest run of ones
  *      in a M-bit block will be >= max_class.
  *
- * The runs_table[] array is sorted by min_n.  For n (bitcount, Length of a single bit stream)
+ * The runs_table[] array is sorted by min_n.  For n (bitcount, length of a single bit stream)
  * find last the table entry where n > runs_table->min_n and where runs_table->min_n != 0.
  *
  * This runs_table[] array is computed with parameters from SP800-22Rev1a section 2.4.2,
- * (the 1st table) and section 2.4.4 (the 1st and 2nd tables).  In particular:
- *
- *      min_n           Minimum n from 1st table of section 2.4.2
- *      M               M from 1st table of section 2.4.2
- *      K               K in 2nd table of section 2.4.4
- *      min_class       The "<= table entry" for the given M in 1st table of section 2.4.4
- *      max_class       The ">= table entry" for the given M in 1st table of section 2.4.4
+ * (the 1st table) and section 2.4.4 (the 1st and 2nd tables).
  *
  * The pi_term array for a given entry is computed from the non-commented constants
  * printed by runstbl(M, min_class, max_class) from the runs_table.cal calc script.
@@ -142,54 +145,13 @@ static const enum test test_num = TEST_LONGEST_RUN;	// This test number
  *
  * NOTE: MIN_LENGTH_LONGESTRUN <= n <= ULONG_MAX
  */
-struct runs_table {
-	const long int min_n;	// Minimum n from test table
-	const long int M;	// Length of each block to be tested
-	const int min_class;	// Minimum length to consider (0 < min_class)
-	const int max_class;	// Maximum length to consider (min_class + CLASS_COUNT_LONGEST_RUN)
-	const double pi_term[CLASS_COUNT_LONGEST_RUN + 1]; // Theoretical probabilities (see comment above)
-};
-
 static const struct runs_table runs_table[] = {
-
-#if 0
-	/*
-	 * NOTE: SP800-22Rev1a section 3.4, 1st table
-	 *
-	 * K = 3, M = 8, min_class = 1, max_class = 4
-	 */
-	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
-	 {
-	  0.2148,		// pi_term[0], v <= 1
-	  0.3672,		// pi_term[1], v == 2
-	  0.2305,		// pi_term[2], v == 3
-	  0.1875,		// pi_term[3], v >= 4
-	  },
-	 },
-#endif
-
-#if 0
-	/*
-	 * NOTE: Old values from sts v2.1.2 code
-	 *
-	 * K = 3, M = 8, min_class = 1, max_class = 4
-	 */
-	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
-	 {
-	  0.21484375,		// pi_term[0], v <= 1
-	  0.3671875,		// pi_term[1], v == 2
-	  0.23046875,		// pi_term[2], v == 3
-	  0.1875,		// pi_term[3], v >= 4
-	  },
-	 },
-#endif
 
 	/*
 	 * NOTE: The K = 3, M = 8 case where the max_class was 4
 	 * 	 has been extended so that max_class - min_class
 	 *       is CLASS_COUNT_LONGEST_RUN (6).
 	 */
-
 	{
 	 MIN_LENGTH_LONGESTRUN, 	// min_n
 	 8, 				// M
@@ -207,48 +169,11 @@ static const struct runs_table runs_table[] = {
 	  },
 	 },
 
-#if 0
-	/*
-	 * NOTE: SP800-22Rev1a section 3.4, 2nd table
-	 *
-	 * K = 5, M = 128, min_class = 4, max_class = 9
-	 */
-	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
-	 {
-	  0.1174,		// pi_term[0], v <= 4
-	  0.2430,		// pi_term[1], v == 5
-	  0.2493,		// pi_term[2], v == 6
-	  0.1752,		// pi_term[3], v == 7
-	  0.1027,		// pi_term[4], v == 8
-	  0.1124,		// pi_term[5], v >= 9
-	  },
-	 },
-#endif
-
-#if 0
-	/*
-	 * NOTE: Old values from sts v2.1.2 code
-	 *
-	 * K = 5, M = 128, min_class = 4, max_class = 9
-	 */
-	{6272, 128, 5, 4, 9,
-	 {
-	  0.1174035788,		// pi_term[0], v <= 4
-	  0.242955959,		// pi_term[1], v == 5
-	  0.249363483,		// pi_term[2], v == 6
-	  0.17517706,		// pi_term[3], v == 7
-	  0.102701071,		// pi_term[4], v == 8
-	  0.112398847,		// pi_term[5], v >= 9
-	  },
-	 },
-#endif
-
 	/*
 	 * NOTE: The K = 6, M = 128 case where the max_class was 9
 	 * 	 has been extended so that max_class - min_class
 	 *       is CLASS_COUNT_LONGEST_RUN (6).
 	 */
-
 	{
 	 6272,				// min_n
 	 128,				// M
@@ -265,26 +190,6 @@ static const struct runs_table runs_table[] = {
 	  0.05718333762093383558,	// pi_term[6], v >= 10
 	  },
 	 },
-
-#if 0
-	/*
-	 * NOTE: SP800-22Rev1a section 3.4, 5th table
-	 * NOTE: These als also the values from sts v2.1.2 code
-	 *
-	 * K = 6, M = 10000, min_class = 10, max_class = 16
-	 */
-	{MIN_LENGTH_LONGESTRUN, 8, 4, 1, 4,
-	 {
-	  0.0882,		// pi_term[0], v <= 10
-	  0.2092,		// pi_term[1], v == 11
-	  0.2483,		// pi_term[2], v == 12
-	  0.1933,		// pi_term[3], v == 13
-	  0.1208,		// pi_term[4], v == 14
-	  0.0675,		// pi_term[5], v == 15
-	  0.0727,		// pi_term[6], v >= 16
-	  },
-	 },
-#endif
 
 	{
 	 750000, 			// min_n
@@ -1094,7 +999,6 @@ LongestRunOfOnes_print(struct state *state)
 			}
 			free(data_txt);
 			data_txt = NULL;
-
 		}
 	}
 
@@ -1185,7 +1089,7 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) {
+	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
 		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;

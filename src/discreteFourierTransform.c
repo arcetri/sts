@@ -66,6 +66,13 @@ static const enum test test_num = TEST_FFT;	// This test number
 
 
 /*
+ * Static variables declarations
+ */
+static double sqrtn4_095_005;			// Square root of (n / 4.0 * 0.95 * 0.05)
+static double sqrt_log20_n;				// Square root of ln(20) * n
+
+
+/*
  * Forward static function declarations
  */
 static bool DiscreteFourierTransform_print_stat(FILE * stream, struct state *state,
@@ -132,6 +139,12 @@ DiscreteFourierTransform_init(struct state *state)
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
 		dbg(DBG_HIGH, "test %s[%d] will use subdir: %s", state->testNames[test_num], test_num, state->subDir[test_num]);
 	}
+
+	/*
+	 * Compute constants needed for the test
+	 */
+	sqrtn4_095_005 = sqrt((double) state->tp.n / 4.0 * 0.95 * 0.05);
+	sqrt_log20_n = sqrt(log(20.0) * (double) state->tp.n);	// 2.995732274 * n
 
 	/*
 	 * Allocate array X, that will be used as input to the DFT
@@ -373,7 +386,7 @@ DiscreteFourierTransform_iterate(struct state *state)
 	 */
 	stat.N_1 = 0;
 	for (i = 0; i < n / 2; i++) {
-		if (m[i] < state->c.sqrt_log20_n) {
+		if (m[i] < sqrt_log20_n) {
 			stat.N_1++;
 		}
 	}
@@ -381,7 +394,7 @@ DiscreteFourierTransform_iterate(struct state *state)
 	/*
 	 * Step 7: compute the test statistic
 	 */
-	stat.d = (stat.N_1 - stat.N_0) / state->c.sqrtn4_095_005;
+	stat.d = (stat.N_1 - stat.N_0) / sqrtn4_095_005;
 
 	/*
 	 * Step 8: compute the test P-value
@@ -793,7 +806,6 @@ DiscreteFourierTransform_print(struct state *state)
 			}
 			free(data_txt);
 			data_txt = NULL;
-
 		}
 	}
 
@@ -884,7 +896,7 @@ DiscreteFourierTransform_metric_print(struct state *state, long int sampleCount,
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) {
+	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
 		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;

@@ -78,7 +78,6 @@ static void getTimestamp(char *buf, size_t len);
  * This function does not return on read errors.  Entering a non-numeric line
  * results an error message on output and another read from input.
  */
-
 long int
 getNumber(FILE * input, FILE * output)
 {
@@ -1546,11 +1545,11 @@ fixParameters(struct state *state)
 				putchar('\n');
 
 				// Check error range
-				if (state->tp.n < MIN_BITCOUNT) {
+				if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
 					printf("    Length of a single bit stream %ld must be >= %d, try again\n\n",
-					       state->tp.n, MIN_BITCOUNT);
+					       state->tp.n, GLOBAL_MIN_BITCOUNT);
 				}
-			} while (state->tp.n < MIN_BITCOUNT);
+			} while (state->tp.n < GLOBAL_MIN_BITCOUNT);
 			break;
 
 		case PARAM_uniformity_level:

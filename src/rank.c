@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
 #include "externs.h"
 #include "cephes.h"
 #include "matrix.h"
@@ -59,6 +60,15 @@ static const enum test test_num = TEST_RANK;	// This test number
 
 
 /*
+ * Static variables declarations
+ */
+static double p_32;			// Probability of rank NUMBER_OF_ROWS_RANK
+static double p_31;			// Probability of rank NUMBER_OF_ROWS_RANK - 1
+static double p_30;			// Probability of rank < NUMBER_OF_ROWS_RANK - 1
+static long int matrix_count;		// Total possible matrix for a given bit stream length
+
+
+/*
  * Forward static function declarations
  */
 static bool Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *stat, double p_value);
@@ -79,7 +89,9 @@ static void Rank_metric_print(struct state *state, long int sampleCount, long in
 void
 Rank_init(struct state *state)
 {
-	long int matrix_count;		// Length of a single bit stream
+	double product;			// Probability product, used when computing values of static variables
+	int r;				// Row count to consider, used when computing values of static variables
+	int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -100,11 +112,15 @@ Rank_init(struct state *state)
 		err(170, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
+	if (((long int) NUMBER_OF_ROWS_RANK * (long int) NUMBER_OF_COLS_RANK) > (long int) LONG_MAX) {	// paranoia
+		err(170, __FUNCTION__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d cannot fit into a long int because"
+				"the product is > %ld", NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, LONG_MAX);
+	}
 
 	/*
 	 * Collect parameters from state
 	 */
-	matrix_count = state->c.matrix_count;
+	matrix_count = state->tp.n / (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK);;
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
@@ -114,6 +130,55 @@ Rank_init(struct state *state)
 		     state->testNames[test_num], test_num, matrix_count, MIN_NUMBER_OF_MATRICES_RANK);
 		state->testVector[test_num] = false;
 		return;
+	}
+
+	/*
+	 * Compute probability of rank NUMBER_OF_ROWS_RANK
+	 */
+	r = NUMBER_OF_ROWS_RANK;
+	product = 1.0;
+	for (i = 0; i <= r - 1; i++) {
+		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
+			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
+	}
+	p_32 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
+			- NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
+	if (p_32 <= 0.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_32 value: %f should be > 0.0", p_32);
+	}
+	if (p_32 >= 1.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_32 value: %f should be < 1.0", p_32);
+	}
+
+	/*
+	 * Compute probability of rank NUMBER_OF_ROWS_RANK - 1
+	 */
+	r = NUMBER_OF_ROWS_RANK - 1;
+	product = 1.0;
+	for (i = 0; i <= r - 1; i++) {
+		product *= ((1.0 - pow(2.0, i - NUMBER_OF_ROWS_RANK))
+			    * (1.0 - pow(2.0, i - NUMBER_OF_COLS_RANK))) / (1.0 - pow(2.0, i - r));
+	}
+	p_31 = pow(2.0, r * (NUMBER_OF_ROWS_RANK + NUMBER_OF_COLS_RANK - r)
+			- NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK) * product;
+	if (p_31 <= 0.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_31 value: %f should be > 0.0", p_31);
+	}
+	if (p_31 >= 1.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_31 value: %f should be < 1.0", p_31);
+	}
+
+	/*
+	 * Compute probability of rank < NUMBER_OF_ROWS_RANK - 1
+	 */
+	p_30 = 1.0 - (p_32 + p_31);
+	if (p_30 <= 0.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be > 0.0",
+		    p_30, p_31, p_32);
+	}
+	if (p_30 >= 1.0) {	// paranoia
+		err(50, __FUNCTION__, "bogus p_30 value: %f == (1.0 - p32: %f - p_31: %f) should be < 1.0",
+		    p_30, p_31, p_32);
 	}
 
 	/*
@@ -231,7 +296,7 @@ Rank_iterate(struct state *state)
 	/*
 	 * Step 1a: divide the sequence into disjoint blocks of NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK bits
 	 */
-	for (k = 0; k < state->c.matrix_count; k++) {
+	for (k = 0; k < matrix_count; k++) {
 
 		/*
 	 	 * Step 1b: copy bits of each block into a NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK matrix
@@ -256,20 +321,20 @@ Rank_iterate(struct state *state)
 	/*
 	 * Step 3b: count the number of matrices with rank less than (full rank - 1)
 	 */
-	stat.F_remaining = state->c.matrix_count - (stat.F_M + stat.F_M_minus_one);
+	stat.F_remaining = matrix_count - (stat.F_M + stat.F_M_minus_one);
 
 	/*
 	 * Step 4: compute the test statistic
 	 */
-	stat.chi_squared = (((stat.F_M - state->c.matrix_count * state->c.p_32) *
-			     (stat.F_M - state->c.matrix_count * state->c.p_32) /
-			     (state->c.matrix_count * state->c.p_32)) +
-			    ((stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) *
-			     (stat.F_M_minus_one - state->c.matrix_count * state->c.p_31) /
-			     (state->c.matrix_count * state->c.p_31)) +
-			    ((stat.F_remaining - state->c.matrix_count * state->c.p_30) *
-			     (stat.F_remaining - state->c.matrix_count * state->c.p_30) /
-			     (state->c.matrix_count * state->c.p_30)));
+	stat.chi_squared = (((stat.F_M - matrix_count * p_32) *
+			     (stat.F_M - matrix_count * p_32) /
+			     (matrix_count * p_32)) +
+			    ((stat.F_M_minus_one - matrix_count * p_31) *
+			     (stat.F_M_minus_one - matrix_count * p_31) /
+			     (matrix_count * p_31)) +
+			    ((stat.F_remaining - matrix_count * p_30) *
+			     (stat.F_remaining - matrix_count * p_30) /
+			     (matrix_count * p_30)));
 
 	/*
 	 * Step 5: compute the test P-value
@@ -386,15 +451,15 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 			return false;
 		}
 	}
-	io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", NUMBER_OF_ROWS_RANK, state->c.p_32);
+	io_ret = fprintf(stream, "\t\t(a) Probability P_%d = %f\n", NUMBER_OF_ROWS_RANK, p_32);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(b)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 1, state->c.p_31);
+	io_ret = fprintf(stream, "\t\t(b)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 1, p_31);
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(c)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 2, state->c.p_30);
+	io_ret = fprintf(stream, "\t\t(c)             P_%d = %f\n", NUMBER_OF_ROWS_RANK - 2, p_30);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -410,7 +475,7 @@ Rank_print_stat(FILE * stream, struct state *state, struct Rank_private_stats *s
 	if (io_ret <= 0) {
 		return false;
 	}
-	io_ret = fprintf(stream, "\t\t(g) # of matrices    = %ld\n", state->c.matrix_count);
+	io_ret = fprintf(stream, "\t\t(g) # of matrices    = %ld\n", matrix_count);
 	if (io_ret <= 0) {
 		return false;
 	}
@@ -715,7 +780,6 @@ Rank_print(struct state *state)
 			}
 			free(data_txt);
 			data_txt = NULL;
-
 		}
 	}
 
@@ -806,7 +870,7 @@ Rank_metric_print(struct state *state, long int sampleCount, long int toolow, lo
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) {
+	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
 		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;

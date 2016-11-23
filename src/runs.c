@@ -58,6 +58,13 @@ static const enum test test_num = TEST_RUNS;	// This test number
 
 
 /*
+ * Static variables declarations
+ */
+static double sqrt2n;				// Square root of (2*n)
+static double two_over_sqrtn;			// 2 / Square root of n
+
+
+/*
  * Forward static function declarations
  */
 static bool Runs_print_stat(FILE * stream, struct state *state, struct Runs_private_stats *stat, double p_value);
@@ -121,6 +128,16 @@ Runs_init(struct state *state)
 	if (state->resultstxtFlag == true) {
 		state->subDir[test_num] = precheckSubdir(state, state->testNames[test_num]);
 		dbg(DBG_HIGH, "test %s[%d] will use subdir: %s", state->testNames[test_num], test_num, state->subDir[test_num]);
+	}
+
+	/*
+	 * Compute constants needed for the test
+	 */
+	sqrt2n = sqrt(2.0 * (double) state->tp.n);
+	if (state->c.sqrtn == 0.0) {	// paranoia
+		two_over_sqrtn = 0.0;
+	} else {
+		two_over_sqrtn = 2.0 / state->c.sqrtn;
 	}
 
 	/*
@@ -210,7 +227,7 @@ Runs_iterate(struct state *state)
 	/*
 	 * Step 2: determine if the prerequisite Frequency test is passed
 	 */
-	stat.test_possible = (fabs(stat.pi - 0.5) >= state->c.two_over_sqrtn) ? false : true;
+	stat.test_possible = (fabs(stat.pi - 0.5) >= two_over_sqrtn) ? false : true;
 
 	/*
 	 * Move on if it is possible to test
@@ -231,7 +248,7 @@ Runs_iterate(struct state *state)
 		 * Step 4: compute the test P-value
 		 */
 		stat.erfc_arg = fabs(stat.V_n - 2.0 * (double) n * stat.pi * (1.0 - stat.pi)) /
-		    (2.0 * stat.pi * (1.0 - stat.pi) * state->c.sqrt2n);
+		    (2.0 * stat.pi * (1.0 - stat.pi) * sqrt2n);
 		p_value = erfc(stat.erfc_arg);
 
 		/*
@@ -377,7 +394,7 @@ Runs_print_stat(FILE * stream, struct state *state, struct Runs_private_stats *s
 				return false;
 			}
 			io_ret = fprintf(stream, "\t\tPi estimator needs fabs(stat.pi:%f - 0.5) = %f > 2.0 / sqrt(n) = %f\n",
-					 stat->pi, fabs(stat->pi - 0.5), state->c.two_over_sqrtn);
+					 stat->pi, fabs(stat->pi - 0.5), two_over_sqrtn);
 			if (io_ret <= 0) {
 				return false;
 			}
@@ -724,7 +741,6 @@ Runs_print(struct state *state)
 			}
 			free(data_txt);
 			data_txt = NULL;
-
 		}
 	}
 
@@ -815,7 +831,7 @@ Runs_metric_print(struct state *state, long int sampleCount, long int toolow, lo
 		fprintf(state->finalRept, "    ----    ");
 		state->uniformity_failure[test_num] = false;
 		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) {
+	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
 		// Uniformity failure
 		fprintf(state->finalRept, " %8.6f * ", uniformity);
 		state->uniformity_failure[test_num] = true;
