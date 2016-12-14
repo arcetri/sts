@@ -26,6 +26,8 @@ osxmalloc
 miniosxmalloc
 # common testing ignore
 RMME
+# mac and ide stuff
 .DS_Store
 CMakeLists.txt
 .idea
+/cmake-build-debug/

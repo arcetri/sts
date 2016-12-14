@@ -438,8 +438,6 @@ main(int argc, char *argv[])
 
 	/*
 	 * Print results if needed
-	 *
-	 * or old code: partition results
 	 */
 	print(&run_state);
 

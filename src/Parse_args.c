@@ -301,7 +301,7 @@ static struct state const defaultstate = {
 
 
 /*
- * Command line usage information
+ * Command line usage information // TODO check if the default numbers here are still correct
  */
 /* *INDENT-OFF* */
 static const char * const usage =

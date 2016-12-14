@@ -256,7 +256,7 @@ init(struct state *state)
 	/*
 	 * Open the finalAnalysisReport.txt file
 	 */
-	if (state->runMode != MODE_WRITE_ONLY) {
+	if (state->runMode != MODE_WRITE_ONLY) { // TODO in iterate only, this should not happen
 		state->finalReptPath = filePathName(state->workDir, "finalAnalysisReport.txt");
 		dbg(DBG_MED, "will use finalAnalysisReport.txt file: %s", state->finalReptPath);
 		state->finalRept = fopen(state->finalReptPath, "w");

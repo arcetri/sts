@@ -69,7 +69,7 @@ static const enum test test_num = TEST_FFT;	// This test number
  * Static variables declarations
  */
 static double sqrtn4_095_005;			// Square root of (n / 4.0 * 0.95 * 0.05)
-static double sqrt_log20_n;				// Square root of ln(20) * n
+static double sqrt_log20_n;			// Square root of ln(20) * n
 
 
 /*
