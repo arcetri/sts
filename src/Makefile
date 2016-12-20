@@ -8,7 +8,7 @@
 # 	Tom Gilgan
 #	Riccardo Paccagnella
 #
-# See the README.txt and the initial comment in assess.c for more information.
+# See the README.md and the initial comment in sts.c for more information.
 #
 # WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
 # WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
@@ -31,6 +31,7 @@ INSTALL= install
 UNCOMPRESS= uncompress
 RM= rm
 CP= cp
+MV= mv
 CMP= cmp
 CTAGS= ctags
 MKDIR= mkdir
@@ -60,57 +61,49 @@ CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${OPT} ${DEBUG}
 # locations
 #
 ROOTDIR= ..
-DATADIR= ${ROOTDIR}/data
-#
-DESTLIBDIR= /usr/global/lib/sts
-DESTBINDIR= /usr/global/bin
-DESTDATADIR= ${DESTLIBDIR}/data
+DESTBINDIR= /usr/local/bin
 
 # source
 #
-CSRC= assess.c frequency.c blockFrequency.c \
-	cusum.c runs.c longestRunOfOnes.c \
-	serial.c rank.c discreteFourierTransform.c \
-	nonOverlappingTemplateMatchings.c \
-	overlappingTemplateMatchings.c universal.c \
-	approximateEntropy.c randomExcursions.c \
-	randomExcursionsVariant.c linearComplexity.c \
-	dfft.c cephes.c matrix.c \
-	utilities.c generators.c genutils.c \
-	Parse_args.c debug.c dyn_alloc.c driver.c
+CSRC= sts.c tests/frequency.c tests/blockFrequency.c \
+	tests/cusum.c tests/runs.c tests/longestRunOfOnes.c \
+	tests/serial.c tests/rank.c tests/discreteFourierTransform.c \
+	tests/nonOverlappingTemplateMatchings.c \
+	tests/overlappingTemplateMatchings.c tests/universal.c \
+	tests/approximateEntropy.c tests/randomExcursions.c \
+	tests/randomExcursionsVariant.c tests/linearComplexity.c \
+	utils/dfft.c utils/cephes.c utils/matrix.c \
+	utils/utilities.c utils/generators.c utils/genutils.c \
+	utils/Parse_args.c utils/debug.c utils/dyn_alloc.c driver.c
 
-HSRC= cephes.h config.h defs.h \
-	dfft.h externs.h generators.h genutils.h \
-	matrix.h stat_fncs.h utilities.h debug.h \
-	dyn_alloc.h
+HSRC= utils/cephes.h utils/config.h constants/defs.h \
+	utils/dfft.h constants/externs.h utils/generators.h utils/genutils.h \
+	utils/matrix.h utils/stat_fncs.h utils/utilities.h utils/debug.h \
+	utils/dyn_alloc.h
 
 SRCS= ${CSRC} ${HSRC}
 
-BASE_OBJ= assess.o frequency.o blockFrequency.o \
-      cusum.o runs.o longestRunOfOnes.o \
-      serial.o rank.o \
-      nonOverlappingTemplateMatchings.o \
-      overlappingTemplateMatchings.o universal.o \
-      approximateEntropy.o randomExcursions.o \
-      randomExcursionsVariant.o linearComplexity.o \
-      cephes.o matrix.o \
-      utilities.o generators.o genutils.o \
-      Parse_args.o debug.o dyn_alloc.o driver.o
+BASE_OBJ= sts.o tests/frequency.o tests/blockFrequency.o \
+      tests/cusum.o tests/runs.o tests/longestRunOfOnes.o \
+      tests/serial.o tests/rank.o \
+      tests/nonOverlappingTemplateMatchings.o \
+      tests/overlappingTemplateMatchings.o tests/universal.o \
+      tests/approximateEntropy.o tests/randomExcursions.o \
+      tests/randomExcursionsVariant.o tests/linearComplexity.o \
+      utils/cephes.o utils/matrix.o \
+      utils/utilities.o utils/generators.o utils/genutils.o \
+      utils/Parse_args.o utils/debug.o utils/dyn_alloc.o driver.o
 
-LEGACY_ONLY_OBJ= dfft.o discreteFourierTransform_legacy.o
-MODERN_ONLY_OBJ= discreteFourierTransform.o
+LEGACY_ONLY_OBJ= utils/dfft.o tests/discreteFourierTransform_legacy.o
+MODERN_ONLY_OBJ= tests/discreteFourierTransform.o
 
 OBJ_LEGACY= ${BASE_OBJ} ${LEGACY_ONLY_OBJ}
 
 OBJ= ${BASE_OBJ} ${MODERN_ONLY_OBJ}
 
-DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
-	${DATADIR}/data.pi ${DATADIR}/data.sha1 ${DATADIR}/data.sqrt2 \
-	${DATADIR}/data.sqrt3
-
-# Code that is mentioned in source comments that is not structkly part of the
+# Code that is mentioned in source comments that is not strictly part of the
 # sts code base.  And while only mkapertemplate has a rule to compile itself
-# in this Makefile, that rule is not invoked when compiling assess.
+# in this Makefile, that rule is not invoked when compiling sts.
 #
 # We only mention this code because it is referenced in the source code
 # comments and we want to be sure it is kept around.
@@ -118,117 +111,117 @@ DATA= ${DATADIR}/BBS-1165667.dat ${DATADIR}/data.bad_rng ${DATADIR}/data.e \
 TOOLS_SRC= ../tools/mkapertemplate.c ../tools/pi_term.nb ../tools/pi_term.txt \
 	../tools/runs_table.cal
 
-LEGACY_TARGETS= assess_legacy_fft ../assess_legacy_fft
+LEGACY_TARGETS= sts_legacy_fft ../sts_legacy_fft
 
-TARGETS= assess ../assess
+TARGETS= sts ../sts
 
 # default rule
 #
-all: ${TARGETS} ${DATA} ${TOOLS_SRC}
+all: ${TARGETS} ${TOOLS_SRC}
 
 legacy: ${LEGACY_TARGETS}
 
-assess: ${OBJ}
+sts: ${OBJ}
 	${RM} -f $@
 	${CC} ${CFLAGS} ${OBJ} ${LIBS} -o $@
 
-assess_legacy_fft: ${OBJ_LEGACY}
+sts_legacy_fft: ${OBJ_LEGACY}
 	${RM} -f $@
 	${CC} ${CFLAGS} ${OBJ_LEGACY} ${LEGACY_LIBS} -o $@
 
-../assess: assess
+../sts: sts
 	${RM} -f $@
-	${CP} -f -p assess $@
+	${CP} -f -p sts $@
 
-../assess_legacy_fft: assess_legacy_fft
+../sts_legacy_fft: sts_legacy_fft
 	${RM} -f $@
-	${CP} -f -p assess_legacy_fft $@
+	${CP} -f -p sts_legacy_fft $@
 
 # object dependencies and rules
 #
-assess.o: assess.c
-	${CC} -c -o $@ ${CFLAGS} assess.c
+sts.o: sts.c
+	${CC} -c -o $@ ${CFLAGS} sts.c
 
-Parse_args.o: Parse_args.c
-	${CC} -c -o $@ ${CFLAGS} Parse_args.c
+utils/Parse_args.o: utils/Parse_args.c
+	${CC} -c -o $@ ${CFLAGS} utils/Parse_args.c
 
-debug.o: debug.c
-	${CC} -c -o $@ ${CFLAGS} debug.c
+utils/debug.o: utils/debug.c
+	${CC} -c -o $@ ${CFLAGS} utils/debug.c
 
-frequency.o: frequency.c
-	${CC} -c -o $@ ${CFLAGS} frequency.c
+tests/frequency.o: tests/frequency.c
+	${CC} -c -o $@ ${CFLAGS} tests/frequency.c
 
-blockFrequency.o: blockFrequency.c
-	${CC} -c -o $@ ${CFLAGS} blockFrequency.c
+tests/blockFrequency.o: tests/blockFrequency.c
+	${CC} -c -o $@ ${CFLAGS} tests/blockFrequency.c
 
-cusum.o: cusum.c
-	${CC} -c -o $@ ${CFLAGS} cusum.c
+tests/cusum.o: tests/cusum.c
+	${CC} -c -o $@ ${CFLAGS} tests/cusum.c
 
-runs.o: runs.c
-	${CC} -c -o $@ ${CFLAGS} runs.c
+tests/runs.o: tests/runs.c
+	${CC} -c -o $@ ${CFLAGS} tests/runs.c
 
-longestRunOfOnes.o: longestRunOfOnes.c
-	${CC} -c -o $@ ${CFLAGS} longestRunOfOnes.c
+tests/longestRunOfOnes.o: tests/longestRunOfOnes.c
+	${CC} -c -o $@ ${CFLAGS} tests/longestRunOfOnes.c
 
-rank.o: rank.c
-	${CC} -c -o $@ ${CFLAGS} rank.c
+tests/rank.o: tests/rank.c
+	${CC} -c -o $@ ${CFLAGS} tests/rank.c
 
-discreteFourierTransform.o: discreteFourierTransform.c
-	${CC} -c -o $@ ${CFLAGS} discreteFourierTransform.c
+tests/discreteFourierTransform.o: tests/discreteFourierTransform.c
+	${CC} -c -o $@ ${CFLAGS} tests/discreteFourierTransform.c
 
-discreteFourierTransform_legacy.o: discreteFourierTransform.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT discreteFourierTransform.c
+tests/discreteFourierTransform_legacy.o: tests/discreteFourierTransform.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/discreteFourierTransform.c
 
-nonOverlappingTemplateMatchings.o: nonOverlappingTemplateMatchings.c
-	${CC} -c -o $@ ${CFLAGS} nonOverlappingTemplateMatchings.c
+tests/nonOverlappingTemplateMatchings.o: tests/nonOverlappingTemplateMatchings.c
+	${CC} -c -o $@ ${CFLAGS} tests/nonOverlappingTemplateMatchings.c
 
-overlappingTemplateMatchings.o: overlappingTemplateMatchings.c
-	${CC} -c -o $@ ${CFLAGS} overlappingTemplateMatchings.c
+tests/overlappingTemplateMatchings.o: tests/overlappingTemplateMatchings.c
+	${CC} -c -o $@ ${CFLAGS} tests/overlappingTemplateMatchings.c
 
-universal.o: universal.c
-	${CC} -c -o $@ ${CFLAGS} universal.c
+tests/universal.o: tests/universal.c
+	${CC} -c -o $@ ${CFLAGS} tests/universal.c
 
-approximateEntropy.o: approximateEntropy.c
-	${CC} -c -o $@ ${CFLAGS} approximateEntropy.c
+tests/approximateEntropy.o: tests/approximateEntropy.c
+	${CC} -c -o $@ ${CFLAGS} tests/approximateEntropy.c
 
-randomExcursions.o: randomExcursions.c
-	${CC} -c -o $@ ${CFLAGS} randomExcursions.c
+tests/randomExcursions.o: tests/randomExcursions.c
+	${CC} -c -o $@ ${CFLAGS} tests/randomExcursions.c
 
-randomExcursionsVariant.o: randomExcursionsVariant.c
-	${CC} -c -o $@ ${CFLAGS} randomExcursionsVariant.c
+tests/randomExcursionsVariant.o: tests/randomExcursionsVariant.c
+	${CC} -c -o $@ ${CFLAGS} tests/randomExcursionsVariant.c
 
-serial.o: serial.c
-	${CC} -c -o $@ ${CFLAGS} serial.c
+tests/serial.o: tests/serial.c
+	${CC} -c -o $@ ${CFLAGS} tests/serial.c
 
-linearComplexity.o: linearComplexity.c
-	${CC} -c -o $@ ${CFLAGS} linearComplexity.c
+tests/linearComplexity.o: tests/linearComplexity.c
+	${CC} -c -o $@ ${CFLAGS} tests/linearComplexity.c
 
-dfft.o: dfft.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT dfft.c
+utils/dfft.o: utils/dfft.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/dfft.c
 
-matrix.o: matrix.c
-	${CC} -c -o $@ ${CFLAGS} matrix.c
+utils/matrix.o: utils/matrix.c
+	${CC} -c -o $@ ${CFLAGS} utils/matrix.c
 
-genutils.o: genutils.c
-	${CC} -c -o $@ ${CFLAGS} genutils.c
+utils/genutils.o: utils/genutils.c
+	${CC} -c -o $@ ${CFLAGS} utils/genutils.c
 
-cephes.o: cephes.c
-	${CC} -c -o $@ ${CFLAGS} cephes.c
+utils/cephes.o: utils/cephes.c
+	${CC} -c -o $@ ${CFLAGS} utils/cephes.c
 
-utilities.o: utilities.c
-	${CC} -c -o $@ ${CFLAGS} utilities.c
+utils/utilities.o: utils/utilities.c
+	${CC} -c -o $@ ${CFLAGS} utils/utilities.c
 
-generators.o: generators.c
-	${CC} -c -o $@ ${CFLAGS} generators.c
+utils/generators.o: utils/generators.c
+	${CC} -c -o $@ ${CFLAGS} utils/generators.c
 
-dyn_alloc.o: dyn_alloc.c
-	${CC} -c -o $@ ${CFLAGS} dyn_alloc.c
+utils/dyn_alloc.o: utils/dyn_alloc.c
+	${CC} -c -o $@ ${CFLAGS} utils/dyn_alloc.c
 
 driver.o: driver.c
 	${CC} -c -o $@ ${CFLAGS} driver.c
 
-mkapertemplate: ../tools/mkapertemplate.c debug.o
-	${CC} -o $@ ${CFLAGS} -I . ../tools/mkapertemplate.c debug.o
+mkapertemplate: ../tools/mkapertemplate.c utils/debug.o
+	${CC} -o $@ ${CFLAGS} -I . ../tools/mkapertemplate.c utils/debug.o
 
 # utility rules
 #
@@ -289,13 +282,13 @@ indent: ${SRCS}
 	    fi; \
 	done
 
-valgrind: assess
+valgrind: sts
 	${RM} -rf valrun
 	${MKDIR} valrun
-	${VALGRIND} ${VALGRIND_OPTIONS} ./assess -b -i 20 -g 4 -I 1 -w valrun -v 3 1000000 2>&1 | \
+	${VALGRIND} ${VALGRIND_OPTIONS} ./sts -b -i 20 -g 4 -I 1 -w valrun -v 3 1000000 2>&1 | \
 		${TEE} valrun/valgrind.out
 
-valgrindeach: assess
+valgrindeach: sts
 	@for i in $$(seq -w 01 15); do \
 	    if [[ -e "eachrun_$$i" ]]; then \
 		echo ${RM} -rf "eachrun_$$i"; \
@@ -304,22 +297,22 @@ valgrindeach: assess
 	done
 	for i in $$(seq -w 01 15); do \
 	    ${MKDIR} -p "eachrun_$$i"; \
-	    ${VALGRIND} ${VALGRIND_OPTIONS} ./assess -b -t "$$i" -i 20 -g 4 -I 1 -w "eachrun_$$i" -v 3 1000000 2>&1 | \
+	    ${VALGRIND} ${VALGRIND_OPTIONS} ./sts -b -t "$$i" -i 20 -g 4 -I 1 -w "eachrun_$$i" -v 3 1000000 2>&1 | \
 		    ${TEE} eachrun_$$i/valgrind.out; \
 	done
 
-minivalgrind: assess
+minivalgrind: sts
 	${RM} -rf minivalrun
 	${MKDIR} minivalrun
-	${VALGRIND} ${VALGRIND_OPTIONS} ./assess -b -i 2 -g 4 -I 1 -w minivalrun -v 3 1000000 2>&1 | \
+	${VALGRIND} ${VALGRIND_OPTIONS} ./sts -b -i 2 -g 4 -I 1 -w minivalrun -v 3 1000000 2>&1 | \
 		${TEE} minivalrun/valgrind.out
 
-osxtest: assess
+osxtest: sts
 	${RM} -rf osxmalloc osxmalloc/malloc.out
 	${MKDIR} -p osxmalloc
 	${OSX_MALLOC_ENV} MallocStackLoggingDirectory=osxmalloc \
 	  MallocLogFile=osxmalloc/malloc.out \
-	  ./assess -b -i 20 -g 4 -I 1 -w osxmalloc -v 3 1000000
+	  ./sts -b -i 20 -g 4 -I 1 -w osxmalloc -v 3 1000000
 	@if [[ -f osxmalloc/malloc.out && -s osxmalloc/malloc.out ]]; then \
 	    echo "=-=-= malloc error log follows"; \
 	    cat osxmalloc/malloc.out; \
@@ -329,12 +322,12 @@ osxtest: assess
 	    rm -f osxmalloc/malloc.out; \
 	fi
 
-miniosxtest: assess
+miniosxtest: sts
 	${RM} -rf miniosxmalloc miniosxmalloc/malloc.out
 	${MKDIR} -p miniosxmalloc
 	${OSX_MALLOC_ENV} MallocStackLoggingDirectory=miniosxmalloc \
 	  MallocLogFile=miniosxmalloc/malloc.out \
-	  ./assess -b -i 2 -g 4 -I 1 -w miniosxmalloc -v 3 1000000
+	  ./sts -b -i 2 -g 4 -I 1 -w miniosxmalloc -v 3 1000000
 	@if [[ -f miniosxmalloc/malloc.out && -s miniosxmalloc/malloc.out ]]; then \
 	    echo "=-=-= malloc error log follows"; \
 	    cat miniosxmalloc/malloc.out; \
@@ -344,7 +337,7 @@ miniosxtest: assess
 	    rm -f miniosxmalloc/malloc.out; \
 	fi
 
-rebuild: clobber assess
+rebuild: clobber sts
 
 depend:
 	@${RM} -f Makefile.bak
@@ -362,59 +355,52 @@ depend:
 	fi
 
 install: all
-	if [ ! -d "${DESTLIBDIR}" ]; then \
-	    ${MKDIR} -p "${DESTLIBDIR}"; \
-	fi
 	if [ ! -d "${DESTBINDIR}" ]; then \
 	    ${MKDIR} -p "${DESTBINDIR}"; \
 	fi
-	if [ ! -d "${DESTDATADIR}" ]; then \
-	    ${MKDIR} -p "${DESTDATADIR}"; \
-	fi
-	${INSTALL} -c -m 0755 assess ${DESTBINDIR}
-	${INSTALL} -m 0444 ${DATA} ${DESTDATADIR}
+	${INSTALL} -c -m 0755 sts ${DESTBINDIR}
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-assess.o: defs.h config.h dyn_alloc.h cephes.h utilities.h stat_fncs.h
-assess.o: externs.h debug.h
-frequency.o: externs.h defs.h config.h dyn_alloc.h utilities.h debug.h
-frequency.o: cephes.h
-blockFrequency.o: externs.h defs.h config.h dyn_alloc.h cephes.h utilities.h
-blockFrequency.o: debug.h
-cusum.o: externs.h defs.h config.h dyn_alloc.h cephes.h utilities.h debug.h
-runs.o: externs.h defs.h config.h dyn_alloc.h cephes.h utilities.h debug.h
-longestRunOfOnes.o: externs.h defs.h config.h dyn_alloc.h cephes.h
-longestRunOfOnes.o: utilities.h debug.h
-serial.o: externs.h defs.h config.h dyn_alloc.h cephes.h utilities.h debug.h
-rank.o: externs.h defs.h config.h dyn_alloc.h cephes.h matrix.h utilities.h
-rank.o: debug.h
-discreteFourierTransform.o: externs.h defs.h config.h dyn_alloc.h utilities.h
-discreteFourierTransform.o: cephes.h dfft.h debug.h
-nonOverlappingTemplateMatchings.o: externs.h defs.h config.h dyn_alloc.h
-nonOverlappingTemplateMatchings.o: utilities.h cephes.h debug.h
-overlappingTemplateMatchings.o: externs.h defs.h config.h dyn_alloc.h
-overlappingTemplateMatchings.o: utilities.h cephes.h debug.h
-universal.o: externs.h defs.h config.h dyn_alloc.h utilities.h cephes.h
-universal.o: debug.h
-approximateEntropy.o: externs.h defs.h config.h dyn_alloc.h utilities.h
-approximateEntropy.o: cephes.h debug.h
-randomExcursions.o: externs.h defs.h config.h dyn_alloc.h cephes.h
-randomExcursions.o: utilities.h debug.h
-randomExcursionsVariant.o: externs.h defs.h config.h dyn_alloc.h cephes.h
-randomExcursionsVariant.o: utilities.h debug.h
-linearComplexity.o: externs.h defs.h config.h dyn_alloc.h cephes.h
-linearComplexity.o: utilities.h debug.h
-dfft.o: dfft.h
-cephes.o: cephes.h defs.h config.h dyn_alloc.h externs.h debug.h
-matrix.o: externs.h defs.h config.h dyn_alloc.h matrix.h debug.h
-utilities.o: externs.h defs.h config.h dyn_alloc.h utilities.h generators.h
-utilities.o: stat_fncs.h debug.h
-generators.o: externs.h defs.h config.h dyn_alloc.h utilities.h generators.h
-generators.o: genutils.h debug.h
-genutils.o: genutils.h config.h debug.h
-Parse_args.o: externs.h defs.h config.h dyn_alloc.h utilities.h debug.h
-debug.o: debug.h externs.h defs.h config.h dyn_alloc.h
-dyn_alloc.o: dyn_alloc.h debug.h
-driver.o: defs.h config.h dyn_alloc.h utilities.h debug.h stat_fncs.h
-driver.o: externs.h
+sts.o: constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/stat_fncs.h
+sts.o: constants/externs.h utils/debug.h
+tests/frequency.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
+tests/frequency.o: utils/cephes.h
+tests/blockFrequency.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h
+tests/blockFrequency.o: utils/debug.h
+tests/cusum.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
+tests/runs.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
+tests/longestRunOfOnes.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/longestRunOfOnes.o: utils/utilities.h utils/debug.h
+tests/serial.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
+tests/rank.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/matrix.h utils/utilities.h
+tests/rank.o: utils/debug.h
+tests/discreteFourierTransform.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h
+tests/discreteFourierTransform.o: utils/cephes.h utils/dfft.h utils/debug.h
+tests/nonOverlappingTemplateMatchings.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
+tests/nonOverlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h utils/debug.h
+tests/overlappingTemplateMatchings.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
+tests/overlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h utils/debug.h
+tests/universal.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/cephes.h
+tests/universal.o: utils/debug.h
+tests/approximateEntropy.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h
+tests/approximateEntropy.o: utils/cephes.h utils/debug.h
+tests/randomExcursions.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/randomExcursions.o: utils/utilities.h utils/debug.h
+tests/randomExcursionsVariant.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/randomExcursionsVariant.o: utils/utilities.h utils/debug.h
+tests/linearComplexity.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/linearComplexity.o: utils/utilities.h utils/debug.h
+utils/dfft.o: utils/dfft.h
+utils/cephes.o: utils/cephes.h constants/defs.h utils/config.h utils/dyn_alloc.h constants/externs.h utils/debug.h
+utils/matrix.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/matrix.h utils/debug.h
+utils/utilities.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/generators.h
+utils/utilities.o: utils/stat_fncs.h utils/debug.h
+utils/generators.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/generators.h
+utils/generators.o: utils/genutils.h utils/debug.h
+utils/genutils.o: utils/genutils.h utils/config.h utils/debug.h
+utils/Parse_args.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
+utils/debug.o: utils/debug.h constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
+utils/dyn_alloc.o: utils/dyn_alloc.h utils/debug.h
+driver.o: constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h utils/stat_fncs.h
+driver.o: constants/externs.h

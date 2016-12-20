@@ -8,7 +8,7 @@
 # 	Tom Gilgan
 #	Riccardo Paccagnella
 #
-# See the README.txt and the initial comment in assess.c for more information.
+# See the README.md and the initial comment in sts.c for more information.
 #
 # WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
 # WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
@@ -30,22 +30,22 @@ SRC= src
 
 # default rules
 #
-all: assess
+all: sts
 
 legacy:
 	cd ${SRC}; $(MAKE) $@
 
-assess: ${SRC}/assess
-	cd ${SRC}; $(MAKE) ../assess
+sts: ${SRC}/sts
+	cd ${SRC}; $(MAKE) ../sts
 
-assess_legacy_fft: ${SRC}/assess_legacy_fft
-	cd ${SRC}; $(MAKE) ../assess_legacy_fft
+sts_legacy_fft: ${SRC}/sts_legacy_fft
+	cd ${SRC}; $(MAKE) ../sts_legacy_fft
 
-${SRC}/assess:
+${SRC}/sts:
 	cd ${SRC}; $(MAKE) all
 
-${SRC}/assess_legacy_fft:
-	cd ${SRC}; $(MAKE) assess_legacy_fft
+${SRC}/sts_legacy_fft:
+	cd ${SRC}; $(MAKE) sts_legacy_fft
 
 # utility rules
 #

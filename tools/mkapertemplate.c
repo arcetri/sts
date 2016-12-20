@@ -15,7 +15,7 @@
  *      Tom Gilgan
  *      Riccardo Paccagnella
  *
- * See the README.txt and the initial comment in assess.c for more information.
+ * See the README.md and the initial comment in sts.c for more information.
  *
  * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
  * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
@@ -44,7 +44,7 @@ typedef unsigned long long int64_t;	/* 64-bit unsigned word */
 #   endif
 #endif				// __STDC_VERSION__ >= 199901L
 
-#include "debug.h"
+#include "../src/utils/debug.h"
 
 #define B (8*sizeof(unsigned long long))
 

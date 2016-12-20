@@ -17,7 +17,7 @@
  *      Tom Gilgan
  *      Riccardo Paccagnella
  *
- * See the README.txt and the initial comment in assess.c for more information.
+ * See the README.md and the initial comment in sts.c for more information.
  *
  * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
  * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
@@ -40,11 +40,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
-#include "defs.h"
-#include "utilities.h"
-#include "debug.h"
-#include "stat_fncs.h"
-#include "externs.h"
+#include "constants/defs.h"
+#include "utils/utilities.h"
+#include "utils/debug.h"
+#include "utils/stat_fncs.h"
+#include "constants/externs.h"
 
 
 /*
