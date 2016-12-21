@@ -185,7 +185,7 @@ static const struct runs_table runs_table[] = {
 	  0.24295595927745485921,	// pi_term[1], v == 5
 	  0.24936348317907796964,	// pi_term[2], v == 6
 	  0.17517706034678234949,	// pi_term[3], v == 7
-	  0.10270107130405369391,	// pi_term[4], v == 8
+	  0.10270117130405369391,	// pi_term[4], v == 8
 	  0.05521550943390406075,	// pi_term[5], v == 9
 	  0.05718333762093383558,	// pi_term[6], v >= 10
 	  },
@@ -198,7 +198,7 @@ static const struct runs_table runs_table[] = {
 	 16,				// max_class
 
 	 {
-	  0.08663231107995278587,	// pi_term[0], v <= 10
+	  0.08663231117995278587,	// pi_term[0], v <= 10
 	  0.20820064838760340198,	// pi_term[1], v == 11
 	  0.24841858194169954122,	// pi_term[2], v == 12
 	  0.19391278674165693004,	// pi_term[3], v == 13
@@ -768,7 +768,7 @@ LongestRunOfOnes_print_p_value(FILE * stream, double p_value)
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(103, __FUNCTION__, "stream arg is NULL");
+		err(113, __FUNCTION__, "stream arg is NULL");
 	}
 
 	/*
@@ -826,7 +826,7 @@ LongestRunOfOnes_print(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(104, __FUNCTION__, "state arg is NULL");
+		err(114, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -834,26 +834,26 @@ LongestRunOfOnes_print(struct state *state)
 		return;
 	}
 	if (state->resultstxtFlag == false) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] disabled due to -n", state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] was not enabled with -s", state->testNames[test_num], test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(104, __FUNCTION__,
+		err(114, __FUNCTION__,
 		    "print driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(104, __FUNCTION__,
+		err(114, __FUNCTION__,
 		    "print driver interface for %s[%d] called with p_val count: %ld != %ld*%d=%ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->datatxt_fmt[test_num] == NULL) {
-		err(104, __FUNCTION__, "format for data0*.txt filename is NULL");
+		err(114, __FUNCTION__, "format for data0*.txt filename is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(104, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(114, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -892,7 +892,7 @@ LongestRunOfOnes_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = LongestRunOfOnes_print_stat(stats, state, stat, p_value);
 		if (ok == false) {
-			errp(104, __FUNCTION__, "error in writing to %s", stats_txt);
+			errp(114, __FUNCTION__, "error in writing to %s", stats_txt);
 		}
 
 		/*
@@ -901,7 +901,7 @@ LongestRunOfOnes_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = LongestRunOfOnes_print_p_value(results, p_value);
 		if (ok == false) {
-			errp(104, __FUNCTION__, "error in writing to %s", results_txt);
+			errp(114, __FUNCTION__, "error in writing to %s", results_txt);
 		}
 	}
 
@@ -911,12 +911,12 @@ LongestRunOfOnes_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
 	if (io_ret != 0) {
-		errp(104, __FUNCTION__, "error flushing to: %s", stats_txt);
+		errp(114, __FUNCTION__, "error flushing to: %s", stats_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(stats);
 	if (io_ret != 0) {
-		errp(104, __FUNCTION__, "error closing: %s", stats_txt);
+		errp(114, __FUNCTION__, "error closing: %s", stats_txt);
 	}
 	free(stats_txt);
 	stats_txt = NULL;
@@ -927,12 +927,12 @@ LongestRunOfOnes_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
 	if (io_ret != 0) {
-		errp(104, __FUNCTION__, "error flushing to: %s", results_txt);
+		errp(114, __FUNCTION__, "error flushing to: %s", results_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(results);
 	if (io_ret != 0) {
-		errp(104, __FUNCTION__, "error closing: %s", results_txt);
+		errp(114, __FUNCTION__, "error closing: %s", results_txt);
 	}
 	free(results_txt);
 	results_txt = NULL;
@@ -950,7 +950,7 @@ LongestRunOfOnes_print(struct state *state)
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(104, __FUNCTION__,
+				errp(114, __FUNCTION__,
 				     "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ, j + 1, snprintf_ret);
 			}
 
@@ -978,7 +978,7 @@ LongestRunOfOnes_print(struct state *state)
 					errno = 0;	// paranoia
 					ok = LongestRunOfOnes_print_p_value(data, p_value);
 					if (ok == false) {
-						errp(104, __FUNCTION__, "error in writing to %s", data_txt);
+						errp(114, __FUNCTION__, "error in writing to %s", data_txt);
 					}
 
 				}
@@ -990,12 +990,12 @@ LongestRunOfOnes_print(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
 			if (io_ret != 0) {
-				errp(104, __FUNCTION__, "error flushing to: %s", data_txt);
+				errp(114, __FUNCTION__, "error flushing to: %s", data_txt);
 			}
 			errno = 0;	// paranoia
 			io_ret = fclose(data);
 			if (io_ret != 0) {
-				errp(104, __FUNCTION__, "error closing: %s", data_txt);
+				errp(114, __FUNCTION__, "error closing: %s", data_txt);
 			}
 			free(data_txt);
 			data_txt = NULL;
@@ -1039,10 +1039,10 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(105, __FUNCTION__, "state arg is NULL");
+		err(115, __FUNCTION__, "state arg is NULL");
 	}
 	if (freqPerBin == NULL) {
-		err(105, __FUNCTION__, "freqPerBin arg is NULL");
+		err(115, __FUNCTION__, "freqPerBin arg is NULL");
 	}
 
 	/*
@@ -1123,7 +1123,7 @@ LongestRunOfOnes_metric_print(struct state *state, long int sampleCount, long in
 	errno = 0;		// paranoia
 	io_ret = fflush(state->finalRept);
 	if (io_ret != 0) {
-		errp(105, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+		errp(115, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
 	}
 
 	return;
@@ -1154,7 +1154,7 @@ LongestRunOfOnes_metrics(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(106, __FUNCTION__, "state arg is NULL");
+		err(116, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -1162,19 +1162,22 @@ LongestRunOfOnes_metrics(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(106, __FUNCTION__,
+		err(116, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(106, __FUNCTION__,
+		err(116, __FUNCTION__,
 		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
-	if (state->driver_state[test_num] != DRIVER_PRINT) {
-		err(106, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
+	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
+		err(116, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
+	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
+		err(116, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
 	/*
@@ -1182,7 +1185,7 @@ LongestRunOfOnes_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(106, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
+		errp(116, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
 		     state->tp.uniformity_bins, sizeof(long int));
 	}
 
@@ -1290,7 +1293,7 @@ LongestRunOfOnes_destroy(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(107, __FUNCTION__, "state arg is NULL");
+		err(117, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __FUNCTION__);

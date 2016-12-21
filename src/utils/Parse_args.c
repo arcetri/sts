@@ -34,6 +34,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <math.h>
 #include "../constants/externs.h"
 #include "utilities.h"
 #include "debug.h"
@@ -89,7 +90,7 @@ static struct state const defaultstate = {
 	true,				// Create directories
 
 	// resultstxtFlag
-	true,				// No -n, create results.txt, data*.txt and stats.txt files
+	false,				// No -s, don't create results.txt, data*.txt and stats.txt files
 
 	// randomDataFlag & randomDataPath
 	false,				// No -f randdata was given
@@ -103,7 +104,7 @@ static struct state const defaultstate = {
 	false,				// No -j jobnum was given
 	0,				// Begin at start of randdata (-j 0)
 
-	// tp & promptFlag
+	// tp, promptFlag, uniformityBinsFlag
 	{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
 	 DEFAULT_NON_OVERLAPPING,	// -P 2=m, NonOverlapping Template Test - block length
 	 DEFAULT_OVERLAPPING,		// -P 3=m, Overlapping Template Test - block length
@@ -117,6 +118,7 @@ static struct state const defaultstate = {
 	 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
 	},
 	false,				// No -p, prompt for change of parameters if no -b
+	false,				// No -P 8 was given with custom uniformity bins
 
 	// c, cSetup
 	{UNSET_DOUBLE,			// Square root of 2
@@ -301,16 +303,14 @@ static struct state const defaultstate = {
 
 
 /*
- * Command line usage information // TODO check if the default numbers here are still correct
+ * Command line usage information
  */
 /* *INDENT-OFF* */
 static const char * const usage =
 "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
 "               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
-"               [-w workDir] [-c] [-n] [-f randdata] [-F format] [-j jobnum]\n"
-"               [-s statePath] [-r stateDir] [-R] [-m mode]\n"
-"               [-h]\n"
-"               bitcount\n"
+"               [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
+"               [-m mode] [-h] bitcount\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
 "    -b                 batch mode - no stdin (def: prompt when needed)\n"
@@ -336,17 +336,17 @@ static const char * const usage =
 "\n"
 "    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
 "\n"
-"       1: Block Frequency Test - block length(M):            128\n"
-"       2: NonOverlapping Template Test - block length(m):      9\n"
-"       3: Overlapping Template Test - block length(m):         9\n"
-"       4: Approximate Entropy Test - block length(m):         10\n"
-"       5: Serial Test - block length(m):                      16\n"
-"       6: Linear Complexity Test - block length(M):          500\n"
-"       7: Number of bitcount runs (same as -i iterations):     1\n"
-"       8: Uniformity bins                                     10\n"
-"       9: Length of a single bit stream (bitcount):      1000000\n"
-"      10: Uniformity Cutoff Level                         0.0001\n"
-"      11: Alpha Confidence Level:                           0.01\n"
+"       1: Block Frequency Test - block length(M):		128\n"
+"       2: NonOverlapping Template Test - block length(m):	9\n"
+"       3: Overlapping Template Test - block length(m):		9\n"
+"       4: Approximate Entropy Test - block length(m):		10\n"
+"       5: Serial Test - block length(m):			16\n"
+"       6: Linear Complexity Test - block length(M):		500\n"
+"       7: Number of bitcount runs (same as -i iterations):	1\n"
+"       8: Uniformity bins:                         		sqrt(iterations) or 10 (if -O)\n"
+"       9: Length of a single bit stream (bitcount):		1000000\n"
+"      10: Uniformity Cutoff Level:				0.0001\n"
+"      11: Alpha Confidence Level:				0.01\n"
 "\n"
 "    -p    In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
 "\n"
@@ -359,7 +359,7 @@ static const char * const usage =
 "\n"
 "    -w workDir       write experiment results under workDir (def: .)\n"
 "    -c               don't create any directories needed for creating files (def: do create)\n"
-"    -n               don't create result.txt, data*.txt, nor stats.txt (def: do create)\n" // TODO invert this so that by default it does not create files. Also, remove the use of dyn_array for stats and results
+"    -s               create result.txt, data*.txt, and stats.txt (def: don't create)\n"
 "    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
 "    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
@@ -612,8 +612,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 			state->subDirs = false;	// do not create directories
 			break;
 
-		case 'n':	// -n (don't create result.txt or stats.txt)
-			state->resultstxtFlag = false;
+		case 's':	// -s (create result.txt and stats.txt)
+			state->resultstxtFlag = true;
 			break;
 
 		case 'F':	// -F format: 'r' or '1': raw binary, 'a' or '0': ASCII '0'/'1' chars
@@ -664,7 +664,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 			switch (optarg[0]) {
 			case MODE_WRITE_ONLY:
 				state->runMode = MODE_WRITE_ONLY;
-				state->resultstxtFlag = false;	// -m w implines -n
+				state->resultstxtFlag = false;	// -m w implies that result.txt and stats.txt are not written
 				break;
 			case MODE_ASSESS_ONLY:
 			case MODE_ITERATE_ONLY:
@@ -820,6 +820,23 @@ Parse_args(struct state *state, int argc, char *argv[])
 	}
 
 	/*
+	 * Set the number of uniformity bins to sqrt(iterations) if running in non-legacy mode and
+	 * no custom number was provided
+	 */
+	if (state->uniformityBinsFlag == false && state->legacy_output == false) {
+		// state->tp.uniformity_bins = (long int) sqrt(state->tp.numOfBitStreams); TODO uncomment when the new metric print is done
+	}
+
+	/*
+	 * Set the number of uniformity bins back to their default value if a custom number was
+	 * provided but the legacy mode is on
+	 */
+	if (state->uniformityBinsFlag == true && state->legacy_output == true) {
+		dbg(DBG_LOW, "setting the number of uniformity bins back to 10 due to -O legacy mode flag");
+		state->tp.uniformity_bins = DEFAULT_UNIFORMITY_BINS;
+	}
+
+	/*
 	 * Report on how we will run, if debugging
 	 */
 	if (debuglevel > 0) {
@@ -863,6 +880,7 @@ change_params(struct state *state, long int parameter, long int value, double d_
 		state->tp.linearComplexitySequenceLength = value;
 		break;
 	case PARAM_numOfBitStreams:
+		state->uniformityBinsFlag = true;
 		state->tp.numOfBitStreams = value;
 		break;
 	case PARAM_uniformity_bins:
@@ -1130,11 +1148,11 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\t    Do not create directories, assume they exist");
 	}
 	if (state->resultstxtFlag == true) {
-		dbg(DBG_MED, "\tno -n was given");
+		dbg(DBG_MED, "\t-s was given");
 		dbg(DBG_MED, "\t    Create result.txt, data*.txt and stats.txt");
 	} else {
-		dbg(DBG_MED, "\t-n was given");
-		dbg(DBG_MED, "\t    Do not create result.txt, data*.t, not stats.txt");
+		dbg(DBG_MED, "\tno -s was given");
+		dbg(DBG_MED, "\t    Do not create result.txt, data*.txt and stats.txt");
 	}
 	if (state->randomDataFlag == true) {
 		dbg(DBG_MED, "\t-f was given");

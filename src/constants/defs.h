@@ -368,8 +368,8 @@ struct state {
 	bool subDirs;			// -c: false -> don't create any directories needed for creating files
 					//		(def: do create)
 
-	bool resultstxtFlag;		// -n: false -> don't create result.txt, data*.txt, nor stats.txt
-					//		(def: do create)
+	bool resultstxtFlag;		// -s: true -> create result.txt, data*.txt, and stats.txt
+					//		(def: don't create)
 
 	bool randomDataFlag;		// true if -f randdata was given
 	char *randomDataPath;		// -f randdata: path to a random data file
@@ -382,6 +382,7 @@ struct state {
 
 	TP tp;				// Test parameters
 	bool promptFlag;		// -p: true -> in interactive mode (no -b), do not prompt for change of parameters
+	bool uniformityBinsFlag;		// -P 8 was given with custom uniformity bins
 
 	T_CONST c;			// Test constants
 	bool cSetup;			// true --> init() function has initialized the test constants c
@@ -401,9 +402,8 @@ struct state {
 	int partitionCount[NUMOFTESTS + 1];	// Partition the result for test i into partitionCount[i] data*.txt files
 	char *datatxt_fmt[NUMOFTESTS + 1];	// Format of data*.txt filenames or NULL
 
-	struct dyn_array *stats[NUMOFTESTS + 1];// Per test dynamic array of per iteration data (for stats.txt unless -n)
-	struct dyn_array *p_val[NUMOFTESTS + 1];// Per test dynamic array of p_values and unless -n for results.txt
-						// NOTE: NonOverlapping Template Test uses array of struct nonover_stats
+	struct dyn_array *stats[NUMOFTESTS + 1];// Per test dynamic array of per iteration data (for stats.txt if -s)
+	struct dyn_array *p_val[NUMOFTESTS + 1];// Per test dynamic array of p_values (nonover_stats for the nonOverlapping test)
 
 	bool is_excursion[NUMOFTESTS + 1];	// true --> test is a form of random excursion
 

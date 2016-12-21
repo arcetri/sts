@@ -599,7 +599,7 @@ OverlappingTemplateMatchings_print(struct state *state)
 		return;
 	}
 	if (state->resultstxtFlag == false) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] disabled due to -n", state->testNames[test_num], test_num);
+		dbg(DBG_LOW, "print driver interface for %s[%d] was not enabled with -s", state->testNames[test_num], test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -937,9 +937,12 @@ OverlappingTemplateMatchings_metrics(struct state *state)
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
-	if (state->driver_state[test_num] != DRIVER_PRINT) {
+	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
 		err(146, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
+	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
+		err(146, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
 	/*
