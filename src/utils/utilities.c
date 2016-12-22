@@ -1628,7 +1628,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Set file pointer after jobnum chunks into file
 		 */
-		dbg(DBG_LOW, "seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
+		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
 		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		seekError = fseek(state->streamFile, (state->jobnum * state->tp.n * state->tp.numOfBitStreams), SEEK_SET);
@@ -1671,7 +1671,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Set file pointer after jobnum chunks into file
 		 */
-		dbg(DBG_LOW, "seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
+		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
 		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
 		if (seekError != 0) {
@@ -1728,7 +1728,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	/*
 	 * Perform iterations on consecutive bitstreams read from the streamFile as binary digits in ASCII
 	 */
-	dbg(DBG_LOW, "start of iterate phase");
+	dbg(DBG_LOW, "Start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
@@ -1755,15 +1755,17 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		}
 
 		/*
-		 * Write stats to freq.txt
+		 * Write stats to freq.txt if in legacy_output mode
 		 */
-		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		if (io_ret <= 0) {
-			errp(225, __FUNCTION__, "error in writing to %s", state->freqFilePath);
-		}
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(225, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+		if (state->legacy_output == true) {
+			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			if (io_ret <= 0) {
+				errp(225, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+			}
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(225, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+			}
 		}
 
 		/*
@@ -1810,7 +1812,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 	/*
 	 * Perform iterations on consecutive bitstreams read from the streamFile as octets
 	 */
-	dbg(DBG_LOW, "start of iterate phase");
+	dbg(DBG_LOW, "Start of iterate phase");
 	for (i = 0; i < state->tp.numOfBitStreams; i++) {
 
 		/*
@@ -1836,15 +1838,17 @@ readHexDigitsInBinaryFormat(struct state *state)
 		} while (done == false);
 
 		/*
-		 * Write stats to freq.txt
+		 * Write stats to freq.txt if in legacy_output mode
 		 */
-		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		if (io_ret <= 0) {
-			errp(226, __FUNCTION__, "error in writing to %s", state->freqFilePath);
-		}
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(226, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+		if (state->legacy_output == true) {
+			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			if (io_ret <= 0) {
+				errp(226, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+			}
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(226, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+			}
 		}
 
 		/*
@@ -1977,40 +1981,37 @@ invokeTestSuite(struct state *state)
 	 */
 	else {
 		/*
-		 * Announce test
+		 * Announce test if in legacy output mode
 		 */
-		io_ret = fprintf(state->freqFile,
-				 "________________________________________________________________________________\n\n");
-		if (io_ret <= 0) {
-			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
-		}
-		if (state->generator == 0) {
-			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-					 state->randomDataPath, state->tp.alpha);
+		if (state->legacy_output == true) {
+			io_ret = fprintf(state->freqFile,
+					 "________________________________________________________________________________\n\n");
 			if (io_ret <= 0) {
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
-		} else {
-			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-					 state->generatorDir[state->generator], state->tp.alpha);
+
+			if (state->generator == 0) {
+				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+						 state->randomDataPath, state->tp.alpha);
+				if (io_ret <= 0) {
+					errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				}
+			} else {
+				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+						 state->generatorDir[state->generator], state->tp.alpha);
+				if (io_ret <= 0) {
+					errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				}
+			}
+			io_ret = fprintf(state->freqFile,
+					 "________________________________________________________________________________\n\n");
 			if (io_ret <= 0) {
 				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
 			}
-		}
-		io_ret = fprintf(state->freqFile,
-				 "________________________________________________________________________________\n\n");
-		if (io_ret <= 0) {
-			errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
-		}
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(228, __FUNCTION__, "error flushing to %s", state->freqFilePath);
-		}
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Statistical Testing In Progress.........");
-		} else {
-			printf("     Statistical Testing In Progress.........\n\n");
-			fflush(stdout);
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(228, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+			}
 		}
 	}
 
@@ -2067,9 +2068,9 @@ invokeTestSuite(struct state *state)
 		 * Announce end of write only run
 		 */
 		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Exiting, completed writes to %s", state->randomDataPath);
+			dbg(DBG_LOW, "Exiting, completed writes to %s", state->randomDataPath);
 		} else {
-			printf("     Exiting completed writes to %s\n", state->randomDataPath);
+			printf("Exiting completed writes to %s\n", state->randomDataPath);
 			fflush(stdout);
 		}
 		destroy(state);
@@ -2087,9 +2088,9 @@ invokeTestSuite(struct state *state)
 		 * Announce end of iteration only run
 		 */
 		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Exiting iterate only");
+			dbg(DBG_LOW, "Exiting iterate only");
 		} else {
-			printf("     Exiting iterate only\n");
+			printf("Exiting iterate only\n");
 			fflush(stdout);
 		}
 		destroy(state);
@@ -2097,29 +2098,13 @@ invokeTestSuite(struct state *state)
 	}
 
 	/*
-	 * -m b: iterate and then assess
-	 *
-	 * Iterations complete, move on to assess
-	 */
-	else if (state->runMode == MODE_ITERATE_AND_ASSESS) {
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "     Statistical Testing Complete!!!!!!!!!!!!");
-		} else {
-			printf("     Statistical Testing Complete!!!!!!!!!!!!\n");
-			fflush(stdout);
-		}
-
-
-	}
-
-	/*
 	 * -m a: assess only, read state from *.state files under -r stateDir and asses results
 	 * -m b: iterate and then assess
 	 */
 	if (state->batchmode == true) {
-		dbg(DBG_LOW, "     About to start assessment");
+		dbg(DBG_LOW, "About to start assessment");
 	} else {
-		printf("     About to start assessment\n");
+		printf("About to start assessment\n");
 		fflush(stdout);
 	}
 }
@@ -2199,7 +2184,7 @@ nist_test_suite(struct state *state)
 	 */
 	if (state->reportCycle > 0 && state->curIteration == 0) {
 		getTimestamp(buf, BUFSIZ);
-		msg("starting first iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+		msg("Starting first iteration of %ld at %s", state->tp.numOfBitStreams, buf);
 	}
 
 	/*
@@ -2215,9 +2200,9 @@ nist_test_suite(struct state *state)
 				       (state->curIteration == state->tp.numOfBitStreams))) {
 		getTimestamp(buf, BUFSIZ);
 		if (state->curIteration == state->tp.numOfBitStreams) {
-			msg("completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+			msg("Completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
 		} else {
-			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
+			msg("Completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
 	}
 
@@ -2343,9 +2328,9 @@ write_sequence(struct state *state)
 				       (state->curIteration == state->tp.numOfBitStreams))) {
 		getTimestamp(buf, BUFSIZ);
 		if (state->curIteration == state->tp.numOfBitStreams) {
-			msg("completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
+			msg("Completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
 		} else {
-			msg("completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
+			msg("Completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
 		}
 	}
 }

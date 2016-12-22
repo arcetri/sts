@@ -231,7 +231,7 @@ enum test {
 	TEST_RUNS = 4,			// Runs test (runs.c)
 	TEST_LONGEST_RUN = 5,		// Longest Runs test (longestRunOfOnes.c)
 	TEST_RANK = 6,			// Rank test (rank.c)
-	TEST_FFT = 7,			// Discrete Fourier Transform test (discreteFourierTransform.c)
+	TEST_DFT = 7,			// Discrete Fourier Transform test (discreteFourierTransform.c)
 	TEST_NON_OVERLAPPING = 8,	// Non-overlapping Template test (nonOverlappingTemplateMatchings.c)
 	TEST_OVERLAPPING = 9,		// Overlapping Template test (overlappingTemplateMatchings.c)
 	TEST_UNIVERSAL = 10,		// Universal test (universal.c)
@@ -259,9 +259,7 @@ enum run_mode {
 	MODE_ITERATE_AND_ASSESS = 'b',	// Iterate and then assess, no *.state files written
 };
 
-/*
- * driver state
- */
+// Driver state
 enum driver_state {
 	DRIVER_NULL = 0,		// No driver state assigned
 	DRIVER_INIT,			// Initialized test for driver
@@ -270,14 +268,6 @@ enum driver_state {
 	DRIVER_METRICS,			// Done uniformity and proportional analysis for driver
 	DRIVER_DESTROY,			// Done final test cleanup and de-allocation for driver
 };
-
-
-/*
- * TP - test parameters
- *
- * Some are NIST defined test parameters, some specific to a particular test, some are
- * were added to allow for better test flexibility.
- */
 
 #   define MIN_PARAM (1)	// minimum -P parameter number
 #   define MAX_PARAM (11)	// maximum -P parameter number
@@ -298,6 +288,12 @@ enum param {
 	PARAM_alpha = 11,				// -P 11=alpha, p_value significance level
 };
 
+/*
+ * TP - test parameters
+ *
+ * Some are NIST defined test parameters, some specific to a particular test, some are
+ * were added to allow for better test flexibility.
+ */
 typedef struct _testParameters {
 	long int blockFrequencyBlockLength;		// -P 1=M, Block Frequency Test - block length
 	long int nonOverlappingTemplateLength;		// -P 2=m, NonOverlapping Template Test - block length
@@ -311,7 +307,6 @@ typedef struct _testParameters {
 	double uniformity_level;			// -P 10=uni_level, uniformity errors have values below this
 	double alpha;					// -P 11=alpha, p_value significance level
 } TP;
-
 
 /*
  * Test constants computed dynamically
@@ -338,6 +333,32 @@ typedef struct _const {
 #   define UNSET_DOUBLE		((double)(0.0))		// Un-initialized floating point constant
 #   define NON_P_VALUE	((double)(-99999999.0))		// Never a valid p_value
 
+
+// Result of metric analysis
+typedef enum test_metric_result {
+	FAILED_PROPORTION = 0,
+	FAILED_UNIFORMITY = 1,
+	FAILED_BOTH = 2,
+	PASSED_BOTH = 3,
+} test_metric_result;
+
+struct metric_results {
+	test_metric_result frequency;
+	test_metric_result block_frequency;
+	test_metric_result runs;
+	test_metric_result longest_run;
+	test_metric_result rank;
+	test_metric_result dft;
+	test_metric_result overlapping;
+	test_metric_result universal;
+	test_metric_result approximate_entropy;
+	test_metric_result linear_complexity;
+	test_metric_result serial[2];
+	test_metric_result cusum[2];
+	long int non_overlapping[4];
+	long int random_excursions[4];
+	long int random_excursions_var[4];
+};
 
 /*
  * state - execution state, initialized and set up by the command line, augmented by test results
@@ -382,14 +403,14 @@ struct state {
 
 	TP tp;				// Test parameters
 	bool promptFlag;		// -p: true -> in interactive mode (no -b), do not prompt for change of parameters
-	bool uniformityBinsFlag;		// -P 8 was given with custom uniformity bins
+	bool uniformityBinsFlag;	// -P 8 was given with custom uniformity bins
 
 	T_CONST c;			// Test constants
 	bool cSetup;			// true --> init() function has initialized the test constants c
 
 	FILE *streamFile;		// true if non-NULL, open stream for randomDataPath
-	char *finalReptPath;		// true if non-NULL, path of finalAnalysisReport.txt
-	FILE *finalRept;		// true if non-NULL, open stream for finalAnalysisReport.txt
+	char *finalReptPath;		// true if non-NULL, path of the final results file
+	FILE *finalRept;		// true if non-NULL, open stream for the final results file
 	char *freqFilePath;		// true if non-NULL, path of freq.txt
 	FILE *freqFile;			// true if non-NULL, open stream for freq.txt
 
@@ -416,21 +437,22 @@ struct state {
 	long int failure[NUMOFTESTS + 1];	// Count of completed FAILURE iterations that were testable
 	long int valid_p_val[NUMOFTESTS + 1];	// Count of p_values that were [0.0, 1.0] for iterations that were testable
 
-	bool uniformity_failure[NUMOFTESTS + 1];	// true --> uniformity failure for a given test
-	bool proportional_failure[NUMOFTESTS + 1];	// true --> proportional failure for a given test
+	struct metric_results metric_results;	// Results of the final metric tests on every test
+	long int successful_tests;		// Number of tests who passed both proportion and uniformity tests
+
 
 	long int maxGeneralSampleSize;		// Largest sample size for a non-excursion test
 	long int maxRandomExcursionSampleSize;	// Largest sample size for a general (non-random excursion) test
 
 	struct dyn_array *nonovTemplates;	// Array of non-overlapping template words for TEST_NON_OVERLAPPING
 
-	double *fft_m;				// test m array for TEST_FFT
-	double *fft_X;				// test X array for TEST_FFT
+	double *fft_m;				// test m array for TEST_DFT
+	double *fft_X;				// test X array for TEST_DFT
 # if defined(LEGACY_FFT)
-	double *fft_wsave;			// test wsave array for legacy dfft library in TEST_FFT
+	double *fft_wsave;			// test wsave array for legacy dfft library in TEST_DFT
 #else /* LEGACY_FFT */
 	fftw_plan fftw_p;			// Plan containing information about the fastest way to compute the transform
-	fftw_complex *fftw_out;			// Output array for fftw library output in TEST_FFT
+	fftw_complex *fftw_out;			// Output array for fftw library output in TEST_DFT
 #endif /* LEGACY_FFT */
 
 	BitSequence **rank_matrix;		// Rank test 32 by 32 matrix for TEST_RANK
@@ -468,7 +490,6 @@ struct state {
 /*
  * Driver - a driver like API to setup a given test, iterate on bitstreams, analyze test results
  */
-
 extern void init(struct state *state);
 extern void iterate(struct state *state);
 extern void print(struct state *state);

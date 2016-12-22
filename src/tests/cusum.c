@@ -63,7 +63,8 @@ static double compute_pi_value(struct state *state, long int z);
 static bool CumulativeSums_print_stat(FILE * stream, struct state *state, struct CumulativeSums_private_stats *stat,
 				      double p_value, double rev_p_value);
 static bool CumulativeSums_print_p_value(FILE * stream, double p_value);
-static void CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin);
+static void CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow,
+					long int *freqPerBin, int index);
 
 
 /*
@@ -599,12 +600,12 @@ CumulativeSums_print(struct state *state)
 		err(34, __FUNCTION__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
+		dbg(DBG_HIGH, "Print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
 		    test_num);
 		return;
 	}
 	if (state->resultstxtFlag == false) {
-		dbg(DBG_LOW, "print driver interface for %s[%d] was not enabled with -s", state->testNames[test_num], test_num);
+		dbg(DBG_HIGH, "Print driver interface for %s[%d] was not enabled with -s", state->testNames[test_num], test_num);
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
@@ -798,7 +799,7 @@ CumulativeSums_print(struct state *state)
  *      freqPerBin              // uniformity frequency bins
  */
 static void
-CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin)
+CumulativeSums_metric_print(struct state *state, long int sampleCount, long int toolow, long int *freqPerBin, int index)
 {
 	long int passCount;			// p_values that pass
 	double p_hat;				// 1 - alpha
@@ -837,7 +838,7 @@ CumulativeSums_metric_print(struct state *state, long int sampleCount, long int 
 	proportion_threshold_min = (p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) / sampleCount)) * sampleCount;
 
 	/*
-	 * Check uniformity failure
+	 * Compute uniformity p-value
 	 */
 	chi2 = 0.0;
 	expCount = sampleCount / state->tp.uniformity_bins;
@@ -854,51 +855,88 @@ CumulativeSums_metric_print(struct state *state, long int sampleCount, long int 
 	}
 
 	/*
-	 * Output uniformity results in traditional format to finalAnalysisReport.txt
+	 * Save or print results
 	 */
-	for (i = 0; i < state->tp.uniformity_bins; ++i) {
-		fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
-	}
-	if (expCount <= 0.0) {
-		// Not enough samples for uniformity check
-		fprintf(state->finalRept, "    ----    ");
-		state->uniformity_failure[test_num] = false;
-		dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
-	} else if (uniformity < state->tp.uniformity_level) { // check if it's smaller than the uniformity_level (default 0.0001)
-		// Uniformity failure
-		fprintf(state->finalRept, " %8.6f * ", uniformity);
-		state->uniformity_failure[test_num] = true;
-		dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
-	} else {
-		// Uniformity success
-		fprintf(state->finalRept, " %8.6f   ", uniformity);
-		state->uniformity_failure[test_num] = false;
-		dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
-	}
+	if (state->legacy_output == true) {
 
-	/*
-	 * Output proportional results in traditional format to finalAnalysisReport.txt
-	 */
-	if (sampleCount == 0) {
-		// Not enough samples for proportional check
-		fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
-		state->proportional_failure[test_num] = false;
-		dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
-	} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
-		// Proportional failure
-		state->proportional_failure[test_num] = true;
-		fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
-		dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
+		/*
+		 * Output uniformity results in traditional format to finalAnalysisReport.txt
+		 */
+		for (i = 0; i < state->tp.uniformity_bins; ++i) {
+			fprintf(state->finalRept, "%3ld ", freqPerBin[i]);
+		}
+		if (expCount <= 0.0) {
+			// Not enough samples for uniformity check
+			fprintf(state->finalRept, "    ----    ");
+			dbg(DBG_HIGH, "too few iterations for uniformity check on %s", state->testNames[test_num]);
+		} else if (uniformity < state->tp.uniformity_level) {
+			// Uniformity failure (the uniformity p-value is smaller than the minimum uniformity_level (default 0.0001)
+			fprintf(state->finalRept, " %8.6f * ", uniformity);
+			dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
+		} else {
+			// Uniformity success
+			fprintf(state->finalRept, " %8.6f   ", uniformity);
+			dbg(DBG_HIGH, "metrics detected uniformity success for %s", state->testNames[test_num]);
+		}
+
+		/*
+		 * Output proportional results in traditional format to finalAnalysisReport.txt
+		 */
+		if (sampleCount == 0) {
+			// Not enough samples for proportional check
+			fprintf(state->finalRept, " ------     %s\n", state->testNames[test_num]);
+			dbg(DBG_HIGH, "too few samples for proportional check on %s", state->testNames[test_num]);
+		} else if ((passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
+			// Proportional failure
+			fprintf(state->finalRept, "%4ld/%-4ld *	 %s\n", passCount, sampleCount, state->testNames[test_num]);
+			dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
+		} else {
+			// Proportional success
+			fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
+			dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
+		}
+
+		/*
+		 * Flush the output file buffer
+		 */
+		errno = 0;                // paranoia
+		io_ret = fflush(state->finalRept);
+		if (io_ret != 0) {
+			errp(35, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+		}
+
 	} else {
-		// Proportional success
-		state->proportional_failure[test_num] = false;
-		fprintf(state->finalRept, "%4ld/%-4ld	 %s\n", passCount, sampleCount, state->testNames[test_num]);
-		dbg(DBG_HIGH, "metrics detected proportional success for %s", state->testNames[test_num]);
-	}
-	errno = 0;		// paranoia
-	io_ret = fflush(state->finalRept);
-	if (io_ret != 0) {
-		errp(35, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+		bool uniformity_passed = true;
+		bool proportion_passed = true;
+
+		/*
+		 * Check uniformity results
+		 */
+		if (expCount <= 0.0 || uniformity < state->tp.uniformity_level) {
+			// Uniformity failure or not enough samples for uniformity check
+			uniformity_passed = false;
+			dbg(DBG_HIGH, "metrics detected uniformity failure for %s", state->testNames[test_num]);
+		}
+
+		/*
+		 * Check proportional results
+		 */
+		if (sampleCount == 0 || (passCount < proportion_threshold_min) || (passCount > proportion_threshold_max)) {
+			// Proportional failure or not enough samples for proportional check
+			proportion_passed = false;
+			dbg(DBG_HIGH, "metrics detected proportional failure for %s", state->testNames[test_num]);
+		}
+
+		if (proportion_passed == false && uniformity_passed == false) {
+			state->metric_results.cusum[index] = FAILED_BOTH;
+		} else if (proportion_passed == false) {
+			state->metric_results.cusum[index] = FAILED_PROPORTION;
+		} else if (uniformity_passed == false) {
+			state->metric_results.cusum[index] = FAILED_UNIFORMITY;
+		} else {
+			state->metric_results.cusum[index] = PASSED_BOTH;
+			state->successful_tests++;
+		}
 	}
 
 	return;
@@ -1019,7 +1057,7 @@ CumulativeSums_metrics(struct state *state)
 		/*
 		 * Print uniformity and proportional information for a tallied count
 		 */
-		CumulativeSums_metric_print(state, sampleCount, toolow, freqPerBin);
+		CumulativeSums_metric_print(state, sampleCount, toolow, freqPerBin, j);
 
 		/*
 		 * Track maximum samples

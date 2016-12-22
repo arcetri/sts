@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	/*
 	 * Report state if debugging
 	 */
-	if (debuglevel > DBG_NONE) {
+	if (debuglevel > DBG_HIGH) {
 		print_option_summary(&run_state, "ready to test state");
 	}
 
@@ -350,46 +350,18 @@ main(int argc, char *argv[])
 	}
 
 	/*
-	 * Print results if needed
+	 * Print p-values and stats of each test in separate files (if needed)
 	 */
 	print(&run_state);
 
 	/*
-	 * Process final result
-	 */
-	io_ret = fprintf(run_state.finalRept, "------------------------------------------------------------------------------\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, "RESULTS FOR THE UNIFORMITY OF P-VALUES AND THE PROPORTION OF PASSING SEQUENCES\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, "------------------------------------------------------------------------------\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, "   generator is: %s\n", run_state.generatorDir[run_state.generator]);
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, "------------------------------------------------------------------------------\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, " C1  C2  C3  C4  C5  C6  C7  C8  C9 C10  P-VALUE  PROPORTION  STATISTICAL TEST\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-	io_ret = fprintf(run_state.finalRept, "------------------------------------------------------------------------------\n");
-	if (io_ret <= 0) {
-		errp(5, __FUNCTION__, "error in writing to finalRept");
-	}
-
-	/*
-	 * Perform metrics processing for each test
+	 * Perform metrics processing for each test and write final result to file
 	 */
 	metrics(&run_state);
+
+	/*
+	 * Flush the output file buffer and close the file
+	 */
 	errno = 0;		// paranoia
 	io_ret = fflush(run_state.finalRept);
 	if (io_ret != 0) {
@@ -405,6 +377,18 @@ main(int argc, char *argv[])
 	 * Free memory no longer needed
 	 */
 	destroy(&run_state);
+
+	/*
+	 * Tell user that the execution is completed
+	 */
+	msg("Execution completed!");
+	if (run_state.runMode != MODE_WRITE_ONLY) {
+		if (run_state.legacy_output == true) {
+			msg("Check the finalAnalysisReport.txt file for the results");
+		} else {
+			msg("Check the results.txt file for the results");
+		}
+	}
 
 	// All Done!!! -- Jessica Noll, Age 2
 	exit(0);

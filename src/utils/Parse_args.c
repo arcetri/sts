@@ -131,8 +131,8 @@ static struct state const defaultstate = {
 
 	// streamFile, finalReptPath, finalRept, freqFilePath, finalRept
 	NULL,				// Initially the randomDataPath is not open
-	NULL,				// Path of finalAnalysisReport.txt
-	NULL,				// Initially finalAnalysisReport.txt is not open
+	NULL,				// Path of the final results file
+	NULL,				// Initially the final results file is not open
 	NULL,				// Path of freq.txt
 	NULL,				// Initially freq.txt is not open
 
@@ -157,7 +157,7 @@ static struct state const defaultstate = {
 	 "Runs",			// TEST_RUNS = 4, Runs test (runs.c)
 	 "LongestRun",			// TEST_LONGEST_RUN = 5, Longest Runs test (longestRunOfOnes.c)
 	 "Rank",			// TEST_RANK = 6, Rank test (rank.c)
-	 "FFT",				// TEST_FFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
+	 "DFT",				// TEST_DFT = 7, Discrete Fourier Transform test (discreteFourierTransform.c)
 	 "NonOverlappingTemplate",	// TEST_NON_OVERLAPPING = 8, Non-overlapping Template Matchings test
 					// (nonOverlappingTemplateMatchings.c)
 	 "OverlappingTemplate",		// TEST_OVERLAPPING = 9, Overlapping Template test (overlappingTemplateMatchings.c)
@@ -183,7 +183,7 @@ static struct state const defaultstate = {
 	 1,					// TEST_RUNS = 4
 	 1,					// TEST_LONGEST_RUN = 5
 	 1,					// TEST_RANK = 6
-	 1,					// TEST_FFT = 7
+	 1,					// TEST_DFT = 7
 	 MAX_NUMOFTEMPLATES,			// TEST_NON_OVERLAPPING = 8
 						// NOTE: Value may be changed by OverlappingTemplateMatchings_init()
 	 1,					// TEST_OVERLAPPING = 9
@@ -232,13 +232,13 @@ static struct state const defaultstate = {
 	 0, 0, 0, 0, 0, 0, 0, 0,
 	},
 
-	// uniformity_failure, proportional_failure
-	{false, false, false, false, false, false, false, false,
-	 false, false, false, false, false, false, false, false,
+	// metric_results & successful_tests
+	{FAILED_BOTH, FAILED_BOTH, FAILED_BOTH, FAILED_BOTH,
+	 FAILED_BOTH, FAILED_BOTH, FAILED_BOTH, FAILED_BOTH,
+	 FAILED_BOTH, FAILED_BOTH, {FAILED_BOTH, FAILED_BOTH},
+	 {FAILED_BOTH, FAILED_BOTH}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
 	},
-	{false, false, false, false, false, false, false, false,
-	 false, false, false, false, false, false, false, false,
-	},
+	0,
 
 	// maxGeneralSampleSize, maxRandomExcursionSampleSize
 	0,
@@ -471,7 +471,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 				 * Enable all tests if testnum is 0 (special case)
 				 */
 				if (testnum == 0) {
-					for (i = 0; i <= NUMOFTESTS; i++) {
+					for (i = 1; i <= NUMOFTESTS; i++) {
 						state->testVector[i] = true;
 					}
 				} else if (testnum < 0 || testnum > NUMOFTESTS) {
@@ -762,7 +762,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 */
 	if ((state->batchmode == true && state->testVectorFlag == false) || state->testVector[0] == true) {
 		// Under -b without and -t test, enable all tests
-		for (i = 0; i <= NUMOFTESTS; i++) {
+		for (i = 1; i <= NUMOFTESTS; i++) {
 			state->testVector[i] = true;
 		}
 	}
@@ -968,10 +968,10 @@ print_option_summary(struct state *state, char *where)
 		} else {
 			dbg(DBG_LOW, "\tWill iterate and assess");
 		}
-		dbg(DBG_MED, "\tTesting %lld bits of data", (long long) state->tp.numOfBitStreams * (long long) state->tp.n);
-		dbg(DBG_MED, "\t    Testing %lld bytes of data",
-		    ((((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7) / 8));
-		dbg(DBG_LOW, "\tTesting %ld iterations of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
+		dbg(DBG_MED, "\tTesting %lld bits of data (%lld bytes)", (long long) state->tp.numOfBitStreams *
+				(long long) state->tp.n, (((long long) state->tp.numOfBitStreams *
+				(long long) state->tp.n) + 7) / 8);
+		dbg(DBG_LOW, "\tPerforming %ld iterations each of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
 	} else {
 		dbg(DBG_LOW, "\tclassic (interactive mode)\n");
 	}
@@ -987,14 +987,7 @@ print_option_summary(struct state *state, char *where)
 		}
 	}
 	if (state->batchmode == true) {
-		if (test_cnt == NUMOFTESTS) {
-			if (debuglevel <= DBG_LOW) {
-				dbg(DBG_LOW, "\tAll tests enabled\n");
-			} else {
-				dbg(DBG_MED, "\tAll tests enabled");
-			}
-		}
-		dbg(DBG_MED, "\t    %d tests enabled\n", test_cnt);
+		dbg(DBG_MED, "\t%d tests enabled\n", test_cnt);
 	} else {
 		if (state->testVectorFlag == true) {
 			dbg(DBG_LOW, "\t-t used, will NOT prompt for tests to enable\n");
@@ -1063,15 +1056,6 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_LOW, "Will prompt user for generator to use");
 	}
-	if (state->jobnumFlag == true) {
-		dbg(DBG_LOW, "\tJob number: %ld", state->jobnum);
-		dbg(DBG_LOW,
-		    "\t    Will skip %lld bytes of data before processing\n",
-		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
-	} else {
-		dbg(DBG_LOW, "\tno -j numnum was given");
-		dbg(DBG_LOW, "\t    Will start processing at the beginning of data\n");
-	}
 
 	/*
 	 * Report detailed state summary
@@ -1083,21 +1067,21 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno -i iterations was given");
 	}
-	dbg(DBG_MED, "\t    iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
+	dbg(DBG_MED, "\t  iterations (bitstreams): -i %ld", state->tp.numOfBitStreams);
 	if (state->reportCycleFlag == true) {
 		dbg(DBG_MED, "\t-I reportCycle was given");
 	} else {
 		dbg(DBG_MED, "\tno -I reportCycle was given");
 	}
 	if (state->reportCycle == 0) {
-		dbg(DBG_MED, "\t    will not report on progress of iterations");
+		dbg(DBG_MED, "\t  will not report on progress of iterations");
 	} else {
-		dbg(DBG_MED, "\t    will progress after every %ld iterations", state->reportCycle);
+		dbg(DBG_MED, "\t  will report on progress every %ld iterations", state->reportCycle);
 	}
 	if (state->legacy_output == true) {
-		dbg(DBG_MED, "\t-O was given, backward compatible output where reasonable");
+		dbg(DBG_MED, "\t-O was given, legacy output mode where reasonable");
 	} else {
-		dbg(DBG_MED, "\tno -O was given, backward compatible output is not important");
+		dbg(DBG_MED, "\tno -O was given, legacy output is not important");
 	}
 	if (state->runModeFlag == true) {
 		dbg(DBG_MED, "\t-m node was given");
@@ -1109,57 +1093,57 @@ print_option_summary(struct state *state, char *where)
 		switch (state->dataFormat) {
 		case FORMAT_ASCII_01:
 		case FORMAT_0:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "ASCII '0' and '1' character bits");
 			break;
 		case FORMAT_RAW_BINARY:
 		case FORMAT_1:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
+			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: %s",
 			    state->randomDataPath, "raw 8 binary bits per byte");
 			break;
 		default:
-			dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: unknown: %c",
+			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: unknown: %c",
 			    state->randomDataPath, (char) state->dataFormat);
 			break;
 		}
 		break;
 	case MODE_ITERATE_ONLY:
-		dbg(DBG_MED, "\t    -m i: iterate only and exit");
+		dbg(DBG_MED, "\t  -m i: iterate only and exit");
 		break;
 	case MODE_ASSESS_ONLY:
-		dbg(DBG_MED, "\t    -m a: assess only and exit");
+		dbg(DBG_MED, "\t  -m a: assess only and exit");
 		break;
 	case MODE_ITERATE_AND_ASSESS:
-		dbg(DBG_MED, "\t    -m b: iterate and then assess, no *.state files written");
+		dbg(DBG_MED, "\t  -m b: iterate and then assess, no *.state files written");
 		break;
 	default:
-		dbg(DBG_MED, "\t    -m %c: unknown runMode", state->runMode);
+		dbg(DBG_MED, "\t  -m %c: unknown runMode", state->runMode);
 		break;
 	}
-	dbg(DBG_MED, "\t    workDir: -w %s", state->workDir);
+	dbg(DBG_MED, "\tworkDir: -w %s", state->workDir);
 	if (state->subDirsFlag == true) {
 		dbg(DBG_MED, "\t-c was given");
 	} else {
 		dbg(DBG_MED, "\tno -c was given");
 	}
 	if (state->subDirs == true) {
-		dbg(DBG_MED, "\t    Create directories needed for writing to any file");
+		dbg(DBG_MED, "\t  create directories needed for writing to any file");
 	} else {
-		dbg(DBG_MED, "\t    Do not create directories, assume they exist");
+		dbg(DBG_MED, "\t  do not create directories, assume they exist");
 	}
 	if (state->resultstxtFlag == true) {
 		dbg(DBG_MED, "\t-s was given");
-		dbg(DBG_MED, "\t    Create result.txt, data*.txt and stats.txt");
+		dbg(DBG_MED, "\t  create result.txt, data*.txt and stats.txt");
 	} else {
 		dbg(DBG_MED, "\tno -s was given");
-		dbg(DBG_MED, "\t    Do not create result.txt, data*.txt and stats.txt");
+		dbg(DBG_MED, "\t  do not create result.txt, data*.txt and stats.txt");
 	}
 	if (state->randomDataFlag == true) {
 		dbg(DBG_MED, "\t-f was given");
 	} else {
 		dbg(DBG_MED, "\tno -f was given");
 	}
-	dbg(DBG_MED, "\t    randomDataPath: -f %s", state->randomDataPath);
+	dbg(DBG_MED, "\t  randomDataPath: -f %s", state->randomDataPath);
 	if (state->dataFormatFlag == true) {
 		dbg(DBG_MED, "\t-F format was given");
 	} else {
@@ -1168,18 +1152,25 @@ print_option_summary(struct state *state, char *where)
 	switch (state->dataFormat) {
 	case FORMAT_ASCII_01:
 	case FORMAT_0:
-		dbg(DBG_MED, "\t    ASCII '0' and '1' character bits");
+		dbg(DBG_MED, "\t  read as ASCII '0' and '1' character bits");
 		break;
 	case FORMAT_RAW_BINARY:
 	case FORMAT_1:
-		dbg(DBG_MED, "\t    raw 8 binary bits per byte");
+		dbg(DBG_MED, "\t  read as raw binary 8 bits per byte");
 		break;
 	default:
-		dbg(DBG_MED, "\t    unknown format: %c", (char) state->dataFormat);
+		dbg(DBG_MED, "\t  unknown format: %c", (char) state->dataFormat);
 		break;
 	}
 	dbg(DBG_MED, "\tjobnum: -j %ld", state->jobnum);
-	dbg(DBG_MED, "\tprogram name: %s\n", program);
+	if (state->jobnumFlag == true) {
+		dbg(DBG_LOW, "\t-j jobnum was set to %ld", state->jobnum);
+		dbg(DBG_LOW, "\t  will skip %lld bytes of data before processing\n",
+		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
+	} else {
+		dbg(DBG_LOW, "\tno -j jobnum was given");
+		dbg(DBG_LOW, "\t  will start processing at the beginning of data\n");
+	}
 
 	/*
 	 * Report on test parameters
@@ -1188,7 +1179,7 @@ print_option_summary(struct state *state, char *where)
 	if (state->batchmode == false) {
 		dbg(DBG_MED, "\t    Showing default parameters");
 	}
-	dbg(DBG_MED, "\tSingleBitStreamLength = %ld", state->tp.n);
+	dbg(DBG_MED, "\tsingleBitStreamLength = %ld", state->tp.n);
 	dbg(DBG_MED, "\tblockFrequencyBlockLength = %ld", state->tp.blockFrequencyBlockLength);
 	dbg(DBG_MED, "\tnonOverlappingTemplateBlockLength = %ld", state->tp.nonOverlappingTemplateLength);
 	dbg(DBG_MED, "\toverlappingTemplateBlockLength = %ld", state->tp.overlappingTemplateLength);
@@ -1197,7 +1188,7 @@ print_option_summary(struct state *state, char *where)
 	dbg(DBG_MED, "\tapproximateEntropyBlockLength = %ld", state->tp.approximateEntropyBlockLength);
 	dbg(DBG_MED, "\tnumOfBitStreams = %ld", state->tp.numOfBitStreams);
 	dbg(DBG_MED, "\tbins = %ld", state->tp.uniformity_bins);
-	dbg(DBG_MED, "\tuniformity_level = %f", state->tp.uniformity_level);
+	dbg(DBG_MED, "\tuniformityLevel = %f", state->tp.uniformity_level);
 	if (state->batchmode == true) {
 		dbg(DBG_MED, "\talpha = %f\n", state->tp.alpha);
 	} else {

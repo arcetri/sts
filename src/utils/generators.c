@@ -118,11 +118,17 @@ lcg(struct state *state)
 			bitsRead++;
 			state->epsilon[i] = bit;
 		}
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(80, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(80, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -175,11 +181,17 @@ quadRes1(struct state *state)
 			memcpy(g, x + 64, 64);
 			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(81, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(81, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -237,11 +249,17 @@ quadRes2(struct state *state)
 			memcpy(g, x + 65, 64);
 			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(82, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(82, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -290,11 +308,17 @@ cubicRes(struct state *state)
 			memcpy(g, x + 128, 64);
 			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(83, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(83, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -349,11 +373,17 @@ exclusiveOR(struct state *state)
 		}
 		bitsRead++;
 		if (bitsRead == state->tp.n) {
-			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-			errno = 0;	// paranoia
-			io_ret = fflush(state->freqFile);
-			if (io_ret != 0) {
-				errp(84, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+			/*
+			 * Write stats to freq.txt if in legacy_output mode
+			 */
+			if (state->legacy_output == true) {
+				fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+				errno = 0;        // paranoia
+				io_ret = fflush(state->freqFile);
+				if (io_ret != 0) {
+					errp(84, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+				}
 			}
 			if (state->runMode == MODE_WRITE_ONLY) {
 				write_sequence(state);
@@ -409,11 +439,17 @@ modExp(struct state *state)
 			done = convertToBits(state, x, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			memcpy(y, x + 44, 20);
 		} while (done == false);
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(85, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(85, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -486,11 +522,16 @@ bbs(struct state *state)
 			}
 		}
 
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(86, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(86, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -560,11 +601,16 @@ micali_schnorr(struct state *state)
 			}
 		} while (done == false);
 
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(87, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(87, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
@@ -732,11 +778,17 @@ SHA1(struct state *state)
 			add(Xkey, 20, G, 20);
 			add(Xkey, 20, One, 1);
 		} while (done == false);
-		fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-		errno = 0;	// paranoia
-		io_ret = fflush(state->freqFile);
-		if (io_ret != 0) {
-			errp(88, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+
+		/*
+		 * Write stats to freq.txt if in legacy_output mode
+		 */
+		if (state->legacy_output == true) {
+			fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+			errno = 0;        // paranoia
+			io_ret = fflush(state->freqFile);
+			if (io_ret != 0) {
+				errp(88, __FUNCTION__, "error flushing to: %s", state->freqFilePath);
+			}
 		}
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
