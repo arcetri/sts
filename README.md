@@ -13,6 +13,15 @@ STS can be useful in:
 
 ## Usage
    
+### Requirements
+
+STS version 3.0.0 requires the external library [fftw3][fftw] to be installed in your system.
+This library is also available to install in most of the package managers with the name _fftw3_.
+
+If you are not able to install fftw3 in your system, but you still want to use STS, you can compile
+the program with the command `make legacy` instead of `make`. This command will make STS use another 
+algorithm to compute the discrete fourier transform, which is slower but does not require external libraries.
+
 ### Get data to test
 
 As mentioned above, STS has been developed with the goal of testing cryptographic pseudo-random data. Therefore,
@@ -54,6 +63,9 @@ Now be patient: depending on the hardware used and on the parameters specified, 
  to finish the test.
 
 After the run is done a report will be generated in a file called `result.txt`.
+
+__NB__: When `make legacy` is used, the compiled program to execute will be called `sts_legacy_fft` 
+ instead of `sts`.
 
 __NB__: For more advanced usage run `./sts -h`
 
@@ -141,3 +153,4 @@ We also thank the original authors for making their code freely available. We sa
    [site]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documentation_software.html>
    [paper]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documents/SP800-22rev1a.pdf>
    [xkcd]: <https://hardmath123.github.io/xkcd-random.html>
+   [fftw]: <http://www.fftw.org>

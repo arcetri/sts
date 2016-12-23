@@ -26,7 +26,9 @@
 
 #   include "../utils/config.h"
 #   include "../utils/dyn_alloc.h"
+#if !defined(LEGACY_FFT)
 #   include <fftw3.h>
+#endif /* LEGACY_FFT */
 
 /*****************************************************************************
  M A C R O S

@@ -83,23 +83,34 @@ HSRC= utils/cephes.h utils/config.h constants/defs.h \
 
 SRCS= ${CSRC} ${HSRC}
 
-BASE_OBJ= sts.o tests/frequency.o tests/blockFrequency.o \
+LEGACY_ONLY_OBJ= utils/genutils_legacy.o utils/dyn_alloc_legacy.o \
+      utils/dfft.o tests/discreteFourierTransform_legacy.o \
+      sts_legacy.o tests/frequency_legacy.o tests/blockFrequency_legacy.o \
+      tests/cusum_legacy.o tests/runs_legacy.o tests/longestRunOfOnes_legacy.o \
+      tests/serial_legacy.o tests/rank_legacy.o \
+      tests/nonOverlappingTemplateMatchings_legacy.o \
+      tests/overlappingTemplateMatchings_legacy.o tests/universal_legacy.o \
+      tests/approximateEntropy_legacy.o tests/randomExcursions_legacy.o \
+      tests/randomExcursionsVariant_legacy.o tests/linearComplexity_legacy.o \
+      utils/cephes_legacy.o utils/matrix_legacy.o \
+      utils/utilities_legacy.o utils/generators_legacy.o \
+      utils/Parse_args_legacy.o utils/debug_legacy.o driver_legacy.o
+
+MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
+      sts.o tests/frequency.o tests/blockFrequency.o \
       tests/cusum.o tests/runs.o tests/longestRunOfOnes.o \
-      tests/serial.o tests/rank.o \
+      tests/serial.o tests/rank.o tests/discreteFourierTransform.o \
       tests/nonOverlappingTemplateMatchings.o \
       tests/overlappingTemplateMatchings.o tests/universal.o \
       tests/approximateEntropy.o tests/randomExcursions.o \
       tests/randomExcursionsVariant.o tests/linearComplexity.o \
       utils/cephes.o utils/matrix.o \
-      utils/utilities.o utils/generators.o utils/genutils.o \
-      utils/Parse_args.o utils/debug.o utils/dyn_alloc.o driver.o
+      utils/utilities.o utils/generators.o \
+      utils/Parse_args.o utils/debug.o driver.o
 
-LEGACY_ONLY_OBJ= utils/dfft.o tests/discreteFourierTransform_legacy.o
-MODERN_ONLY_OBJ= tests/discreteFourierTransform.o
+OBJ_LEGACY= ${LEGACY_ONLY_OBJ}
 
-OBJ_LEGACY= ${BASE_OBJ} ${LEGACY_ONLY_OBJ}
-
-OBJ= ${BASE_OBJ} ${MODERN_ONLY_OBJ}
+OBJ= ${MODERN_ONLY_OBJ}
 
 # Code that is mentioned in source comments that is not strictly part of the
 # sts code base.  And while only mkapertemplate has a rule to compile itself
@@ -142,29 +153,56 @@ sts_legacy_fft: ${OBJ_LEGACY}
 sts.o: sts.c
 	${CC} -c -o $@ ${CFLAGS} sts.c
 
+sts_legacy.o: sts.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT sts.c
+
 utils/Parse_args.o: utils/Parse_args.c
 	${CC} -c -o $@ ${CFLAGS} utils/Parse_args.c
+
+utils/Parse_args_legacy.o: utils/Parse_args.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/Parse_args.c
 
 utils/debug.o: utils/debug.c
 	${CC} -c -o $@ ${CFLAGS} utils/debug.c
 
+utils/debug_legacy.o: utils/debug.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/debug.c
+
 tests/frequency.o: tests/frequency.c
 	${CC} -c -o $@ ${CFLAGS} tests/frequency.c
+
+tests/frequency_legacy.o: tests/frequency.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/frequency.c
 
 tests/blockFrequency.o: tests/blockFrequency.c
 	${CC} -c -o $@ ${CFLAGS} tests/blockFrequency.c
 
+tests/blockFrequency_legacy.o: tests/blockFrequency.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/blockFrequency.c
+
 tests/cusum.o: tests/cusum.c
 	${CC} -c -o $@ ${CFLAGS} tests/cusum.c
+
+tests/cusum_legacy.o: tests/cusum.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/cusum.c
 
 tests/runs.o: tests/runs.c
 	${CC} -c -o $@ ${CFLAGS} tests/runs.c
 
+tests/runs_legacy.o: tests/runs.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/runs.c
+
 tests/longestRunOfOnes.o: tests/longestRunOfOnes.c
 	${CC} -c -o $@ ${CFLAGS} tests/longestRunOfOnes.c
 
+tests/longestRunOfOnes_legacy.o: tests/longestRunOfOnes.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/longestRunOfOnes.c
+
 tests/rank.o: tests/rank.c
 	${CC} -c -o $@ ${CFLAGS} tests/rank.c
+
+tests/rank_legacy.o: tests/rank.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/rank.c
 
 tests/discreteFourierTransform.o: tests/discreteFourierTransform.c
 	${CC} -c -o $@ ${CFLAGS} tests/discreteFourierTransform.c
@@ -175,26 +213,50 @@ tests/discreteFourierTransform_legacy.o: tests/discreteFourierTransform.c
 tests/nonOverlappingTemplateMatchings.o: tests/nonOverlappingTemplateMatchings.c
 	${CC} -c -o $@ ${CFLAGS} tests/nonOverlappingTemplateMatchings.c
 
+tests/nonOverlappingTemplateMatchings_legacy.o: tests/nonOverlappingTemplateMatchings.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/nonOverlappingTemplateMatchings.c
+
 tests/overlappingTemplateMatchings.o: tests/overlappingTemplateMatchings.c
 	${CC} -c -o $@ ${CFLAGS} tests/overlappingTemplateMatchings.c
+
+tests/overlappingTemplateMatchings_legacy.o: tests/overlappingTemplateMatchings.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/overlappingTemplateMatchings.c
 
 tests/universal.o: tests/universal.c
 	${CC} -c -o $@ ${CFLAGS} tests/universal.c
 
+tests/universal_legacy.o: tests/universal.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/universal.c
+
 tests/approximateEntropy.o: tests/approximateEntropy.c
 	${CC} -c -o $@ ${CFLAGS} tests/approximateEntropy.c
+
+tests/approximateEntropy_legacy.o: tests/approximateEntropy.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/approximateEntropy.c
 
 tests/randomExcursions.o: tests/randomExcursions.c
 	${CC} -c -o $@ ${CFLAGS} tests/randomExcursions.c
 
+tests/randomExcursions_legacy.o: tests/randomExcursions.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/randomExcursions.c
+
 tests/randomExcursionsVariant.o: tests/randomExcursionsVariant.c
 	${CC} -c -o $@ ${CFLAGS} tests/randomExcursionsVariant.c
+
+tests/randomExcursionsVariant_legacy.o: tests/randomExcursionsVariant.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/randomExcursionsVariant.c
 
 tests/serial.o: tests/serial.c
 	${CC} -c -o $@ ${CFLAGS} tests/serial.c
 
+tests/serial_legacy.o: tests/serial.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/serial.c
+
 tests/linearComplexity.o: tests/linearComplexity.c
 	${CC} -c -o $@ ${CFLAGS} tests/linearComplexity.c
+
+tests/linearComplexity_legacy.o: tests/linearComplexity.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT tests/linearComplexity.c
 
 utils/dfft.o: utils/dfft.c
 	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/dfft.c
@@ -202,23 +264,44 @@ utils/dfft.o: utils/dfft.c
 utils/matrix.o: utils/matrix.c
 	${CC} -c -o $@ ${CFLAGS} utils/matrix.c
 
+utils/matrix_legacy.o: utils/matrix.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/matrix.c
+
 utils/genutils.o: utils/genutils.c
 	${CC} -c -o $@ ${CFLAGS} utils/genutils.c
+
+utils/genutils_legacy.o: utils/genutils.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/genutils.c
 
 utils/cephes.o: utils/cephes.c
 	${CC} -c -o $@ ${CFLAGS} utils/cephes.c
 
+utils/cephes_legacy.o: utils/cephes.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/cephes.c
+
 utils/utilities.o: utils/utilities.c
 	${CC} -c -o $@ ${CFLAGS} utils/utilities.c
+
+utils/utilities_legacy.o: utils/utilities.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/utilities.c
 
 utils/generators.o: utils/generators.c
 	${CC} -c -o $@ ${CFLAGS} utils/generators.c
 
+utils/generators_legacy.o: utils/generators.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/generators.c
+
 utils/dyn_alloc.o: utils/dyn_alloc.c
 	${CC} -c -o $@ ${CFLAGS} utils/dyn_alloc.c
 
+utils/dyn_alloc_legacy.o: utils/dyn_alloc.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/dyn_alloc.c
+
 driver.o: driver.c
 	${CC} -c -o $@ ${CFLAGS} driver.c
+
+driver_legacy.o: driver.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT driver.c
 
 mkapertemplate: ../tools/mkapertemplate.c utils/debug.o
 	${CC} -o $@ ${CFLAGS} -I . ../tools/mkapertemplate.c utils/debug.o

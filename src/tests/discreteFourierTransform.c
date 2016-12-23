@@ -41,7 +41,7 @@
 #include "../utils/debug.h"
 
 #if defined(LEGACY_FFT)
-#include "dfft.h"
+#include "../utils/dfft.h"
 #else /* LEGACY_FFT */
 #include <fftw3.h>
 #endif /* LEGACY_FFT */
