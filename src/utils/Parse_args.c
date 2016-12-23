@@ -351,11 +351,10 @@ static const char * const usage =
 "    -p    In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
 "\n"
 "    -i iterations    number of bitstream runs (if -b, def: 1)\n"
+"                     this flag is the same as -P 7=iterations\n"
 "\n"
-"       NOTE: -i iterations is the same as -P 7=iterations\n"
-"\n"
-"    -I reportCycle   Report after completion of reportCycle iterations (def: 0: do not report)\n"
-"    -O		      try to mimic output format of legacy code (def: don't be output compatible)\n"
+"    -I reportCycle   report after completion of reportCycle iterations (def: 0: do not report)\n"
+"    -O               try to mimic output format of legacy code (def: don't be output compatible)\n"
 "\n"
 "    -w workDir       write experiment results under workDir (def: .)\n"
 "    -c               don't create any directories needed for creating files (def: do create)\n"
@@ -371,7 +370,7 @@ static const char * const usage =
 "\n"
 "    -h               print this message and exit\n"
 "\n"
-"    bitcount         Length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
+"    bitcount         length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
 /* *INDENT-ON* */
 
 

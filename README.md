@@ -45,18 +45,25 @@ Depending on the size of the data you want to test, and on the time you have, th
 The data will be processed in _number of iterations (1)_ chunks of the specified _length of a single bitstream (2)_.
 Therefore, it's required that the size of the data you use as input is at least:
 
-    ((number of iterations) * (length of a single bitstream) / 8) BYTES
+    [(number of iterations) * (length of a single bitstream) / 8] BYTES
 
 Once you have chosen the data to test and the two parameters and cloned the repository, `cd` into the sts folder, run `make` and
  then you can use the program as follows (this is a simple example):
        
 ```sh       
-$ ./sts -v 1 -b -g 0 -p -i 32 -I 1 -w . -f /path/to/random/data 1048576
+$ ./sts -v 1 -b -g 0 -i 32 -I 1 -w . -f /path/to/random/data 1048576
+```
+Here is the meaning of the flags used in this command:
 
-where [-i 32] indicates that we want to run 32 iterations (choose bigger numbers when possible)
-      [-w .] indicates the path of the folder where you want to store the testing results
-      [-f /path/to/random/data] indicates the path of the data we want to use as input
-      [1048576] indicates that our preferred length of a single bitstream is 1048576
+```
+[-v 1] indicates that we want a verbosity level of 1 for the printed output
+[-b] indicates that we want to run sts in batch mode (without human intervention)
+[-g 0] indicates that we want to test data from a file
+[-i 32] indicates that we want to run 32 iterations (choose bigger numbers when possible)
+[-I 1] indicates that we want the program to tell us every time it finishes testing 1 bitstream
+[-w .] indicates the path of the folder where you want to store the testing results
+[-f /path/to/random/data] indicates the path of the data we want to use as input
+[1048576] indicates that our preferred length of a single bitstream is 1048576
 ```
 
 Now be patient: depending on the hardware used and on the parameters specified, the suite might take minutes, hours or days 
