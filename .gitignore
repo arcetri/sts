@@ -2,8 +2,8 @@
 # by default it is where the result of runs are written
 experiments
 # ignore the sts compiled binary
-assess
-assess_legacy_fft
+sts
+sts_legacy_fft
 # ignore mkapertemplate compiled binary
 mkapertemplate
 dataInfo
@@ -31,3 +31,4 @@ RMME
 CMakeLists.txt
 .idea
 /cmake-build-debug/
+result.txt
