@@ -220,8 +220,10 @@ Universal_init(struct state *state)
 	/*
 	 * Allocate dynamic arrays
 	 */
-	state->stats[test_num] = create_dyn_array(sizeof(struct Universal_private_stats),
-						  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
+	if (state->resultstxtFlag == true) {
+		state->stats[test_num] = create_dyn_array(sizeof(struct Universal_private_stats),
+							  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);        // stats.txt
+	}
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
 						  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// results.txt
 
@@ -411,7 +413,9 @@ Universal_iterate(struct state *state)
 	/*
 	 * Record values computed during this iteration
 	 */
-	append_value(state->stats[test_num], &stat);
+	if (state->resultstxtFlag == true) {
+		append_value(state->stats[test_num], &stat);
+	}
 	append_value(state->p_val[test_num], &p_value);
 
 	/*

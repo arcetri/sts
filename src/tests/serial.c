@@ -143,10 +143,12 @@ Serial_init(struct state *state)
 	/*
 	 * Allocate dynamic arrays
 	 */
-	state->stats[test_num] = create_dyn_array(sizeof(struct Serial_private_stats),
-						  DEFAULT_CHUNK, state->tp.numOfBitStreams, false); // stats.txt data
+	if (state->resultstxtFlag == true) {
+		state->stats[test_num] = create_dyn_array(sizeof(struct Serial_private_stats),
+							  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);        // stats.txt
+	}
 	state->p_val[test_num] = create_dyn_array(sizeof(double),
-						  DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false); // results.txt data
+						  DEFAULT_CHUNK, 2 * state->tp.numOfBitStreams, false);	// results.txt data
 
 	/*
 	 * Determine format of data*.txt filenames based on state->partitionCount[test_num]
@@ -277,7 +279,9 @@ Serial_iterate(struct state *state)
 	/*
 	 * Record values computed during this iteration
 	 */
-	append_value(state->stats[test_num], &stat);
+	if (state->resultstxtFlag == true) {
+		append_value(state->stats[test_num], &stat);
+	}
 	append_value(state->p_val[test_num], &p_value1);
 	append_value(state->p_val[test_num], &p_value2);
 

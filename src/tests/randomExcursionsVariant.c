@@ -155,8 +155,10 @@ RandomExcursionsVariant_init(struct state *state)
 	/*
 	 * Allocate dynamic arrays
 	 */
-	state->stats[test_num] = create_dyn_array(sizeof(struct RandomExcursionsVariant_private_stats),
-						  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
+	if (state->resultstxtFlag == true) {
+		state->stats[test_num] = create_dyn_array(sizeof(struct RandomExcursionsVariant_private_stats),
+							  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);        // stats.txt
+	}
 	state->p_val[test_num] = create_dyn_array(sizeof(double), DEFAULT_CHUNK, NUMBER_OF_STATES_RND_EXCURSION_VAR *
 			state->tp.numOfBitStreams, false);						// results.txt
 
@@ -339,7 +341,9 @@ RandomExcursionsVariant_iterate(struct state *state)
 		/*
 		 * Record stats of this iteration
 		 */
-		append_value(state->stats[test_num], &stat);
+		if (state->resultstxtFlag == true) {
+			append_value(state->stats[test_num], &stat);
+		}
 	}
 
 	/*
@@ -359,7 +363,9 @@ RandomExcursionsVariant_iterate(struct state *state)
 			stat.success[i] = false;	// FAILURE
 		}
 		memset(stat.counter, 0, sizeof(stat.counter));
-		append_value(state->stats[test_num], &stat);
+		if (state->resultstxtFlag == true) {
+			append_value(state->stats[test_num], &stat);
+		}
 
 		/*
 		 * Record non p-value of this invalid iteration

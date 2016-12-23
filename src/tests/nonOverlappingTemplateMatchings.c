@@ -280,8 +280,10 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	 *
 	 * NonOverlapping Template Test uses array of struct nonover_stats instead of p_value doubles
 	 */
-	state->stats[test_num] = create_dyn_array(sizeof(struct NonOverlappingTemplateMatchings_private_stats),
-						  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);	// stats.txt
+	if (state->resultstxtFlag == true) {
+		state->stats[test_num] = create_dyn_array(sizeof(struct NonOverlappingTemplateMatchings_private_stats),
+							  DEFAULT_CHUNK, state->tp.numOfBitStreams, false);        // stats.txt
+	}
 	state->p_val[test_num] = create_dyn_array(sizeof(struct nonover_stats), DEFAULT_CHUNK,
 						  numOfTemplates[m] * state->tp.numOfBitStreams, false);	// results.txt
 
@@ -614,7 +616,9 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	 *
 	 * NOTE: The number of nonover_stat values in state->p_val is numOfTemplates[m].
 	 */
-	append_value(state->stats[test_num], &stat);
+	if (state->resultstxtFlag == true) {
+		append_value(state->stats[test_num], &stat);
+	}
 
 	/*
 	 * Set driver state to DRIVER_ITERATE
