@@ -352,7 +352,9 @@ main(int argc, char *argv[])
 	/*
 	 * Print p-values and stats of each test in separate files (if needed)
 	 */
-	print(&run_state);
+	if (run_state.resultstxtFlag == true) {
+		print(&run_state);
+	}
 
 	/*
 	 * Perform metrics processing for each test and write final result to file

@@ -831,7 +831,8 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 * provided but the legacy mode is on
 	 */
 	if (state->uniformityBinsFlag == true && state->legacy_output == true) {
-		dbg(DBG_LOW, "setting the number of uniformity bins back to 10 due to -O legacy mode flag");
+		warn(__FUNCTION__, "The number of uniformity bins was set back to %d due to '-O' legacy mode flag",
+		    DEFAULT_UNIFORMITY_BINS);
 		state->tp.uniformity_bins = DEFAULT_UNIFORMITY_BINS;
 	}
 
@@ -978,7 +979,7 @@ print_option_summary(struct state *state, char *where)
 	/*
 	 * Report on tests enabled
 	 */
-	dbg(DBG_LOW, "Tests enabled:");
+	dbg(DBG_MED, "Tests enabled:");
 	for (j = 1; j <= NUMOFTESTS; j++) {
 		if (state->testVector[j]) {
 			dbg(DBG_MED, "\ttest[%d] %s: enabled", j, state->testNames[j]);
@@ -1003,7 +1004,7 @@ print_option_summary(struct state *state, char *where)
 
 		case GENERATOR_FROM_FILE:
 			if (state->batchmode == true) {
-				dbg(DBG_LOW, "Testing data from file: %s", state->randomDataPath);
+				dbg(DBG_LOW, "Testing data from file:\n\t%s\n", state->randomDataPath);
 			} else {
 				dbg(DBG_LOW, "Will use data from a file");
 				dbg(DBG_LOW, "\tWill prompt for filename\n");
@@ -1163,12 +1164,12 @@ print_option_summary(struct state *state, char *where)
 	}
 	dbg(DBG_MED, "\tjobnum: -j %ld", state->jobnum);
 	if (state->jobnumFlag == true) {
-		dbg(DBG_LOW, "\t-j jobnum was set to %ld", state->jobnum);
-		dbg(DBG_LOW, "\t  will skip %lld bytes of data before processing\n",
+		dbg(DBG_MED, "\t-j jobnum was set to %ld", state->jobnum);
+		dbg(DBG_MED, "\t  will skip %lld bytes of data before processing\n",
 		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
 	} else {
-		dbg(DBG_LOW, "\tno -j jobnum was given");
-		dbg(DBG_LOW, "\t  will start processing at the beginning of data\n");
+		dbg(DBG_MED, "\tno -j jobnum was given");
+		dbg(DBG_MED, "\t  will start processing at the beginning of data\n");
 	}
 
 	/*

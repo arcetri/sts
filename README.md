@@ -51,7 +51,7 @@ Once you have chosen the data to test and the two parameters and cloned the repo
  then you can use the program as follows (this is a simple example):
        
 ```sh       
-$ ./sts -v 1 -b -g 0 -i 32 -I 1 -w . -f /path/to/random/data 1048576
+$ ./sts -v 1 -b -g 0 -i 32 -I 1 -w . -f /path/to/random/data -F 'r' 1048576
 ```
 Here is the meaning of the flags used in this command:
 
@@ -63,6 +63,7 @@ Here is the meaning of the flags used in this command:
 [-I 1] indicates that we want the program to tell us every time it finishes testing 1 bitstream
 [-w .] indicates the path of the folder where you want to store the testing results
 [-f /path/to/random/data] indicates the path of the data we want to use as input
+[-F 'r'] indicates that that data will be read as raw binary data (use 'a' for files of ASCII '0'/'1' chars)
 [1048576] indicates that our preferred length of a single bitstream is 1048576
 ```
 

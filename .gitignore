@@ -2,6 +2,7 @@
 # by default it is where the result of runs are written
 experiments
 # ignore the sts compiled binary
+*.o
 sts
 sts_legacy_fft
 # ignore mkapertemplate compiled binary

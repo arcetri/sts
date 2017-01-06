@@ -1174,7 +1174,7 @@ generatorOptions(struct state *state)
 	} while (generator < 0 || generator > NUMOFGENERATORS);
 
 	// Set the generator option
-	dbg(DBG_LOW, "will use generator %s[%ld]", state->generatorDir[generator], generator);
+	dbg(DBG_HIGH, "will use generator %s[%ld]", state->generatorDir[generator], generator);
 	state->generator = (enum gen) generator;
 	return;
 }
@@ -1187,7 +1187,7 @@ generatorOptions(struct state *state)
  *      state           // pointer to run state
  *
  * Ask the user which tests to enable.
- * 
+ *
  * This function does not return on error.
  */
 void
@@ -1364,7 +1364,7 @@ fixParameters(struct state *state)
 		printf("    [%d] Length of a single bit stream:			%ld\n", PARAM_n, state->tp.n);
 		printf("    [%d] Uniformity Cutoff Level:			%f\n", PARAM_uniformity_level,
 		       state->tp.uniformity_level);
-		printf("    [%d] Alpha - confidence level:       		%f\\n", PARAM_alpha, state->tp.alpha);
+		printf("    [%d] Alpha - confidence level:       		%f\n", PARAM_alpha, state->tp.alpha);
 		putchar('\n');
 		printf("   Select Test (%d to continue): ", PARAM_continue);
 		fflush(stdout);
@@ -1628,7 +1628,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Set file pointer after jobnum chunks into file
 		 */
-		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format",
+		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format\n",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
 		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		seekError = fseek(state->streamFile, (state->jobnum * state->tp.n * state->tp.numOfBitStreams), SEEK_SET);
@@ -1671,7 +1671,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Set file pointer after jobnum chunks into file
 		 */
-		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format",
+		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format\n",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
 		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
 		if (seekError != 0) {
@@ -1774,7 +1774,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		nist_test_suite(state);
 	}
 
-	dbg(DBG_LOW, "end of iterate phase");
+	dbg(DBG_LOW, "End of iterate phase\n");
 	return;
 }
 
@@ -1857,7 +1857,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 		nist_test_suite(state);
 
 	}
-	dbg(DBG_LOW, "end of iterate phase");
+	dbg(DBG_LOW, "End of iterate phase\n");
 	return;
 }
 
@@ -2095,17 +2095,6 @@ invokeTestSuite(struct state *state)
 		}
 		destroy(state);
 		exit(0);
-	}
-
-	/*
-	 * -m a: assess only, read state from *.state files under -r stateDir and asses results
-	 * -m b: iterate and then assess
-	 */
-	if (state->batchmode == true) {
-		dbg(DBG_LOW, "About to start assessment");
-	} else {
-		printf("About to start assessment\n");
-		fflush(stdout);
 	}
 }
 

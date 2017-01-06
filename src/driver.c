@@ -360,7 +360,7 @@ init(struct state *state)
 	/*
 	 * Report the end of the init phase
 	 */
-	dbg(DBG_LOW, "End of init phase");
+	dbg(DBG_LOW, "End of init phase\n");
 
 	return;
 }
@@ -438,7 +438,7 @@ print(struct state *state)
 	/*
 	 * Report the end of the print phase
 	 */
-	dbg(DBG_LOW, "End of print phase");
+	dbg(DBG_LOW, "End of print phase\n");
 
 	return;
 }
@@ -511,7 +511,7 @@ metrics(struct state *state)
 	/*
 	 * Perform metrics processing for each test and print each result to the output files
 	 */
-	dbg(DBG_LOW, "Start of metrics phase");
+	dbg(DBG_LOW, "Start of assess phase");
 	for (i = 1; i <= NUMOFTESTS; i++) {	// FOR EACH TEST
 
 		// Check if the test is enabled
@@ -894,7 +894,7 @@ metrics(struct state *state)
 	/*
 	 * Report the end of the metric phase
 	 */
-	dbg(DBG_LOW, "End of metrics phase");
+	dbg(DBG_LOW, "End of assess phase\n");
 	return;
 }
 
@@ -988,6 +988,6 @@ destroy(struct state *state)
 	/*
 	 * Report the end of the metric phase
 	 */
-	dbg(DBG_LOW, "End of destroy phase");
+	dbg(DBG_LOW, "End of destroy phase\n");
 	return;
 }
