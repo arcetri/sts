@@ -340,12 +340,12 @@ main(int argc, char *argv[])
 		errno = 0;	// paranoia
 		io_ret = fflush(run_state.freqFile);
 		if (io_ret != 0) {
-			errp(5, __FUNCTION__, "error flushing freqFile");
+			errp(5, __func__, "error flushing freqFile");
 		}
 		errno = 0;	// paranoia
 		io_ret = fclose(run_state.freqFile);
 		if (io_ret != 0) {
-			errp(5, __FUNCTION__, "error closing freqFile");
+			errp(5, __func__, "error closing freqFile");
 		}
 	}
 
@@ -367,12 +367,12 @@ main(int argc, char *argv[])
 	errno = 0;		// paranoia
 	io_ret = fflush(run_state.finalRept);
 	if (io_ret != 0) {
-		errp(5, __FUNCTION__, "error flushing finalRept");
+		errp(5, __func__, "error flushing finalRept");
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(run_state.finalRept);
 	if (io_ret != 0) {
-		errp(5, __FUNCTION__, "error closing finalRept");
+		errp(5, __func__, "error closing finalRept");
 	}
 
 	/*

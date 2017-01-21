@@ -101,7 +101,7 @@ DiscreteFourierTransform_init(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(40, __FUNCTION__, "state arg is NULL");
+		err(40, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -109,11 +109,11 @@ DiscreteFourierTransform_init(struct state *state)
 		return;
 	}
 	if (state->cSetup != true) {
-		err(40, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
-		    __FUNCTION__, state->testNames[test_num], test_num);
+		err(40, __func__, "test constants not setup prior to calling %s for %s[%d]",
+		    __func__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(40, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
+		err(40, __func__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
 
@@ -126,7 +126,7 @@ DiscreteFourierTransform_init(struct state *state)
 	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (n < MIN_LENGTH_FFT) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
+		warn(__func__, "disabling test %s[%d]: requires bitcount(n): %ld >= %d",
 		     state->testNames[test_num], test_num, n, MIN_LENGTH_FFT);
 		state->testVector[test_num] = false;
 		return;
@@ -151,7 +151,7 @@ DiscreteFourierTransform_init(struct state *state)
 	 */
 	state->fft_X = malloc((state->tp.n) * sizeof(state->fft_X[0]));
 	if (state->fft_X == NULL) {
-		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_X", n, sizeof(double));
+		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_X", n, sizeof(double));
 	}
 
 	/*
@@ -167,7 +167,7 @@ DiscreteFourierTransform_init(struct state *state)
 #if defined(LEGACY_FFT)
 	state->fft_wsave = malloc(2 * state->tp.n * sizeof(state->fft_wsave[0]));
 	if (state->fft_wsave == NULL) {
-		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_wsave",
+		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_wsave",
 		     2 * state->tp.n, sizeof(double));
 	}
 	for (i = 0; i < 2 * state->tp.n; ++i) {
@@ -176,18 +176,18 @@ DiscreteFourierTransform_init(struct state *state)
 #else /* LEGACY_FFT */
 	state->fftw_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
 	if (state->fftw_out == NULL) {
-		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fftw_out",
+		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fftw_out",
 		     n / 2 + 1, sizeof(fftw_complex));
 	}
 	if(n > INT_MAX) {
-		errp(40, __FUNCTION__, "cannot create a plan: library requires bitcount(n): %ld <= INT_MAX = %d",
+		errp(40, __func__, "cannot create a plan: library requires bitcount(n): %ld <= INT_MAX = %d",
 		     n, INT_MAX);
 	}
 	state->fftw_p = fftw_plan_dft_r2c_1d((int) n, state->fft_X, state->fftw_out, FFTW_ESTIMATE);
 #endif /* LEGACY_FFT */
 	state->fft_m = malloc((state->tp.n / 2 + 1) * sizeof(state->fft_m[0]));
 	if (state->fft_m == NULL) {
-		errp(40, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->fft_m",
+		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_m",
 		     state->tp.n / 2 + 1, sizeof(double));
 	}
 	for (i = 0; i < (state->tp.n / 2 + 1); ++i) {
@@ -254,39 +254,39 @@ DiscreteFourierTransform_iterate(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(41, __FUNCTION__, "state arg is NULL");
+		err(41, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __func__);
 		return;
 	}
 	if (state->epsilon == NULL) {
-		err(41, __FUNCTION__, "state->epsilon is NULL");
+		err(41, __func__, "state->epsilon is NULL");
 	}
 	if (state->fft_X == NULL) {
-		err(41, __FUNCTION__, "state->fft_X is NULL");
+		err(41, __func__, "state->fft_X is NULL");
 	}
 	if (state->fft_m == NULL) {
-		err(41, __FUNCTION__, "state->fft_m is NULL");
+		err(41, __func__, "state->fft_m is NULL");
 	}
 	if (state->cSetup != true) {
-		err(41, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
-		    __FUNCTION__, state->testNames[test_num], test_num);
+		err(41, __func__, "test constants not setup prior to calling %s for %s[%d]",
+		    __func__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(41, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
+		err(41, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 #if defined(LEGACY_FFT)
 	if (state->fft_wsave == NULL) {
-		err(41, __FUNCTION__, "state->fft_wsave is NULL");
+		err(41, __func__, "state->fft_wsave is NULL");
 	}
 #else
 	if (state->fftw_out == NULL) {
-		err(41, __FUNCTION__, "state->fftw_out is NULL");
+		err(41, __func__, "state->fftw_out is NULL");
 	}
 	if (state->fftw_p == NULL) {
-		err(41, __FUNCTION__, "state->fftw_p is NULL");
+		err(41, __func__, "state->fftw_p is NULL");
 	}
 #endif /* LEGACY_FFT */
 
@@ -312,7 +312,7 @@ DiscreteFourierTransform_iterate(struct state *state)
 		} else if ((int) state->epsilon[i] == 0) {
 			X[i] = -1;
 		} else {
-			err(41, __FUNCTION__, "found a bit different than 1 or 0 in the sequence");
+			err(41, __func__, "found a bit different than 1 or 0 in the sequence");
 		}
 	}
 
@@ -411,12 +411,12 @@ DiscreteFourierTransform_iterate(struct state *state)
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
@@ -472,16 +472,16 @@ DiscreteFourierTransform_print_stat(FILE * stream, struct state *state, struct D
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(42, __FUNCTION__, "stream arg is NULL");
+		err(42, __func__, "stream arg is NULL");
 	}
 	if (state == NULL) {
-		err(42, __FUNCTION__, "state arg is NULL");
+		err(42, __func__, "state arg is NULL");
 	}
 	if (stat == NULL) {
-		err(42, __FUNCTION__, "stat arg is NULL");
+		err(42, __func__, "stat arg is NULL");
 	}
 	if (p_value == NON_P_VALUE && stat->success == true) {
-		err(42, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success == true");
+		err(42, __func__, "p_value was set to NON_P_VALUE but stat->success == true");
 	}
 
 	/*
@@ -575,7 +575,7 @@ DiscreteFourierTransform_print_p_value(FILE * stream, double p_value)
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(43, __FUNCTION__, "stream arg is NULL");
+		err(43, __func__, "stream arg is NULL");
 	}
 
 	/*
@@ -633,7 +633,7 @@ DiscreteFourierTransform_print(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(44, __FUNCTION__, "state arg is NULL");
+		err(44, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_HIGH, "Print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -645,22 +645,22 @@ DiscreteFourierTransform_print(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(44, __FUNCTION__,
+		err(44, __func__,
 		    "print driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(44, __FUNCTION__,
+		err(44, __func__,
 		    "print driver interface for %s[%d] called with p_val count: %ld != %ld*%d=%ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->datatxt_fmt[test_num] == NULL) {
-		err(44, __FUNCTION__, "format for data0*.txt filename is NULL");
+		err(44, __func__, "format for data0*.txt filename is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(44, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(44, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -699,7 +699,7 @@ DiscreteFourierTransform_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = DiscreteFourierTransform_print_stat(stats, state, stat, p_value);
 		if (ok == false) {
-			errp(44, __FUNCTION__, "error in writing to %s", stats_txt);
+			errp(44, __func__, "error in writing to %s", stats_txt);
 		}
 
 		/*
@@ -708,7 +708,7 @@ DiscreteFourierTransform_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = DiscreteFourierTransform_print_p_value(results, p_value);
 		if (ok == false) {
-			errp(44, __FUNCTION__, "error in writing to %s", results_txt);
+			errp(44, __func__, "error in writing to %s", results_txt);
 		}
 	}
 
@@ -718,12 +718,12 @@ DiscreteFourierTransform_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
 	if (io_ret != 0) {
-		errp(44, __FUNCTION__, "error flushing to: %s", stats_txt);
+		errp(44, __func__, "error flushing to: %s", stats_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(stats);
 	if (io_ret != 0) {
-		errp(44, __FUNCTION__, "error closing: %s", stats_txt);
+		errp(44, __func__, "error closing: %s", stats_txt);
 	}
 	free(stats_txt);
 	stats_txt = NULL;
@@ -734,12 +734,12 @@ DiscreteFourierTransform_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
 	if (io_ret != 0) {
-		errp(44, __FUNCTION__, "error flushing to: %s", results_txt);
+		errp(44, __func__, "error flushing to: %s", results_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(results);
 	if (io_ret != 0) {
-		errp(44, __FUNCTION__, "error closing: %s", results_txt);
+		errp(44, __func__, "error closing: %s", results_txt);
 	}
 	free(results_txt);
 	results_txt = NULL;
@@ -761,7 +761,7 @@ DiscreteFourierTransform_print(struct state *state)
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(44, __FUNCTION__, "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ,
+				errp(44, __func__, "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ,
 				     j + 1, snprintf_ret);
 			}
 
@@ -789,7 +789,7 @@ DiscreteFourierTransform_print(struct state *state)
 					errno = 0;	// paranoia
 					ok = DiscreteFourierTransform_print_p_value(data, p_value);
 					if (ok == false) {
-						errp(44, __FUNCTION__, "error in writing to %s", data_txt);
+						errp(44, __func__, "error in writing to %s", data_txt);
 					}
 
 				}
@@ -801,12 +801,12 @@ DiscreteFourierTransform_print(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
 			if (io_ret != 0) {
-				errp(44, __FUNCTION__, "error flushing to: %s", data_txt);
+				errp(44, __func__, "error flushing to: %s", data_txt);
 			}
 			errno = 0;	// paranoia
 			io_ret = fclose(data);
 			if (io_ret != 0) {
-				errp(44, __FUNCTION__, "error closing: %s", data_txt);
+				errp(44, __func__, "error closing: %s", data_txt);
 			}
 			free(data_txt);
 			data_txt = NULL;
@@ -850,10 +850,10 @@ DiscreteFourierTransform_metric_print(struct state *state, long int sampleCount,
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(45, __FUNCTION__, "state arg is NULL");
+		err(45, __func__, "state arg is NULL");
 	}
 	if (freqPerBin == NULL) {
-		err(45, __FUNCTION__, "freqPerBin arg is NULL");
+		err(45, __func__, "freqPerBin arg is NULL");
 	}
 
 	/*
@@ -937,7 +937,7 @@ DiscreteFourierTransform_metric_print(struct state *state, long int sampleCount,
 		errno = 0;                // paranoia
 		io_ret = fflush(state->finalRept);
 		if (io_ret != 0) {
-			errp(45, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+			errp(45, __func__, "error flushing to: %s", state->finalReptPath);
 		}
 
 	} else {
@@ -1002,7 +1002,7 @@ DiscreteFourierTransform_metrics(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(46, __FUNCTION__, "state arg is NULL");
+		err(46, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -1010,21 +1010,21 @@ DiscreteFourierTransform_metrics(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(46, __FUNCTION__,
+		err(46, __func__,
 		    "metrics driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(46, __FUNCTION__,
+		err(46, __func__,
 		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
-		err(46, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
+		err(46, __func__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
 	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
-		err(46, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(46, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -1033,7 +1033,7 @@ DiscreteFourierTransform_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(46, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
+		errp(46, __func__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
 		     state->tp.uniformity_bins, sizeof(long int));
 	}
 
@@ -1141,10 +1141,10 @@ DiscreteFourierTransform_destroy(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(47, __FUNCTION__, "state arg is NULL");
+		err(47, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __func__);
 		return;
 	}
 

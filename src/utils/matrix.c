@@ -56,7 +56,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			err(122, __FUNCTION__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
+			err(122, __func__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
 			    matrix[i][i]);
 		}
 	}
@@ -72,7 +72,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			err(122, __FUNCTION__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
+			err(122, __func__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
 			    matrix[i][i]);
 		}
 	}
@@ -204,10 +204,10 @@ create_matrix(int M, int Q)
 	 * Check preconditions (firewall)
 	 */
 	if (M < 0) {
-		err(120, __FUNCTION__, "number of rows: %d must be > 0", M);
+		err(120, __func__, "number of rows: %d must be > 0", M);
 	}
 	if (Q < 0) {
-		err(120, __FUNCTION__, "number of columns per rows: %d must be > 0", Q);
+		err(120, __func__, "number of columns per rows: %d must be > 0", Q);
 	}
 
 	/*
@@ -215,7 +215,7 @@ create_matrix(int M, int Q)
 	 */
 	matrix = malloc(M * sizeof(matrix[0]));
 	if (matrix == NULL) {
-		errp(120, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix rows",
+		errp(120, __func__, "cannot malloc of %ld elements of %ld bytes each for matrix rows",
 		     (long int) M, sizeof(BitSequence *));
 	}
 
@@ -225,7 +225,7 @@ create_matrix(int M, int Q)
 	for (i = 0; i < M; i++) {
 		matrix[i] = malloc(Q * sizeof(matrix[0][0]));
 		if (matrix[i] == NULL) {
-			errp(120, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for matrix[%d] column",
+			errp(120, __func__, "cannot malloc of %ld elements of %ld bytes each for matrix[%d] column",
 			     (long int) Q, sizeof(BitSequence), i);
 		}
 	}
@@ -252,19 +252,19 @@ def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(121, __FUNCTION__, "state arg is NULL");
+		err(121, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
-		err(121, __FUNCTION__, "state->epsilon is NULL");
+		err(121, __func__, "state->epsilon is NULL");
 	}
 	if (M < 0) {
-		err(121, __FUNCTION__, "number of rows: %d must be > 0", M);
+		err(121, __func__, "number of rows: %d must be > 0", M);
 	}
 	if (Q < 0) {
-		err(121, __FUNCTION__, "number of columns per rows: %d must be > 0", Q);
+		err(121, __func__, "number of columns per rows: %d must be > 0", Q);
 	}
 	if (k < 0) {
-		err(121, __FUNCTION__, "offset for the values to copy from the sequence to to m: %d must be > 0", Q);
+		err(121, __func__, "offset for the values to copy from the sequence to to m: %d must be > 0", Q);
 	}
 
 	for (i = 0; i < M; i++) {

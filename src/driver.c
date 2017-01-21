@@ -210,10 +210,10 @@ init(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(50, __FUNCTION__, "state arg is NULL");
+		err(50, __func__, "state arg is NULL");
 	}
 	if (state->workDir == NULL) {
-		err(50, __FUNCTION__, "state->workDir is NULL");
+		err(50, __func__, "state->workDir is NULL");
 	}
 	dbg(DBG_LOW, "Start of init phase");
 
@@ -256,7 +256,7 @@ init(struct state *state)
 		dbg(DBG_MED, "Will use freq.txt file: %s", state->freqFilePath);
 		state->freqFile = fopen(state->freqFilePath, "w");
 		if (state->freqFile == NULL) {
-			errp(50, __FUNCTION__, "Could not open freq.txt file: %s", state->freqFilePath);
+			errp(50, __func__, "Could not open freq.txt file: %s", state->freqFilePath);
 		}
 
 		if (state->runMode != MODE_WRITE_ONLY) {
@@ -264,7 +264,7 @@ init(struct state *state)
 			dbg(DBG_MED, "Will use finalAnalysisReport.txt file: %s", state->finalReptPath);
 			state->finalRept = fopen(state->finalReptPath, "w");
 			if (state->finalRept == NULL) {
-				errp(50, __FUNCTION__, "Could not open finalAnalysisReport.txt file: %s", state->finalReptPath);
+				errp(50, __func__, "Could not open finalAnalysisReport.txt file: %s", state->finalReptPath);
 			}
 		}
 
@@ -274,7 +274,7 @@ init(struct state *state)
 			dbg(DBG_MED, "Will use result.txt file: %s", state->finalReptPath);
 			state->finalRept = fopen(state->finalReptPath, "w");
 			if (state->finalRept == NULL) {
-				errp(50, __FUNCTION__, "Could not open result.txt file: %s", state->finalReptPath);
+				errp(50, __func__, "Could not open result.txt file: %s", state->finalReptPath);
 			}
 		}
 	}
@@ -293,7 +293,7 @@ init(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state->tp.n <= 0) { // guard against taking the square root of a negative value
-		err(50, __FUNCTION__, "bogus n value: %ld should be > 0", state->tp.n);
+		err(50, __func__, "bogus n value: %ld should be > 0", state->tp.n);
 	}
 	
 	/*
@@ -340,7 +340,7 @@ init(struct state *state)
 		}
 	}
 	if (test_count <= 0) {
-		err(50, __FUNCTION__, "no more tests enabled, nothing to do, aborting");
+		err(50, __func__, "no more tests enabled, nothing to do, aborting");
 	} else {
 		dbg(DBG_MED, "We have %d tests enabled and initialized", test_count);
 	}
@@ -349,11 +349,11 @@ init(struct state *state)
 	 * Allocate bit stream
 	 */
 	if ((state->tp.n <= 0) || (state->tp.n < GLOBAL_MIN_BITCOUNT)) {
-		err(50, __FUNCTION__, "bogus value n: %ld, must be >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
+		err(50, __func__, "bogus value n: %ld, must be >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
 	}
 	state->epsilon = calloc((size_t) state->tp.n, sizeof(BitSequence));
 	if (state->epsilon == NULL) {
-		errp(50, __FUNCTION__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->tp.n,
+		errp(50, __func__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->tp.n,
 		     sizeof(BitSequence));
 	}
 
@@ -381,7 +381,7 @@ iterate(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(51, __FUNCTION__, "state arg is NULL");
+		err(51, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -418,7 +418,7 @@ print(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(52, __FUNCTION__, "state arg is NULL");
+		err(52, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -464,7 +464,7 @@ metrics(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(53, __FUNCTION__, "state arg is NULL");
+		err(53, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -474,36 +474,36 @@ metrics(struct state *state)
 		io_ret = fprintf(state->finalRept,
 				 "------------------------------------------------------------------------------\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 "RESULTS FOR THE UNIFORMITY OF P-VALUES AND THE PROPORTION OF PASSING SEQUENCES\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 "------------------------------------------------------------------------------\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept, "   generator is: %s\n", state->generatorDir[state->generator]);
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 "------------------------------------------------------------------------------\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 " C1  C2  C3  C4  C5  C6  C7  C8  C9 C10  P-VALUE  PROPORTION  STATISTICAL TEST\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 "------------------------------------------------------------------------------\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 
 	}
@@ -531,7 +531,7 @@ metrics(struct state *state)
 		io_ret = fprintf(state->finalRept,
 				 "\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		case1 = false;
 		case2 = false;
@@ -551,11 +551,11 @@ metrics(struct state *state)
 				io_ret = fprintf(state->finalRept,
 						 "The minimum pass rate for each statistical test with the exception of the\n");
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 				io_ret = fprintf(state->finalRept, "random excursion (variant) test is undefined.\n\n");
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 			} else {
 				long double floorl_result =
@@ -563,24 +563,24 @@ metrics(struct state *state)
 											   state->maxGeneralSampleSize)) *
 											   state->maxGeneralSampleSize);
 				if (floorl_result > (long double) LONG_MAX) {        // firewall
-					err(50, __FUNCTION__, "floorl result is too big for a long int");
+					err(50, __func__, "floorl result is too big for a long int");
 				}
 				passRate = (long) floorl_result;
 
 				io_ret = fprintf(state->finalRept,
 						 "The minimum pass rate for each statistical test with the exception of the\n");
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 				io_ret = fprintf(state->finalRept, "random excursion (variant) test is approximately = %ld for a\n",
 						 state->maxGeneralSampleSize ? passRate : 0);
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 				io_ret = fprintf(state->finalRept, "sample size = %ld binary sequences.\n\n",
 						 state->maxGeneralSampleSize);
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 			}
 		}
@@ -589,14 +589,14 @@ metrics(struct state *state)
 				io_ret = fprintf(state->finalRept,
 						 "The minimum pass rate for the random excursion (variant) test is undefined.\n\n");
 				if (io_ret <= 0) {
-					errp(53, __FUNCTION__, "error in writing to finalRept");
+					errp(53, __func__, "error in writing to finalRept");
 				}
 			} else {
 				long double floorl_result = floorl((p_hat - 3.0 * sqrt((p_hat * state->tp.alpha) /
 										       state->maxRandomExcursionSampleSize)) *
 								   state->maxRandomExcursionSampleSize);
 				if (floorl_result > (long double) LONG_MAX) {        // firewall
-					err(50, __FUNCTION__, "floorl result is too big for a long int");
+					err(50, __func__, "floorl result is too big for a long int");
 				}
 				passRate = (long) floorl_result;
 
@@ -604,25 +604,25 @@ metrics(struct state *state)
 					io_ret = fprintf(state->finalRept,
 							 "The minimum pass rate for the random excursion (variant) test\n");
 					if (io_ret <= 0) {
-						errp(53, __FUNCTION__, "error in writing to finalRept");
+						errp(53, __func__, "error in writing to finalRept");
 					}
 					io_ret = fprintf(state->finalRept,
 							 "is approximately = %ld for a sample size = %ld binary sequences.\n\n",
 							 passRate, state->maxRandomExcursionSampleSize);
 					if (io_ret <= 0) {
-						errp(53, __FUNCTION__, "error in writing to finalRept");
+						errp(53, __func__, "error in writing to finalRept");
 					}
 				} else {
 					io_ret = fprintf(state->finalRept, "The minimum pass rate for "
 							"the RandomExcursions and RandomExcursionsVariant\n");
 					if (io_ret <= 0) {
-						errp(53, __FUNCTION__, "error in writing to finalRept");
+						errp(53, __func__, "error in writing to finalRept");
 					}
 					io_ret = fprintf(state->finalRept,
 							 "tests is %ld for a sample size of %ld binary sequences.\n\n",
 							 passRate, state->maxRandomExcursionSampleSize);
 					if (io_ret <= 0) {
-						errp(53, __FUNCTION__, "error in writing to finalRept");
+						errp(53, __func__, "error in writing to finalRept");
 					}
 				}
 			}
@@ -631,16 +631,16 @@ metrics(struct state *state)
 		io_ret = fprintf(state->finalRept,
 				 "For further guidelines construct a probability table using the MAPLE program\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept, "provided in the addendum section of the documentation.\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 		io_ret = fprintf(state->finalRept,
 				 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n");
 		if (io_ret <= 0) {
-			errp(53, __FUNCTION__, "error in writing to finalRept");
+			errp(53, __func__, "error in writing to finalRept");
 		}
 
 	} else {
@@ -674,7 +674,7 @@ metrics(struct state *state)
 				 total_number_of_tests, NUMOFTESTS, state->randomDataPath, state->successful_tests,
 				 total_number_of_tests, total_number_of_tests - state->successful_tests, total_number_of_tests);
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 
 		/*
@@ -683,7 +683,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_FREQUENCY] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Frequency\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.frequency, state);
 		}
@@ -691,7 +691,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_BLOCK_FREQUENCY] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Block Frequency\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.block_frequency, state);
 		}
@@ -699,13 +699,13 @@ metrics(struct state *state)
 		if (state->testVector[TEST_CUSUM] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Cumulative Sums\" (forward) test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.cusum[0], state);
 
 			io_ret = fprintf(state->finalRept, "   The \"Cumulative Sums\" (backward) test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.cusum[1], state);
 		}
@@ -713,7 +713,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_RUNS] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Runs\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.runs, state);
 		}
@@ -721,7 +721,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_LONGEST_RUN] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Longest Run of Ones\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.longest_run, state);
 		}
@@ -729,7 +729,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_RANK] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Binary Matrix Rank\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.rank, state);
 		}
@@ -737,7 +737,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_DFT] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Discrete Fourier Transform\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.dft, state);
 		}
@@ -746,28 +746,28 @@ metrics(struct state *state)
 			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Non-overlapping Template Matching\" tests ",
 					 state->metric_results.non_overlapping[PASSED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(PASSED_BOTH, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
 					 state->metric_results.non_overlapping[FAILED_PROPORTION]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_PROPORTION, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
 					 state->metric_results.non_overlapping[FAILED_UNIFORMITY]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
 					 state->metric_results.non_overlapping[FAILED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_BOTH, state);
 		}
@@ -775,7 +775,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_OVERLAPPING] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Overlapping Template Matching\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.overlapping, state);
 		}
@@ -783,7 +783,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_UNIVERSAL] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Maurer’s Universal Statistical\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.universal, state);
 		}
@@ -791,7 +791,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_APEN] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Approximate Entropy\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.approximate_entropy, state);
 		}
@@ -800,28 +800,28 @@ metrics(struct state *state)
 			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Random Excursions\" tests ",
 					 state->metric_results.random_excursions[PASSED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(PASSED_BOTH, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
 					 state->metric_results.random_excursions[FAILED_PROPORTION]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_PROPORTION, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
 					 state->metric_results.random_excursions[FAILED_UNIFORMITY]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
 					 state->metric_results.random_excursions[FAILED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_BOTH, state);
 		}
@@ -830,28 +830,28 @@ metrics(struct state *state)
 			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Random Excursions Variant\" tests ",
 					 state->metric_results.random_excursions_var[PASSED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(PASSED_BOTH, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
 					 state->metric_results.random_excursions_var[FAILED_PROPORTION]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_PROPORTION, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
 					 state->metric_results.random_excursions_var[FAILED_UNIFORMITY]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
 
 			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
 					 state->metric_results.random_excursions_var[FAILED_BOTH]);
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(FAILED_BOTH, state);
 		}
@@ -859,13 +859,13 @@ metrics(struct state *state)
 		if (state->testVector[TEST_SERIAL] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Serial\" (first) test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.serial[0], state);
 
 			io_ret = fprintf(state->finalRept, "   The \"Serial\" (second) test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.serial[1], state);
 		}
@@ -873,7 +873,7 @@ metrics(struct state *state)
 		if (state->testVector[TEST_LINEARCOMPLEXITY] == true) {
 			io_ret = fprintf(state->finalRept, "\n - The \"Linear Complexity\" test ");
 			if (io_ret <= 0) {
-				errp(5, __FUNCTION__, "error in writing to finalRept");
+				errp(5, __func__, "error in writing to finalRept");
 			}
 			finishMetricTestsSentence(state->metric_results.linear_complexity, state);
 		}
@@ -884,10 +884,10 @@ metrics(struct state *state)
 		io_ret = fprintf(state->finalRept,
 				 "\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 				 "- - - - - - - - - - - - - - -\n\n"
-				"The missing tests (if any) were wither disabled manually by the user or disabled\n"
+				"The missing tests (if any) were whether disabled manually by the user or disabled\n"
 						 "at run time due to input size requirements not satisfied by this run.\n\n");
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 	}
 
@@ -905,25 +905,25 @@ static void finishMetricTestsSentence(test_metric_result result, struct state *s
 	case PASSED_BOTH:
 		io_ret = fprintf(state->finalRept, "passed both the analyses.\n");
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	case FAILED_UNIFORMITY:
 		io_ret = fprintf(state->finalRept, "failed the uniformity analysis.\n");
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	case FAILED_PROPORTION:
 		io_ret = fprintf(state->finalRept, "failed the proportion analysis.\n");
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	case FAILED_BOTH:
 		io_ret = fprintf(state->finalRept, "failed both the analyses.\n");
 		if (io_ret <= 0) {
-			errp(5, __FUNCTION__, "error in writing to finalRept");
+			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	}
@@ -944,7 +944,7 @@ destroy(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(54, __FUNCTION__, "state arg is NULL");
+		err(54, __func__, "state arg is NULL");
 	}
 
 	/*

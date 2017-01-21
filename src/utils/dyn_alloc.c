@@ -26,7 +26,7 @@
 
 // Exit codes: 60 thru 69
 
-#define _BSD_SOURCE
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,32 +70,32 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
-		err(61, __FUNCTION__, "array arg is NULL");
+		err(61, __func__, "array arg is NULL");
 	}
 	if (elms_to_allocate <= 0) {
-		err(61, __FUNCTION__, "elms_to_allocate arg must be > 0: %d", elms_to_allocate);
+		err(61, __func__, "elms_to_allocate arg must be > 0: %d", elms_to_allocate);
 	}
 
 	/*
 	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(61, __FUNCTION__, "data for dynamic array is NULL");
+		err(61, __func__, "data for dynamic array is NULL");
 	}
 	if (array->elm_size <= 0) {
-		err(61, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(61, __func__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(61, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(61, __func__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(61, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(61, __func__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	// firewall - check for overflow
 	old_allocated = array->allocated;
 	if (sum_will_overflow_long(old_allocated, elms_to_allocate)) {
-		err(61, __FUNCTION__, "allocating %ld new elements would overflow the allocated counter (now %ld) of the dynamic "
+		err(61, __func__, "allocating %ld new elements would overflow the allocated counter (now %ld) of the dynamic "
 				    "array: %ld + %ld does not fit in a long int",
 		    elms_to_allocate, old_allocated, old_allocated, elms_to_allocate);
 	}
@@ -104,7 +104,7 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 	// firewall - check for size overflow
 	old_bytes = old_allocated * array->elm_size;
 	if (multiplication_will_overflow_long(new_allocated, array->elm_size)) {
-		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
+		err(61, __func__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
 				    " %ld * %lu does not fit in a long int",
 		    new_allocated, array->elm_size, new_allocated, array->elm_size);
 	}
@@ -112,7 +112,7 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 
 	// firewall - check if new_bytes fits in a size_t variable
 	if (new_bytes > SIZE_MAX) {
-		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
+		err(61, __func__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
 				    " the bounds of a size_t variable: requires %ld <= %lu",
 		    new_allocated, array->elm_size, new_bytes, SIZE_MAX);
 	}
@@ -122,7 +122,7 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 	 */
 	data = realloc(array->data, (size_t) new_bytes);
 	if (data == NULL) {
-		errp(61, __FUNCTION__, "failed to reallocate the dynamic array from a size of %ld bytes to a size of %ld bytes",
+		errp(61, __func__, "failed to reallocate the dynamic array from a size of %ld bytes to a size of %ld bytes",
 		     old_bytes, new_bytes);
 	}
 
@@ -159,23 +159,23 @@ clear_dyn_array(struct dyn_array *array)
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
-		err(61, __FUNCTION__, "array arg is NULL");
+		err(61, __func__, "array arg is NULL");
 	}
 
 	/*
 	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(61, __FUNCTION__, "data for dynamic array is NULL");
+		err(61, __func__, "data for dynamic array is NULL");
 	}
 	if (array->elm_size <= 0) {
-		err(61, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(61, __func__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(61, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(61, __func__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(61, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(61, __func__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	/*
@@ -218,13 +218,13 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (elm_size <= 0) {
-		err(62, __FUNCTION__, "elm_size must be > 0: %ld", elm_size);
+		err(62, __func__, "elm_size must be > 0: %ld", elm_size);
 	}
 	if (chunk <= 0) {
-		err(62, __FUNCTION__, "chunk must be > 0: %ld", chunk);
+		err(62, __func__, "chunk must be > 0: %ld", chunk);
 	}
 	if (start_elm_count <= 0) {
-		err(62, __FUNCTION__, "start_elm_count must be > 0: %ld", start_elm_count);
+		err(62, __func__, "start_elm_count must be > 0: %ld", start_elm_count);
 	}
 
 	/*
@@ -232,7 +232,7 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 	 */
 	ret = malloc(sizeof(struct dyn_array));
 	if (ret == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
+		errp(62, __func__, "cannot malloc of %ld elements of %ld bytes each for dyn_array",
 		     (long int) 1, sizeof(struct dyn_array));
 	}
 
@@ -248,20 +248,20 @@ create_dyn_array(size_t elm_size, long int chunk, long int start_elm_count, int 
 
 	// firewall - check for size overflow
 	if (multiplication_will_overflow_long(ret->allocated, elm_size)) {
-		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
+		err(61, __func__, "the total number of bytes occupied by %ld elements of size %lu would overflow because"
 				    " %ld * %lu does not fit in a long int",
 		    ret->allocated, elm_size, ret->allocated, elm_size);
 	}
 	number_of_bytes = ret->allocated * elm_size;
 	if (number_of_bytes > SIZE_MAX) {
-		err(61, __FUNCTION__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
+		err(61, __func__, "the total number of bytes occupied by %ld elements of size %lu is too big and does not fit"
 				    " the bounds of a size_t variable: requires %ld <= %lu",
 		    ret->allocated, elm_size, number_of_bytes, SIZE_MAX);
 	}
 
 	ret->data = malloc((size_t) number_of_bytes);
 	if (ret->data == NULL) {
-		errp(62, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", ret->allocated,
+		errp(62, __func__, "cannot malloc of %ld elements of %ld bytes each for dyn_array->data", ret->allocated,
 		     elm_size);
 	}
 
@@ -304,26 +304,26 @@ append_value(struct dyn_array *array, void *value_to_add)
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
-		err(63, __FUNCTION__, "array arg is NULL");
+		err(63, __func__, "array arg is NULL");
 	}
 	if (value_to_add == NULL) {
-		err(63, __FUNCTION__, "value_to_add arg is NULL");
+		err(63, __func__, "value_to_add arg is NULL");
 	}
 
 	/*
 	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(63, __FUNCTION__, "data in dynamic array");
+		err(63, __func__, "data in dynamic array");
 	}
 	if (array->elm_size <= 0) {
-		err(63, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(63, __func__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(63, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(63, __func__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(63, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(63, __func__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	/*
@@ -370,26 +370,26 @@ append_array(struct dyn_array *array, void *array_to_add_p, long int total_eleme
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
-		err(63, __FUNCTION__, "array arg is NULL");
+		err(63, __func__, "array arg is NULL");
 	}
 	if (array_to_add_p == NULL) {
-		err(63, __FUNCTION__, "array_to_add_p arg is NULL");
+		err(63, __func__, "array_to_add_p arg is NULL");
 	}
 
 	/*
 	 * Check preconditions (firewall) - sanity check array
 	 */
 	if (array->data == NULL) {
-		err(63, __FUNCTION__, "data in dynamic array");
+		err(63, __func__, "data in dynamic array");
 	}
 	if (array->elm_size <= 0) {
-		err(63, __FUNCTION__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
+		err(63, __func__, "elm_size in dynamic array must be > 0: %ld", array->elm_size);
 	}
 	if (array->chunk <= 0) {
-		err(63, __FUNCTION__, "chunk in dynamic array must be > 0: %ld", array->chunk);
+		err(63, __func__, "chunk in dynamic array must be > 0: %ld", array->chunk);
 	}
 	if (array->count > array->allocated) {
-		err(63, __FUNCTION__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
+		err(63, __func__, "count: %ld in dynamic array must be <= allocated: %ld", array->count, array->allocated);
 	}
 
 	/*
@@ -425,7 +425,7 @@ free_dyn_array(struct dyn_array *array)
 	 * Check preconditions (firewall) - sanity check args
 	 */
 	if (array == NULL) {
-		err(64, __FUNCTION__, "array arg is NULL");
+		err(64, __func__, "array arg is NULL");
 	}
 
 	/*
@@ -492,7 +492,7 @@ main(int argc, char *argv[])
 	 */
 	for (i = 0; i < 1000000; ++i) {
 		if ((double) i != get_value(array, double, i)) {
-			warn(__FUNCTION__, "value mismatch %d != %f", i, get_value(array, double, i));
+			warn(__func__, "value mismatch %d != %f", i, get_value(array, double, i));
 		}
 	}
 	exit(0);

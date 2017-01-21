@@ -90,10 +90,10 @@ getNumber(FILE * input, FILE * output)
 	 * Check preconditions (firewall)
 	 */
 	if (input == NULL) {
-		err(210, __FUNCTION__, "input arg is NULL");
+		err(210, __func__, "input arg is NULL");
 	}
 	if (output == NULL) {
-		err(210, __FUNCTION__, "output arg is NULL");
+		err(210, __func__, "output arg is NULL");
 	}
 
 	/*
@@ -105,14 +105,14 @@ getNumber(FILE * input, FILE * output)
 		 */
 		linelen = getline(&line, &buflen, input);
 		if (line == NULL) {
-			errp(210, __FUNCTION__, "line is still NULL after getline call");
+			errp(210, __func__, "line is still NULL after getline call");
 		}
 		if (linelen < 0) {
-			errp(210, __FUNCTION__, "getline returned: %ld", linelen);
+			errp(210, __func__, "getline returned: %ld", linelen);
 		}
 		// firewall
 		if (line[linelen] != '\0') {
-			err(210, __FUNCTION__, "getline did not return a NULL terminated string");
+			err(210, __func__, "getline did not return a NULL terminated string");
 		}
 
 		/*
@@ -160,10 +160,10 @@ getDouble(FILE * input, FILE * output)
 	 * Check preconditions (firewall)
 	 */
 	if (input == NULL) {
-		err(211, __FUNCTION__, "input arg is NULL");
+		err(211, __func__, "input arg is NULL");
 	}
 	if (output == NULL) {
-		err(211, __FUNCTION__, "output arg is NULL");
+		err(211, __func__, "output arg is NULL");
 	}
 
 	/*
@@ -175,16 +175,16 @@ getDouble(FILE * input, FILE * output)
 		 */
 		linelen = getline(&line, &buflen, input);
 		if (line == NULL) {
-			errp(211, __FUNCTION__, "line is still NULL after getline call");
+			errp(211, __func__, "line is still NULL after getline call");
 		}
 		if (linelen < 0) {
-			errp(211, __FUNCTION__, "getline returned: %ld", linelen);
+			errp(211, __func__, "getline returned: %ld", linelen);
 		}
 		/*
 		 * paranoia
 		 */
 		if (line[linelen] != '\0') {
-			err(211, __FUNCTION__, "getline did not return a NULL terminated string");
+			err(211, __func__, "getline did not return a NULL terminated string");
 		}
 
 		/*
@@ -230,7 +230,7 @@ getNumberOrDie(FILE * stream)
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(212, __FUNCTION__, "stream arg is NULL");
+		err(212, __func__, "stream arg is NULL");
 	}
 
 	/*
@@ -238,13 +238,13 @@ getNumberOrDie(FILE * stream)
 	 */
 	linelen = getline(&line, &buflen, stream);
 	if (line == NULL) {
-		errp(212, __FUNCTION__, "line is still NULL after getline call");
+		errp(212, __func__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(212, __FUNCTION__, "getline returned: %ld", linelen);
+		errp(212, __func__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(212, __FUNCTION__, "getline did not return a NUL terminated string");
+		err(212, __func__, "getline did not return a NUL terminated string");
 	}
 
 	/*
@@ -253,7 +253,7 @@ getNumberOrDie(FILE * stream)
 	errno = 0;
 	number = strtol(line, NULL, 0);
 	if (errno != 0) {
-		errp(212, __FUNCTION__, "error in parsing string to integer: '%s'", line);
+		errp(212, __func__, "error in parsing string to integer: '%s'", line);
 	}
 
 	/*
@@ -287,7 +287,7 @@ getString(FILE * stream)
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(213, __FUNCTION__, "stream arg is NULL");
+		err(213, __func__, "stream arg is NULL");
 	}
 
 	/*
@@ -295,13 +295,13 @@ getString(FILE * stream)
 	 */
 	linelen = getline(&line, &buflen, stream);
 	if (line == NULL) {
-		errp(213, __FUNCTION__, "line is still NULL after getline call");
+		errp(213, __func__, "line is still NULL after getline call");
 	}
 	if (linelen <= 0) {
-		errp(213, __FUNCTION__, "getline returned: %ld", linelen);
+		errp(213, __func__, "getline returned: %ld", linelen);
 	}
 	if (line[linelen] != '\0') {
-		err(213, __FUNCTION__, "getline did not return a NUL terminated string");
+		err(213, __func__, "getline did not return a NUL terminated string");
 	}
 
 	/*
@@ -349,7 +349,7 @@ checkWritePermissions(char *path)
 	 * Check preconditions (firewall)
 	 */
 	if (path == NULL) {
-		warn(__FUNCTION__, "path arg was NULL");
+		warn(__func__, "path arg was NULL");
 		return false;
 	}
 
@@ -363,13 +363,13 @@ checkWritePermissions(char *path)
 
 	switch (errno) {
 	case EACCES:
-		dbg(DBG_VHIGH, "%s: path: %s is not writable", __FUNCTION__, path);
+		dbg(DBG_VHIGH, "%s: path: %s is not writable", __func__, path);
 		break;
 	case ENOENT:
-		dbg(DBG_VHIGH, "%s: path: %s does not exist", __FUNCTION__, path);
+		dbg(DBG_VHIGH, "%s: path: %s does not exist", __func__, path);
 		break;
 	default:
-		dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __FUNCTION__, path, errno, strerror(errno));
+		dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __func__, path, errno, strerror(errno));
 		break;
 	}
 
@@ -398,7 +398,7 @@ checkReadPermissions(char *path)
 
 	// firewall
 	if (path == NULL) {
-		warn(__FUNCTION__, "path arg was NULL");
+		warn(__func__, "path arg was NULL");
 		return false;
 	}
 	// check if path has write permissions
@@ -408,13 +408,13 @@ checkReadPermissions(char *path)
 	} else {
 		switch (errno) {
 		case EACCES:
-			dbg(DBG_VHIGH, "%s: path: %s is not readable", __FUNCTION__, path);
+			dbg(DBG_VHIGH, "%s: path: %s is not readable", __func__, path);
 			break;
 		case ENOENT:
-			dbg(DBG_VHIGH, "%s: path: %s does not exist", __FUNCTION__, path);
+			dbg(DBG_VHIGH, "%s: path: %s does not exist", __func__, path);
 			break;
 		default:
-			dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __FUNCTION__, path, errno, strerror(errno));
+			dbg(DBG_VHIGH, "%s: faccessat error on %s: %d: %s", __func__, path, errno, strerror(errno));
 			break;
 		}
 	}
@@ -447,7 +447,7 @@ openTruncate(char *filename)
 	 * Check preconditions (firewall)
 	 */
 	if (filename == NULL) {
-		warn(__FUNCTION__, "filename arg was NULL");
+		warn(__func__, "filename arg was NULL");
 		return NULL;
 	}
 
@@ -457,7 +457,7 @@ openTruncate(char *filename)
 	errno = 0;		// paranoia
 	stream = fopen(filename, "w");
 	if (stream == NULL) {
-		warnp(__FUNCTION__, "could not create/open for writing/truncation: %s", filename);
+		warnp(__func__, "could not create/open for writing/truncation: %s", filename);
 		return NULL;
 	}
 	dbg(DBG_HIGH, "created/opened for writing/truncation: %s", filename);
@@ -488,10 +488,10 @@ filePathName(char *head, char *tail)
 	 * Check preconditions (firewall)
 	 */
 	if (head == NULL) {
-		err(214, __FUNCTION__, "head arg is NULL");
+		err(214, __func__, "head arg is NULL");
 	}
 	if (tail == NULL) {
-		err(214, __FUNCTION__, "tail arg is NULL");
+		err(214, __func__, "tail arg is NULL");
 	}
 
 	/*
@@ -500,7 +500,7 @@ filePathName(char *head, char *tail)
 	len = strlen(head) + 1 + strlen(tail) + 1;
 	fullpath = malloc(len + 1);	// +1 for later paranoia
 	if (fullpath == NULL) {
-		errp(214, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for fullpath", len + 1,
+		errp(214, __func__, "cannot malloc of %ld elements of %ld bytes each for fullpath", len + 1,
 		     sizeof(fullpath[0]));
 	}
 
@@ -511,7 +511,7 @@ filePathName(char *head, char *tail)
 	snprintf_ret = snprintf(fullpath, len, "%s/%s", head, tail);
 	fullpath[len] = '\0';	// paranoia
 	if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-		errp(214, __FUNCTION__, "snprintf failed for %ld bytes for %s/%s, returned: %d", len, head, tail, snprintf_ret);
+		errp(214, __func__, "snprintf failed for %ld bytes for %s/%s, returned: %d", len, head, tail, snprintf_ret);
 	}
 
 	/*
@@ -543,7 +543,7 @@ data_filename_format(int partitionCount)
 	 * Check preconditions (firewall)
 	 */
 	if (partitionCount < 1) {
-		err(215, __FUNCTION__, "partitionCount arg: %d must be >= 1", partitionCount);
+		err(215, __func__, "partitionCount arg: %d must be >= 1", partitionCount);
 	}
 
 	/*
@@ -571,7 +571,7 @@ data_filename_format(int partitionCount)
 	 */
 	buf = malloc((size_t) len + 1);	// + 1 for paranoia
 	if (buf == NULL) {
-		errp(215, __FUNCTION__, "cannot malloc of %d elements of %ld bytes each for data%%0*d.txt", len + 1,
+		errp(215, __func__, "cannot malloc of %d elements of %ld bytes each for data%%0*d.txt", len + 1,
 		     sizeof(buf[0]));
 	}
 
@@ -584,7 +584,7 @@ data_filename_format(int partitionCount)
 		errno = 0;	// paranoia
 		snprintf_ret = snprintf(buf, len, "data%%0%dd.txt", digits);
 		if (snprintf_ret <= 0 || snprintf_ret >= len || errno != 0) {
-			errp(215, __FUNCTION__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d", len, digits,
+			errp(215, __func__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d", len, digits,
 			     snprintf_ret);
 		}
 		buf[len] = '\0';	// paranoia
@@ -618,9 +618,9 @@ makePath(char *dir)
 	 * Check preconditions (firewall)
 	 */
 	if (dir == NULL) {
-		err(216, __FUNCTION__, "dir arg is NULL");
+		err(216, __func__, "dir arg is NULL");
 	}
-	dbg(DBG_VHIGH, "called %s on path: %s", __FUNCTION__, dir);
+	dbg(DBG_VHIGH, "called %s on path: %s", __func__, dir);
 
 	/*
 	 * Check if dir exists
@@ -633,12 +633,12 @@ makePath(char *dir)
 				dbg(DBG_VHIGH, "dir is already a writable directory: %s", dir);
 				return;
 			} else {
-				err(216, __FUNCTION__, "dir exists but is not a writable directory: %s", dir);
+				err(216, __func__, "dir exists but is not a writable directory: %s", dir);
 			}
 
 		} else {
 			// dir is not a directory
-			err(216, __FUNCTION__, "dir exists but is not a directory: %s", dir);
+			err(216, __func__, "dir exists but is not a directory: %s", dir);
 		}
 	}
 
@@ -648,7 +648,7 @@ makePath(char *dir)
 	len = strlen(dir); // Allocate max possible storage for tmp
 	tmp = malloc(len + 1);	// +1 for paranoia below
 	if (tmp == NULL) {
-		errp(216, __FUNCTION__, "unable to allocate a string of length %lu", len + 1);
+		errp(216, __func__, "unable to allocate a string of length %lu", len + 1);
 	}
 	tmp[len] = '\0';	// paranoia
 	for (p = dir, len = 0; *p; ++p) {
@@ -713,7 +713,7 @@ makePath(char *dir)
 			dbg(DBG_VVHIGH, "about to mkdir %s", tmp);
 			errno = 0;	// paranoia
 			if (mkdir(tmp, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) < 0) {
-				errp(216, __FUNCTION__, "error creating %s for %s", tmp, dir);
+				errp(216, __func__, "error creating %s for %s", tmp, dir);
 			}
 			dbg(DBG_VVHIGH, "just created %s", tmp);
 
@@ -728,7 +728,7 @@ makePath(char *dir)
 	dbg(DBG_VVHIGH, "about to do the final mkdir %s", tmp);
 	errno = 0;		// paranoia
 	if (mkdir(tmp, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) < 0) {
-		errp(216, __FUNCTION__, "error creating final %s for %s", tmp, dir);
+		errp(216, __func__, "error creating final %s for %s", tmp, dir);
 	}
 	dbg(DBG_VVHIGH, "just created final %s", tmp);
 	dbg(DBG_VHIGH, "directory now exists and is writable: %s", dir);
@@ -760,12 +760,12 @@ precheckPath(struct state *state, char *dir)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(217, __FUNCTION__, "state arg is NULL");
+		err(217, __func__, "state arg is NULL");
 	}
 	if (dir == NULL) {
-		err(217, __FUNCTION__, "dir arg is NULL");
+		err(217, __func__, "dir arg is NULL");
 	}
-	dbg(DBG_VHIGH, "called %s on path: %s", __FUNCTION__, dir);
+	dbg(DBG_VHIGH, "called %s on path: %s", __func__, dir);
 
 	/*
 	 * no -c (state->subDirs is true)
@@ -789,7 +789,7 @@ precheckPath(struct state *state, char *dir)
 	 */
 	dbg(DBG_VVHIGH, "with -c, %s must be a writeable directory", dir);
 	if (checkWritePermissions(dir) != true) {
-		err(217, __FUNCTION__, "directory does not exist or is not writable: %s", dir);
+		err(217, __func__, "directory does not exist or is not writable: %s", dir);
 	}
 	dbg(DBG_VVHIGH, "directory is writable %s", dir);
 	return;
@@ -821,13 +821,13 @@ precheckSubdir(struct state *state, char *subdir)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(218, __FUNCTION__, "state arg is NULL");
+		err(218, __func__, "state arg is NULL");
 	}
 	if (subdir == NULL) {
-		err(218, __FUNCTION__, "subdir arg is NULL");
+		err(218, __func__, "subdir arg is NULL");
 	}
 	if (state->workDir == NULL) {
-		err(218, __FUNCTION__, "state->workDir is NULL");
+		err(218, __func__, "state->workDir is NULL");
 	}
 
 	/*
@@ -871,10 +871,10 @@ str2longint(bool * success_p, char *string)
 	 * Check preconditions (firewall)
 	 */
 	if (success_p == NULL) {
-		err(219, __FUNCTION__, "success_p arg is NULL");
+		err(219, __func__, "success_p arg is NULL");
 	}
 	if (string == NULL) {
-		err(219, __FUNCTION__, "string arg is NULL");
+		err(219, __func__, "string arg is NULL");
 	}
 
 	/*
@@ -919,7 +919,7 @@ str2longint_or_die(char *string)
 	 * Check preconditions (firewall)
 	 */
 	if (string == NULL) {
-		err(220, __FUNCTION__, "string arg is NULL");
+		err(220, __func__, "string arg is NULL");
 	}
 
 	/*
@@ -928,7 +928,7 @@ str2longint_or_die(char *string)
 	errno = 0;
 	number = strtol(string, NULL, 0);
 	if (errno != 0) {
-		errp(220, __FUNCTION__, "error in parsing string to integer: '%s'", string);
+		errp(220, __func__, "error in parsing string to integer: '%s'", string);
 	}
 
 	/*
@@ -965,7 +965,7 @@ generatorOptions(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(221, __FUNCTION__, "state arg is NULL");
+		err(221, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -976,7 +976,7 @@ generatorOptions(struct state *state)
 		// Open the input file for writing
 		state->streamFile = fopen(state->randomDataPath, "w");
 		if (state->streamFile == NULL) {
-			errp(221, __FUNCTION__, "unable to open data file to writing: %s", state->randomDataPath);
+			errp(221, __func__, "unable to open data file to writing: %s", state->randomDataPath);
 		}
 	}
 
@@ -987,13 +987,13 @@ generatorOptions(struct state *state)
 
 		// Verify the input file is readable
 		if (checkReadPermissions(state->randomDataPath) == false) {
-			err(221, __FUNCTION__, "input data file not readable: %s", state->randomDataPath);
+			err(221, __func__, "input data file not readable: %s", state->randomDataPath);
 		}
 
 		// Open the input file for reading
 		state->streamFile = fopen(state->randomDataPath, "r");
 		if (state->streamFile == NULL) {
-			errp(221, __FUNCTION__, "unable to open data file to reading: %s", state->randomDataPath);
+			errp(221, __func__, "unable to open data file to reading: %s", state->randomDataPath);
 		}
 	}
 
@@ -1202,7 +1202,7 @@ chooseTests(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(223, __FUNCTION__, "state arg is NULL");
+		err(223, __func__, "state arg is NULL");
 	}
 
 	// If -t was used, tests are already chosen, just return
@@ -1319,7 +1319,7 @@ fixParameters(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(223, __FUNCTION__, "state arg is NULL");
+		err(223, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -1614,10 +1614,10 @@ fileBasedBitStreams(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(224, __FUNCTION__, "state arg is NULL");
+		err(224, __func__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(224, __FUNCTION__, "streamFile arg is NULL");
+		err(224, __func__, "streamFile arg is NULL");
 	}
 
 	/*
@@ -1633,7 +1633,7 @@ fileBasedBitStreams(struct state *state)
 		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		seekError = fseek(state->streamFile, (state->jobnum * state->tp.n * state->tp.numOfBitStreams), SEEK_SET);
 		if (seekError != 0) {
-			errp(224, __FUNCTION__, "could not seek %ld into file: %s",
+			errp(224, __func__, "could not seek %ld into file: %s",
 			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		}
 		/*
@@ -1647,7 +1647,7 @@ fileBasedBitStreams(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
 		if (io_ret != 0) {
-			errp(224, __FUNCTION__, "error closing: %s", state->randomDataPath);
+			errp(224, __func__, "error closing: %s", state->randomDataPath);
 		}
 		state->streamFile = NULL;
 
@@ -1675,7 +1675,7 @@ fileBasedBitStreams(struct state *state)
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
 		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
 		if (seekError != 0) {
-			err(224, __FUNCTION__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
+			err(224, __func__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
 		}
 		/*
 		 * Parse data
@@ -1688,7 +1688,7 @@ fileBasedBitStreams(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = fclose(state->streamFile);
 		if (io_ret != 0) {
-			errp(224, __FUNCTION__, "error closing: %s", state->randomDataPath);
+			errp(224, __func__, "error closing: %s", state->randomDataPath);
 		}
 		state->streamFile = NULL;
 	}
@@ -1697,7 +1697,7 @@ fileBasedBitStreams(struct state *state)
 	 * Case: should not get here
 	 */
 	else {
-		err(224, __FUNCTION__, "Input file format selection is invalid");
+		err(224, __func__, "Input file format selection is invalid");
 	}
 
 	return;
@@ -1719,10 +1719,10 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(225, __FUNCTION__, "state arg is NULL");
+		err(225, __func__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(225, __FUNCTION__, "streamFile arg is NULL");
+		err(225, __func__, "streamFile arg is NULL");
 	}
 
 	/*
@@ -1740,7 +1740,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		for (j = 0; j < state->tp.n; j++) {
 			io_ret = fscanf(state->streamFile, "%d", &bit);
 			if (io_ret == EOF) {
-				warn(__FUNCTION__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
+				warn(__func__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
 				     bitsRead);
 				return;
 			} else {
@@ -1760,11 +1760,11 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		if (state->legacy_output == true) {
 			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
 			if (io_ret <= 0) {
-				errp(225, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				errp(225, __func__, "error in writing to %s", state->freqFilePath);
 			}
 			io_ret = fflush(state->freqFile);
 			if (io_ret != 0) {
-				errp(225, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+				errp(225, __func__, "error flushing to %s", state->freqFilePath);
 			}
 		}
 
@@ -1803,10 +1803,10 @@ readHexDigitsInBinaryFormat(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(226, __FUNCTION__, "state arg is NULL");
+		err(226, __func__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(226, __FUNCTION__, "streamFile arg is NULL");
+		err(226, __func__, "streamFile arg is NULL");
 	}
 
 	/*
@@ -1827,7 +1827,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 			 */
 			io_ret = fgetc(state->streamFile);
 			if (io_ret < 0) {
-				errp(226, __FUNCTION__, "read error in stream file: %s", state->randomDataPath);
+				errp(226, __func__, "read error in stream file: %s", state->randomDataPath);
 			}
 			byte = (BYTE) io_ret;
 
@@ -1843,11 +1843,11 @@ readHexDigitsInBinaryFormat(struct state *state)
 		if (state->legacy_output == true) {
 			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
 			if (io_ret <= 0) {
-				errp(226, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				errp(226, __func__, "error in writing to %s", state->freqFilePath);
 			}
 			io_ret = fflush(state->freqFile);
 			if (io_ret != 0) {
-				errp(226, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+				errp(226, __func__, "error flushing to %s", state->freqFilePath);
 			}
 		}
 
@@ -1894,10 +1894,10 @@ convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bits
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(227, __FUNCTION__, "state arg is NULL");
+		err(227, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
-		err(227, __FUNCTION__, "state->epsilon is NULL");
+		err(227, __func__, "state->epsilon is NULL");
 	}
 
 	count = 0;
@@ -1939,7 +1939,7 @@ invokeTestSuite(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(228, __FUNCTION__, "state arg is NULL");
+		err(228, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -1955,7 +1955,7 @@ invokeTestSuite(struct state *state)
 			// Compression BITS_N_BYTE:1
 			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
-				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
+				errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
 				     (state->tp.n / BITS_N_BYTE) + 1, sizeof(state->tmpepsilon[0]));
 			}
 			state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
@@ -1964,14 +1964,14 @@ invokeTestSuite(struct state *state)
 		case FORMAT_ASCII_01:
 			state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
 			if (state->tmpepsilon == NULL) {
-				errp(228, __FUNCTION__, "cannot allocate %ld elements of %ld bytes each",
+				errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
 				     state->tp.n + 1, sizeof(state->tmpepsilon[0]));
 			}
 			state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
 			break;
 
 		default:
-			err(228, __FUNCTION__, "Invalid format");
+			err(228, __func__, "Invalid format");
 			break;
 		}
 	}
@@ -1987,30 +1987,30 @@ invokeTestSuite(struct state *state)
 			io_ret = fprintf(state->freqFile,
 					 "________________________________________________________________________________\n\n");
 			if (io_ret <= 0) {
-				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				errp(228, __func__, "error in writing to %s", state->freqFilePath);
 			}
 
 			if (state->generator == 0) {
 				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
 						 state->randomDataPath, state->tp.alpha);
 				if (io_ret <= 0) {
-					errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+					errp(228, __func__, "error in writing to %s", state->freqFilePath);
 				}
 			} else {
 				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
 						 state->generatorDir[state->generator], state->tp.alpha);
 				if (io_ret <= 0) {
-					errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+					errp(228, __func__, "error in writing to %s", state->freqFilePath);
 				}
 			}
 			io_ret = fprintf(state->freqFile,
 					 "________________________________________________________________________________\n\n");
 			if (io_ret <= 0) {
-				errp(228, __FUNCTION__, "error in writing to %s", state->freqFilePath);
+				errp(228, __func__, "error in writing to %s", state->freqFilePath);
 			}
 			io_ret = fflush(state->freqFile);
 			if (io_ret != 0) {
-				errp(228, __FUNCTION__, "error flushing to %s", state->freqFilePath);
+				errp(228, __func__, "error flushing to %s", state->freqFilePath);
 			}
 		}
 	}
@@ -2053,7 +2053,7 @@ invokeTestSuite(struct state *state)
 		break;
 
 	default:
-		err(228, __FUNCTION__, "Error in invokeTestSuite!");
+		err(228, __func__, "Error in invokeTestSuite!");
 		break;
 	}
 
@@ -2122,10 +2122,10 @@ getTimestamp(char *buf, size_t len)
 
 	// firewall
 	if (buf == NULL) {
-		err(229, __FUNCTION__, "bug arg is NULL");
+		err(229, __func__, "bug arg is NULL");
 	}
 	if (len <= 0) {
-		err(229, __FUNCTION__, "len must be > 0: %lu", len);
+		err(229, __func__, "len must be > 0: %lu", len);
 	}
 
 	/*
@@ -2134,16 +2134,16 @@ getTimestamp(char *buf, size_t len)
 	errno = 0;		// paranoia
 	seconds = time(NULL);
 	if (seconds < 0) {
-		errp(229, __FUNCTION__, "time returned < 0: %ld", seconds);
+		errp(229, __func__, "time returned < 0: %ld", seconds);
 	}
 	loc_ret = localtime_r(&seconds, &now);
 	if (loc_ret == NULL) {
-		errp(229, __FUNCTION__, "localtime_r returned NULL");
+		errp(229, __func__, "localtime_r returned NULL");
 	}
 	errno = 0;		// paranoia
 	time_len = strftime(buf, len - 1, "%F %T", &now);
 	if (time_len == 0) {
-		errp(229, __FUNCTION__, "strftime failed");
+		errp(229, __func__, "strftime failed");
 	}
 	buf[len] = '\0';	// paranoia
 	return;
@@ -2165,7 +2165,7 @@ nist_test_suite(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(230, __FUNCTION__, "state arg is NULL");
+		err(230, __func__, "state arg is NULL");
 	}
 
 	/*
@@ -2218,13 +2218,13 @@ write_sequence(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(231, __FUNCTION__, "state arg was NULL");
+		err(231, __func__, "state arg was NULL");
 	}
 	if (state->tmpepsilon == NULL) {
-		err(231, __FUNCTION__, "state->tmpepsilon is NULL");
+		err(231, __func__, "state->tmpepsilon is NULL");
 	}
 	if (state->streamFile == NULL) {
-		err(231, __FUNCTION__, "state->streamFile is NULL");
+		err(231, __func__, "state->streamFile is NULL");
 	}
 
 	/*
@@ -2242,7 +2242,7 @@ write_sequence(struct state *state)
 			if (state->epsilon[i] == 1) {
 				state->tmpepsilon[j] |= (1 << count);
 			} else if (state->epsilon[i] != 0) {
-				err(231, __FUNCTION__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
 			}
 			++count;
 
@@ -2264,13 +2264,13 @@ write_sequence(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) j, state->streamFile);
 		if (io_ret < j) {
-			errp(231, __FUNCTION__, "write of %d elements of %ld bytes to %s failed",
+			errp(231, __func__, "write of %d elements of %ld bytes to %s failed",
 			     j, sizeof(BitSequence), state->randomDataPath);
 		}
 		errno = 0;	// paranoia
 		io_ret = fflush(state->streamFile);
 		if (io_ret == EOF) {
-			errp(231, __FUNCTION__, "flush of %s failed", state->randomDataPath);
+			errp(231, __func__, "flush of %s failed", state->randomDataPath);
 		}
 		break;
 
@@ -2285,7 +2285,7 @@ write_sequence(struct state *state)
 			} else if (state->epsilon[i] == 1) {
 				state->tmpepsilon[i] = '1';
 			} else {
-				err(231, __FUNCTION__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
 			}
 		}
 
@@ -2295,17 +2295,17 @@ write_sequence(struct state *state)
 		errno = 0;	// paranoia
 		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) state->tp.n, state->streamFile);
 		if (io_ret < state->tp.n) {
-			errp(231, __FUNCTION__, "write of %ld elements of %ld bytes to %s failed",
+			errp(231, __func__, "write of %ld elements of %ld bytes to %s failed",
 			     state->tp.n, sizeof(BitSequence), state->randomDataPath);
 		}
 		io_ret = fflush(state->streamFile);
 		if (io_ret == EOF) {
-			errp(231, __FUNCTION__, "flush of %s failed", state->randomDataPath);
+			errp(231, __func__, "flush of %s failed", state->randomDataPath);
 		}
 		break;
 
 	default:
-		err(231, __FUNCTION__, "Invalid format");
+		err(231, __func__, "Invalid format");
 		break;
 	}
 

@@ -65,7 +65,7 @@ msg(char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "NULL fmt given to debug");
+		warn(__func__, "NULL fmt given to debug");
 		fmt = "((NULL fmt))";
 	}
 
@@ -74,7 +74,7 @@ msg(char const *fmt, ...)
 	 */
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
-		fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 	}
 	fputc('\n', stderr);
 
@@ -114,7 +114,7 @@ dbg(int level, char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "NULL fmt given to debug");
+		warn(__func__, "NULL fmt given to debug");
 		fmt = "((NULL fmt))";
 	}
 
@@ -124,7 +124,7 @@ dbg(int level, char const *fmt, ...)
 	if (level <= debuglevel) {
 		ret = vfprintf(stderr, fmt, ap);
 		if (ret <= 0) {
-			fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+			fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 		}
 		fputc('\n', stderr);
 	}
@@ -147,7 +147,7 @@ dbg(int level, char const *fmt, ...)
  *
  * Example:
  *
- *      warn(__FUNCTION__, "unexpected foobar: %d", value);
+ *      warn(__func__, "unexpected foobar: %d", value);
  */
 void
 warn(char const *name, char const *fmt, ...)
@@ -164,11 +164,11 @@ warn(char const *name, char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (name == NULL) {
-		fprintf(stderr, "Warning: %s called with NULL name\n", __FUNCTION__);
+		fprintf(stderr, "Warning: %s called with NULL name\n", __func__);
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		fprintf(stderr, "Warning: %s called with NULL fmt\n", __FUNCTION__);
+		fprintf(stderr, "Warning: %s called with NULL fmt\n", __func__);
 		fmt = "((NULL fmt))";
 	}
 
@@ -178,7 +178,7 @@ warn(char const *name, char const *fmt, ...)
 	fprintf(stderr, "Warning: %s: ", name);
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
-		fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 	}
 	fputc('\n', stderr);
 
@@ -202,7 +202,7 @@ warn(char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      warnp(__FUNCTION__, "unexpected foobar: %d", value);
+ *      warnp(__func__, "unexpected foobar: %d", value);
  */
 void
 warnp(char const *name, char const *fmt, ...)
@@ -221,11 +221,11 @@ warnp(char const *name, char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (name == NULL) {
-		fprintf(stderr, "Warning: %s called with NULL name\n", __FUNCTION__);
+		fprintf(stderr, "Warning: %s called with NULL name\n", __func__);
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		fprintf(stderr, "Warning: %s called with NULL fmt\n", __FUNCTION__);
+		fprintf(stderr, "Warning: %s called with NULL fmt\n", __func__);
 		fmt = "((NULL fmt))";
 	}
 
@@ -235,7 +235,7 @@ warnp(char const *name, char const *fmt, ...)
 	fprintf(stderr, "Warning: %s: ", name);
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
-		fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 	}
 	fputc('\n', stderr);
 	fprintf(stderr, "errno[%d]: %s\n", saved_errno, strerror(saved_errno));
@@ -261,7 +261,7 @@ warnp(char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      err(99, __FUNCTION__, "bad foobar: %s", message);
+ *      err(99, __func__, "bad foobar: %s", message);
  */
 void
 err(int exitcode, char const *name, char const *fmt, ...)
@@ -278,21 +278,21 @@ err(int exitcode, char const *name, char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (exitcode >= 256) {
-		warn(__FUNCTION__, "called with exitcode >= 256: %d", exitcode);
+		warn(__func__, "called with exitcode >= 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (exitcode < 0) {
-		warn(__FUNCTION__, "called with exitcode < 0: %d", exitcode);
+		warn(__func__, "called with exitcode < 0: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (name == NULL) {
-		warn(__FUNCTION__, "called with NULL name");
+		warn(__func__, "called with NULL name");
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "called with NULL fmt");
+		warn(__func__, "called with NULL fmt");
 		fmt = "((NULL fmt))";
 	}
 
@@ -302,7 +302,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
 	fprintf(stderr, "FATAL: %s: ", name);
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
-		fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 	}
 	fputc('\n', stderr);
 
@@ -332,7 +332,7 @@ err(int exitcode, char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      errp(99, __FUNCTION__, "I/O failure: %s", message);
+ *      errp(99, __func__, "I/O failure: %s", message);
  */
 void
 errp(int exitcode, char const *name, char const *fmt, ...)
@@ -351,21 +351,21 @@ errp(int exitcode, char const *name, char const *fmt, ...)
 	 * Check preconditions (firewall)
 	 */
 	if (exitcode >= 256) {
-		warn(__FUNCTION__, "called with exitcode >= 256: %d", exitcode);
+		warn(__func__, "called with exitcode >= 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (exitcode < 0) {
-		warn(__FUNCTION__, "called with exitcode < 0: %d", exitcode);
+		warn(__func__, "called with exitcode < 0: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (name == NULL) {
-		warn(__FUNCTION__, "called with NULL name");
+		warn(__func__, "called with NULL name");
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "called with NULL fmt");
+		warn(__func__, "called with NULL fmt");
 		fmt = "((NULL fmt))";
 	}
 
@@ -375,7 +375,7 @@ errp(int exitcode, char const *name, char const *fmt, ...)
 	fprintf(stderr, "FATAL: %s: ", name);
 	ret = vfprintf(stderr, fmt, ap);
 	if (ret <= 0) {
-		fprintf(stderr, "[%s vfprintf returned error: %d]", __FUNCTION__, ret);
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
 	}
 	fputc('\n', stderr);
 	fprintf(stderr, "errno[%d]: %s\n", saved_errno, strerror(saved_errno));
@@ -407,7 +407,7 @@ errp(int exitcode, char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      usage_err(usage, 99, __FUNCTION__, "bad foobar: %s", message);
+ *      usage_err(usage, 99, __func__, "bad foobar: %s", message);
  */
 void
 usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ...)
@@ -424,20 +424,20 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
 	 * Check preconditions (firewall)
 	 */
 	if (usage == NULL) {
-		warn(__FUNCTION__, "called with NULL usage");
+		warn(__func__, "called with NULL usage");
 		usage = "((NULL usage))";
 	}
 	if (exitcode < 0 || exitcode >= 256) {
-		warn(__FUNCTION__, "exitcode must be >= 0 && < 256: %d", exitcode);
+		warn(__func__, "exitcode must be >= 0 && < 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (name == NULL) {
-		warn(__FUNCTION__, "called with NULL name");
+		warn(__func__, "called with NULL name");
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "called with NULL fmt");
+		warn(__func__, "called with NULL fmt");
 		fmt = "((NULL fmt))";
 	}
 
@@ -448,7 +448,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
 		fprintf(stderr, "FATAL: %s: ", name);
 		ret = vfprintf(stderr, fmt, ap);
 		if (ret <= 0) {
-			fprintf(stderr, "%s: vfprintf returned error: %d", __FUNCTION__, ret);
+			fprintf(stderr, "%s: vfprintf returned error: %d", __func__, ret);
 		}
 		fputc('\n', stderr);
 	}
@@ -491,7 +491,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
  *
  * Example:
  *
- *      usage_errp(usage, 99, __FUNCTION__, "bad foobar: %s", message);
+ *      usage_errp(usage, 99, __func__, "bad foobar: %s", message);
  */
 void
 usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, ...)
@@ -510,20 +510,20 @@ usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, .
 	 * Check preconditions (firewall)
 	 */
 	if (usage == NULL) {
-		warn(__FUNCTION__, "called with NULL usage");
+		warn(__func__, "called with NULL usage");
 		usage = "((NULL usage))";
 	}
 	if (exitcode < 0 || exitcode >= 256) {
-		warn(__FUNCTION__, "exitcode must be >= 0 && < 256: %d", exitcode);
+		warn(__func__, "exitcode must be >= 0 && < 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
-		warn(__FUNCTION__, "forcing exit code: %d", exitcode);
+		warn(__func__, "forcing exit code: %d", exitcode);
 	}
 	if (name == NULL) {
-		warn(__FUNCTION__, "called with NULL name");
+		warn(__func__, "called with NULL name");
 		name = "((NULL name))";
 	}
 	if (fmt == NULL) {
-		warn(__FUNCTION__, "called with NULL fmt");
+		warn(__func__, "called with NULL fmt");
 		fmt = "((NULL fmt))";
 	}
 
@@ -534,7 +534,7 @@ usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, .
 		fprintf(stderr, "FATAL: %s: ", name);
 		ret = vfprintf(stderr, fmt, ap);
 		if (ret <= 0) {
-			fprintf(stderr, "%s: vfprintf returned error: %d", __FUNCTION__, ret);
+			fprintf(stderr, "%s: vfprintf returned error: %d", __func__, ret);
 		}
 		fputc('\n', stderr);
 		fprintf(stderr, "errno[%d]: %s\n", saved_errno, strerror(saved_errno));

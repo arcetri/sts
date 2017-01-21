@@ -73,20 +73,20 @@ main(int argc, char *argv[])
 	 */
 	program = argv[0];
 	if (argc != 4) {
-		usage_err(usage, 1, __FUNCTION__, "expected 4 argumentsi, found only %d", argc);
+		usage_err(usage, 1, __func__, "expected 4 argumentsi, found only %d", argc);
 	}
 	errno = 0;
 	M = strtol(argv[1], NULL, 0);
 	if (errno != 0) {
-		errp(2, __FUNCTION__, "error in parsing bits argument: %s", argv[1]);
+		errp(2, __func__, "error in parsing bits argument: %s", argv[1]);
 	}
 	template = argv[2];
 	dataInfo = argv[3];
 	if (M < 1) {
-		err(3, __FUNCTION__, "bits argument: %ld must be > 1", M);
+		err(3, __func__, "bits argument: %ld must be > 1", M);
 	}
 	if (M >= B) {
-		err(3, __FUNCTION__, "bits argument: %ld must be < %ld", M, B);
+		err(3, __func__, "bits argument: %ld must be < %ld", M, B);
 	}
 
 	/*
@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 	 */
 	A = calloc(B, sizeof(unsigned int));
 	if (A == NULL) {
-		errp(1, __FUNCTION__, "cannot calloc %ld unsigned int of %ld bytes each", B, sizeof(unsigned int));
+		errp(1, __func__, "cannot calloc %ld unsigned int of %ld bytes each", B, sizeof(unsigned int));
 	}
 
 	/*
@@ -102,11 +102,11 @@ main(int argc, char *argv[])
 	 */
 	fp1 = fopen(template, "w");
 	if (fp1 == NULL) {
-		errp(2, __FUNCTION__, "cannot open for writing, %s", template);
+		errp(2, __func__, "cannot open for writing, %s", template);
 	}
 	fp2 = fopen(dataInfo, "a");
 	if (fp2 == NULL) {
-		errp(2, __FUNCTION__, "cannot open for appending, %s", dataInfo);
+		errp(2, __func__, "cannot open for appending, %s", dataInfo);
 	}
 
 	/*

@@ -33,7 +33,7 @@ const double MAXNUM = (double) 1.79769313486231570814527e308;	// 2**1024*(1-MACH
 #if defined(M_PI)
 #   define PI (M_PI)
 #else
-static const double PI = (double) 3.14159265358979323846264;
+// static const double PI = (double) 3.14159265358979323846264;
 #endif
 
 // Use C defined value of sqrt(2) if available

@@ -582,7 +582,7 @@ sub(BYTE * A, int LA, BYTE * B, int LB)
 
 	tb = calloc(LA, 1);
 	if (tb == NULL) {
-		errp(90, __FUNCTION__, "cannot calloc for LA: %d bytes", LA);
+		errp(90, __func__, "cannot calloc for LA: %d bytes", LA);
 	}
 	memcpy(tb, B, LB);
 	negate(tb, LB);

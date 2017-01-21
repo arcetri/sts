@@ -85,7 +85,7 @@ ApproximateEntropy_init(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(10, __FUNCTION__, "state arg is NULL");
+		err(10, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "init driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -93,11 +93,11 @@ ApproximateEntropy_init(struct state *state)
 		return;
 	}
 	if (state->cSetup != true) {
-		err(10, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
-		    __FUNCTION__, state->testNames[test_num], test_num);
+		err(10, __func__, "test constants not setup prior to calling %s for %s[%d]",
+		    __func__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(10, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
+		err(10, __func__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
 	}
 
@@ -110,7 +110,7 @@ ApproximateEntropy_init(struct state *state)
 	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (m >= (long int) state->c.logn / state->c.log2 - 5) {
-		warn(__FUNCTION__, "disabling test %s[%d]: requires block length(m): %ld >= %d",
+		warn(__func__, "disabling test %s[%d]: requires block length(m): %ld >= %d",
 		     state->testNames[test_num], test_num, m, (long int) state->c.logn / state->c.log2 - 5);
 		state->testVector[test_num] = false;
 		return;
@@ -128,12 +128,12 @@ ApproximateEntropy_init(struct state *state)
 	 * Allocate frequency count C array
 	 */
 	if (m > (BITS_N_LONGINT - 1)) {	// firewall
-		err(10, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
+		err(10, __func__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
 	}
 	state->apen_C_len = (long int) 1 << (m + 1);
 	state->apen_C = malloc(state->apen_C_len * sizeof(state->apen_C[0]));
 	if (state->apen_C == NULL) {
-		errp(10, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for state->apen_C",
+		errp(10, __func__, "cannot malloc of %ld elements of %ld bytes each for state->apen_C",
 		     state->apen_C_len, sizeof(long int));
 	}
 
@@ -188,24 +188,24 @@ ApproximateEntropy_iterate(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(11, __FUNCTION__, "state arg is NULL");
+		err(11, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __func__);
 		return;
 	}
 	if (state->epsilon == NULL) {
-		err(11, __FUNCTION__, "state->epsilon is NULL");
+		err(11, __func__, "state->epsilon is NULL");
 	}
 	if (state->apen_C == NULL) {
-		err(11, __FUNCTION__, "state->apen_C is NULL");
+		err(11, __func__, "state->apen_C is NULL");
 	}
 	if (state->cSetup != true) {
-		err(11, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
-		    __FUNCTION__, state->testNames[test_num], test_num);
+		err(11, __func__, "test constants not setup prior to calling %s for %s[%d]",
+		    __func__, state->testNames[test_num], test_num);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(11, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
+		err(11, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
@@ -240,12 +240,12 @@ ApproximateEntropy_iterate(struct state *state)
 	if (isNegative(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
+		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
-		warn(__FUNCTION__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
+		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
 		     state->curIteration, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
@@ -302,19 +302,19 @@ compute_phi(struct state *state, long int blocksize)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(18, __FUNCTION__, "state arg is NULL");
+		err(18, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
-		err(18, __FUNCTION__, "state->epsilon is NULL");
+		err(18, __func__, "state->epsilon is NULL");
 	}
 	if (blocksize == 0) {
 		return 0.0;
 	}
 	if (blocksize > (BITS_N_LONGINT - 1)) {	// firewall
-		err(18, __FUNCTION__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
+		err(18, __func__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", blocksize, BITS_N_LONGINT - 1);
 	}
 	if (state->apen_C == NULL) {
-		err(18, __FUNCTION__, "state->apen_C is NULL");
+		err(18, __func__, "state->apen_C is NULL");
 	}
 
 	/*
@@ -328,7 +328,7 @@ compute_phi(struct state *state, long int blocksize)
 	 */
 	powLen = (long int) 1 << blocksize;
 	if (powLen > state->apen_C_len) {
-		err(18, __FUNCTION__, "powLen: %ld is too large, "
+		err(18, __func__, "powLen: %ld is too large, "
 				"1 << blockSize: %ld > state->apen_C_len: %ld ", powLen, blocksize, state->apen_C_len);
 	}
 
@@ -417,20 +417,20 @@ ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct Approxi
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(12, __FUNCTION__, "stream arg is NULL");
+		err(12, __func__, "stream arg is NULL");
 	}
 	if (state == NULL) {
-		err(12, __FUNCTION__, "state arg is NULL");
+		err(12, __func__, "state arg is NULL");
 	}
 	if (stat == NULL) {
-		err(12, __FUNCTION__, "stat arg is NULL");
+		err(12, __func__, "stat arg is NULL");
 	}
 	if (state->cSetup != true) {
-		err(12, __FUNCTION__, "test constants not setup prior to calling %s for %s[%d]",
-		    __FUNCTION__, state->testNames[test_num], test_num);
+		err(12, __func__, "test constants not setup prior to calling %s for %s[%d]",
+		    __func__, state->testNames[test_num], test_num);
 	}
 	if (p_value == NON_P_VALUE && stat->success == true) {
-		err(12, __FUNCTION__, "p_value was set to NON_P_VALUE but stat->success == true");
+		err(12, __func__, "p_value was set to NON_P_VALUE but stat->success == true");
 	}
 
 	/*
@@ -538,7 +538,7 @@ ApproximateEntropy_print_p_value(FILE * stream, double p_value)
 	 * Check preconditions (firewall)
 	 */
 	if (stream == NULL) {
-		err(13, __FUNCTION__, "stream arg is NULL");
+		err(13, __func__, "stream arg is NULL");
 	}
 
 	/*
@@ -596,7 +596,7 @@ ApproximateEntropy_print(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(14, __FUNCTION__, "state arg is NULL");
+		err(14, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_HIGH, "Print driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -608,22 +608,22 @@ ApproximateEntropy_print(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(14, __FUNCTION__,
+		err(14, __func__,
 		    "print driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(14, __FUNCTION__,
+		err(14, __func__,
 		    "print driver interface for %s[%d] called with p_val count: %ld != %ld*%d=%ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->datatxt_fmt[test_num] == NULL) {
-		err(14, __FUNCTION__, "format for data0*.txt filename is NULL");
+		err(14, __func__, "format for data0*.txt filename is NULL");
 	}
 	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(14, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(14, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -662,7 +662,7 @@ ApproximateEntropy_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = ApproximateEntropy_print_stat(stats, state, stat, p_value);
 		if (ok == false) {
-			errp(14, __FUNCTION__, "error in writing to %s", stats_txt);
+			errp(14, __func__, "error in writing to %s", stats_txt);
 		}
 
 		/*
@@ -671,7 +671,7 @@ ApproximateEntropy_print(struct state *state)
 		errno = 0;	// paranoia
 		ok = ApproximateEntropy_print_p_value(results, p_value);
 		if (ok == false) {
-			errp(14, __FUNCTION__, "error in writing to %s", results_txt);
+			errp(14, __func__, "error in writing to %s", results_txt);
 		}
 	}
 
@@ -681,12 +681,12 @@ ApproximateEntropy_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(stats);
 	if (io_ret != 0) {
-		errp(14, __FUNCTION__, "error flushing to: %s", stats_txt);
+		errp(14, __func__, "error flushing to: %s", stats_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(stats);
 	if (io_ret != 0) {
-		errp(14, __FUNCTION__, "error closing: %s", stats_txt);
+		errp(14, __func__, "error closing: %s", stats_txt);
 	}
 	free(stats_txt);
 	stats_txt = NULL;
@@ -697,12 +697,12 @@ ApproximateEntropy_print(struct state *state)
 	errno = 0;		// paranoia
 	io_ret = fflush(results);
 	if (io_ret != 0) {
-		errp(14, __FUNCTION__, "error flushing to: %s", results_txt);
+		errp(14, __func__, "error flushing to: %s", results_txt);
 	}
 	errno = 0;		// paranoia
 	io_ret = fclose(results);
 	if (io_ret != 0) {
-		errp(14, __FUNCTION__, "error closing: %s", results_txt);
+		errp(14, __func__, "error closing: %s", results_txt);
 	}
 	free(results_txt);
 	results_txt = NULL;
@@ -720,7 +720,7 @@ ApproximateEntropy_print(struct state *state)
 			snprintf_ret = snprintf(data_filename, BUFSIZ, state->datatxt_fmt[test_num], j + 1);
 			data_filename[BUFSIZ] = '\0';	// paranoia
 			if (snprintf_ret <= 0 || snprintf_ret >= BUFSIZ || errno != 0) {
-				errp(14, __FUNCTION__, "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ,
+				errp(14, __func__, "snprintf failed for %d bytes for data%03ld.txt, returned: %d", BUFSIZ,
 				     j + 1, snprintf_ret);
 			}
 
@@ -748,7 +748,7 @@ ApproximateEntropy_print(struct state *state)
 					errno = 0;	// paranoia
 					ok = ApproximateEntropy_print_p_value(data, p_value);
 					if (ok == false) {
-						errp(14, __FUNCTION__, "error in writing to %s", data_txt);
+						errp(14, __func__, "error in writing to %s", data_txt);
 					}
 
 				}
@@ -760,12 +760,12 @@ ApproximateEntropy_print(struct state *state)
 			errno = 0;	// paranoia
 			io_ret = fflush(data);
 			if (io_ret != 0) {
-				errp(14, __FUNCTION__, "error flushing to: %s", data_txt);
+				errp(14, __func__, "error flushing to: %s", data_txt);
 			}
 			errno = 0;	// paranoia
 			io_ret = fclose(data);
 			if (io_ret != 0) {
-				errp(14, __FUNCTION__, "error closing: %s", data_txt);
+				errp(14, __func__, "error closing: %s", data_txt);
 			}
 			free(data_txt);
 			data_txt = NULL;
@@ -809,10 +809,10 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(15, __FUNCTION__, "state arg is NULL");
+		err(15, __func__, "state arg is NULL");
 	}
 	if (freqPerBin == NULL) {
-		err(15, __FUNCTION__, "freqPerBin arg is NULL");
+		err(15, __func__, "freqPerBin arg is NULL");
 	}
 
 	/*
@@ -894,7 +894,7 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 		errno = 0;                // paranoia
 		io_ret = fflush(state->finalRept);
 		if (io_ret != 0) {
-			errp(15, __FUNCTION__, "error flushing to: %s", state->finalReptPath);
+			errp(15, __func__, "error flushing to: %s", state->finalReptPath);
 		}
 
 	} else {
@@ -959,7 +959,7 @@ ApproximateEntropy_metrics(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(16, __FUNCTION__, "state arg is NULL");
+		err(16, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "metrics driver interface for %s[%d] called when test vector was false", state->testNames[test_num],
@@ -967,21 +967,21 @@ ApproximateEntropy_metrics(struct state *state)
 		return;
 	}
 	if (state->partitionCount[test_num] < 1) {
-		err(16, __FUNCTION__,
+		err(16, __func__,
 		    "metrics driver interface for %s[%d] called with state.partitionCount: %d < 0",
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(16, __FUNCTION__,
+		err(16, __func__,
 		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
-		err(16, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
+		err(16, __func__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
 	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
-		err(16, __FUNCTION__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
+		err(16, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
 		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
 	}
 
@@ -990,7 +990,7 @@ ApproximateEntropy_metrics(struct state *state)
 	 */
 	freqPerBin = malloc(state->tp.uniformity_bins * sizeof(freqPerBin[0]));
 	if (freqPerBin == NULL) {
-		errp(16, __FUNCTION__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
+		errp(16, __func__, "cannot malloc of %ld elements of %ld bytes each for freqPerBin",
 		     state->tp.uniformity_bins, sizeof(long int));
 	}
 
@@ -1098,10 +1098,10 @@ ApproximateEntropy_destroy(struct state *state)
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(17, __FUNCTION__, "state arg is NULL");
+		err(17, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
-		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __FUNCTION__);
+		dbg(DBG_LOW, "destroy function[%d] %s called when test vector was false", test_num, __func__);
 		return;
 	}
 
