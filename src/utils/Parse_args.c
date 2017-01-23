@@ -432,7 +432,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:cnf:F:j:m:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bst:g:P:pi:I:Ow:cnf:F:j:m:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
