@@ -1738,7 +1738,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		num_1s = 0;
 		bitsRead = 0;
 		for (j = 0; j < state->tp.n; j++) {
-			io_ret = fscanf(state->streamFile, "%d", &bit);
+			io_ret = fscanf(state->streamFile, "%1d", &bit);
 			if (io_ret == EOF) {
 				warn(__func__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
 				     bitsRead);
