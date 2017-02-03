@@ -133,7 +133,7 @@ lcg(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(DUNIF);
@@ -179,7 +179,7 @@ quadRes1(struct state *state)
 			memset(x, 0x00, 128);
 			ModMult(x, g, 64, g, 64, p, 64);
 			memcpy(g, x + 64, 64);
-			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -196,7 +196,7 @@ quadRes1(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -247,7 +247,7 @@ quadRes2(struct state *state)
 			Mult(x, t1, 65, g, 64);	/* x(2x+3) */
 			add(x, 129, One, 1);	/* x(2x+3)+1 */
 			memcpy(g, x + 65, 64);
-			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -264,7 +264,7 @@ quadRes2(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -306,7 +306,7 @@ cubicRes(struct state *state)
 			Mult(tmp, g, 64, g, 64);
 			Mult(x, tmp, 128, g, 64);	// Don't need to mod by 2^512, just take low 64 bytes
 			memcpy(g, x + 128, 64);
-			done = convertToBits(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -323,7 +323,7 @@ cubicRes(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -388,7 +388,7 @@ exclusiveOR(struct state *state)
 			if (state->runMode == MODE_WRITE_ONLY) {
 				write_sequence(state);
 			} else {
-				nist_test_suite(state);
+				runStatisticalTests(state);
 			}
 			num_0s = 0;
 			num_1s = 0;
@@ -436,7 +436,7 @@ modExp(struct state *state)
 		do {
 			memset(x, 0x00, 128);
 			ModExp(x, g, 64, y, 20, p, 64);	/* NOTE: g must be less than p */
-			done = convertToBits(state, x, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, x, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			memcpy(y, x + 44, 20);
 		} while (done == false);
 
@@ -454,7 +454,7 @@ modExp(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -536,7 +536,7 @@ bbs(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -593,7 +593,7 @@ micali_schnorr(struct state *state)
 			for (j = 0; j < 3; j++) {
 				bshl(Tail, 105);
 			}
-			done = convertToBits(state, Tail, k, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, Tail, k, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			memset(X, 0x00, 128);
 			memcpy(X + 104, Y, 24);
 			for (j = 0; j < 5; j++) {
@@ -615,7 +615,7 @@ micali_schnorr(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);
@@ -774,7 +774,7 @@ SHA1(struct state *state)
 #endif
 			// End: SHA Steps A-E
 
-			done = convertToBits(state, G, 160, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, G, 160, state->tp.n, &num_0s, &num_1s, &bitsRead);
 			add(Xkey, 20, G, 20);
 			add(Xkey, 20, One, 1);
 		} while (done == false);
@@ -793,7 +793,7 @@ SHA1(struct state *state)
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			nist_test_suite(state);
+			runStatisticalTests(state);
 		}
 	}
 	free(state->epsilon);

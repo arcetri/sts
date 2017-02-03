@@ -473,7 +473,7 @@ main(int argc, char *argv[])
 	/*
 	 * parse args
 	 */
-	Parse_args(&s, argc, argv);
+	parse_args(&s, argc, argv);
 
 	/*
 	 * create dynamic array

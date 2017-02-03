@@ -498,6 +498,6 @@ extern void print(struct state *state);
 extern void metrics(struct state *state);
 extern void destroy(struct state *state);
 
-extern void Parse_args(struct state *state, int argc, char *argv[]);
+extern void parse_args(struct state *state, int argc, char **argv);
 
 #endif				/* DEFS_H */

@@ -46,12 +46,10 @@ extern int displayGeneratorOptions(void);
 extern void generatorOptions(struct state *state);
 extern void chooseTests(struct state *state);
 extern void fixParameters(struct state *state);
-extern void fileBasedBitStreams(struct state *state);
-extern void readHexDigitsInBinaryFormat(struct state *state);
-extern bool convertToBits(struct state *state, BYTE * x, long int xBitLength, long int bitsNeeded, long int *num_0s,
-			  long int *num_1s, long int *bitsRead);
+extern bool copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bitsNeeded, long int *num_0s,
+			      long int *num_1s, long int *bitsRead);
 extern void invokeTestSuite(struct state *state);
-extern void nist_test_suite(struct state *state);
+extern void runStatisticalTests(struct state *state);
 extern void createDirectoryTree(struct state *state);
 extern void write_sequence(struct state *state);
 extern void print_option_summary(struct state *state, char *where);

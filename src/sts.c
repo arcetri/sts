@@ -284,7 +284,7 @@
 
 // Exit codes: 5 to 9
 // NOTE: This code also does an exit(0) on normal completion
-// NOTE: 0-4 is used in Parse_args.c
+// NOTE: 0-4 is used in parse_args.c
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -314,7 +314,7 @@ main(int argc, char *argv[])
 	/*
 	 * Set default test parameters and parse command line
 	 */
-	Parse_args(&run_state, argc, argv);
+	parse_args(&run_state, argc, argv);
 
 	/*
 	 * Initialize all active tests

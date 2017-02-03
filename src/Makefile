@@ -74,7 +74,7 @@ CSRC= sts.c tests/frequency.c tests/blockFrequency.c \
 	tests/randomExcursionsVariant.c tests/linearComplexity.c \
 	utils/dfft.c utils/cephes.c utils/matrix.c \
 	utils/utilities.c utils/generators.c utils/genutils.c \
-	utils/Parse_args.c utils/debug.c utils/dyn_alloc.c driver.c
+	utils/parse_args.c utils/debug.c utils/dyn_alloc.c driver.c
 
 HSRC= utils/cephes.h utils/config.h constants/defs.h \
 	utils/dfft.h constants/externs.h utils/generators.h utils/genutils.h \
@@ -94,7 +94,7 @@ LEGACY_ONLY_OBJ= utils/genutils_legacy.o utils/dyn_alloc_legacy.o \
       tests/randomExcursionsVariant_legacy.o tests/linearComplexity_legacy.o \
       utils/cephes_legacy.o utils/matrix_legacy.o \
       utils/utilities_legacy.o utils/generators_legacy.o \
-      utils/Parse_args_legacy.o utils/debug_legacy.o driver_legacy.o
+      utils/parse_args_legacy.o utils/debug_legacy.o driver_legacy.o
 
 MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
       sts.o tests/frequency.o tests/blockFrequency.o \
@@ -106,7 +106,7 @@ MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
       tests/randomExcursionsVariant.o tests/linearComplexity.o \
       utils/cephes.o utils/matrix.o \
       utils/utilities.o utils/generators.o \
-      utils/Parse_args.o utils/debug.o driver.o
+      utils/parse_args.o utils/debug.o driver.o
 
 OBJ_LEGACY= ${LEGACY_ONLY_OBJ}
 
@@ -156,11 +156,11 @@ sts.o: sts.c
 sts_legacy.o: sts.c
 	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT sts.c
 
-utils/Parse_args.o: utils/Parse_args.c
-	${CC} -c -o $@ ${CFLAGS} utils/Parse_args.c
+utils/parse_args.o: utils/parse_args.c
+	${CC} -c -o $@ ${CFLAGS} utils/parse_args.c
 
-utils/Parse_args_legacy.o: utils/Parse_args.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/Parse_args.c
+utils/parse_args_legacy.o: utils/parse_args.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/parse_args.c
 
 utils/debug.o: utils/debug.c
 	${CC} -c -o $@ ${CFLAGS} utils/debug.c
@@ -482,7 +482,7 @@ utils/utilities.o: utils/stat_fncs.h utils/debug.h
 utils/generators.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/generators.h
 utils/generators.o: utils/genutils.h utils/debug.h
 utils/genutils.o: utils/genutils.h utils/config.h utils/debug.h
-utils/Parse_args.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
+utils/parse_args.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
 utils/debug.o: utils/debug.h constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
 utils/dyn_alloc.o: utils/dyn_alloc.h utils/debug.h
 driver.o: constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h utils/stat_fncs.h

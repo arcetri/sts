@@ -61,7 +61,9 @@
 /*
  * Forward static function declarations
  */
-static void readBinaryDigitsInASCIIFormat(struct state *state);
+static void handleFileBasedBitStreams(struct state *state);
+static void testBitsASCIIInput(struct state *state);
+static void testBitsBinaryInput(struct state *state);
 static void getTimestamp(char *buf, size_t len);
 
 
@@ -147,7 +149,6 @@ getNumber(FILE * input, FILE * output)
  * This function does not return on read errors.  Entering a non-numeric line
  * results an error message on output and another read from input.
  */
-
 double
 getDouble(FILE * input, FILE * output)
 {
@@ -217,7 +218,6 @@ getDouble(FILE * input, FILE * output)
  *
  * This function does not return on error.
  */
-
 long int
 getNumberOrDie(FILE * stream)
 {
@@ -1604,7 +1604,171 @@ fixParameters(struct state *state)
 
 
 void
-fileBasedBitStreams(struct state *state)
+invokeTestSuite(struct state *state)
+{
+	int io_ret;		// I/O return status
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(228, __func__, "state arg is NULL");
+	}
+
+	/*
+	 * Case: prep for writing to the datafile
+	 */
+	if (state->runMode == MODE_WRITE_ONLY) {
+
+		/*
+		 * Allocate the write buffer
+		 */
+		switch (state->dataFormat) {
+			case FORMAT_RAW_BINARY:
+				// Compression BITS_N_BYTE:1
+				state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
+				if (state->tmpepsilon == NULL) {
+					errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
+						 (state->tp.n / BITS_N_BYTE) + 1, sizeof(state->tmpepsilon[0]));
+				}
+				state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
+				break;
+
+			case FORMAT_ASCII_01:
+				state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
+				if (state->tmpepsilon == NULL) {
+					errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
+						 state->tp.n + 1, sizeof(state->tmpepsilon[0]));
+				}
+				state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
+				break;
+
+			default:
+				err(228, __func__, "Invalid format");
+				break;
+		}
+	}
+
+	/*
+	 * Announce test if in legacy output mode
+	 */
+	if (state->legacy_output == true) {
+		io_ret = fprintf(state->freqFile,
+				 "________________________________________________________________________________\n\n");
+		if (io_ret <= 0) {
+			errp(228, __func__, "error in writing to %s", state->freqFilePath);
+		}
+
+		if (state->generator == 0) {
+			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+							 state->randomDataPath, state->tp.alpha);
+			if (io_ret <= 0) {
+				errp(228, __func__, "error in writing to %s", state->freqFilePath);
+			}
+		} else {
+			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+							 state->generatorDir[state->generator], state->tp.alpha);
+			if (io_ret <= 0) {
+				errp(228, __func__, "error in writing to %s", state->freqFilePath);
+			}
+		}
+		io_ret = fprintf(state->freqFile,
+				 "________________________________________________________________________________\n\n");
+		if (io_ret <= 0) {
+			errp(228, __func__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(228, __func__, "error flushing to %s", state->freqFilePath);
+		}
+	}
+
+	/*
+	 * Test data from a file or from an internal generator
+	 * NOTE: Introduce new pseudo random number generators in this switch
+	 */
+	switch (state->generator) {
+
+		case GENERATOR_FROM_FILE:
+			handleFileBasedBitStreams(state);
+			break;
+		case GENERATOR_LCG:
+			lcg(state);
+			break;
+		case GENERATOR_QCG1:
+			quadRes1(state);
+			break;
+		case GENERATOR_QCG2:
+			quadRes2(state);
+			break;
+		case GENERATOR_CCG:
+			cubicRes(state);
+			break;
+		case GENERATOR_XOR:
+			exclusiveOR(state);
+			break;
+		case GENERATOR_MODEXP:
+			modExp(state);
+			break;
+		case GENERATOR_BBS:
+			bbs(state);
+			break;
+		case GENERATOR_MS:
+			micali_schnorr(state);
+			break;
+		case GENERATOR_SHA1:
+			SHA1(state);
+			break;
+
+		default:
+			err(228, __func__, "Error in invokeTestSuite!");
+			break;
+	}
+
+	/*
+	 * -m w: only write generated data to -f randata
+	 *
+	 * Data already written, nothing else do to.
+	 */
+	if (state->runMode == MODE_WRITE_ONLY) {
+
+		/*
+		 * Announce end of write only run
+		 */
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "Exiting, completed writes to %s", state->randomDataPath);
+		} else {
+			printf("Exiting completed writes to %s\n", state->randomDataPath);
+			fflush(stdout);
+		}
+		destroy(state);
+		exit(0);
+	}
+
+	/*
+         * -m i: iterate only, write state to -s statePath
+         *
+         * State already written, nothing else do to.
+         */
+	else if (state->runMode == MODE_ITERATE_ONLY) {
+
+		/*
+		 * Announce end of iteration only run
+		 */
+		if (state->batchmode == true) {
+			dbg(DBG_LOW, "Exiting iterate only");
+		} else {
+			printf("Exiting iterate only\n");
+			fflush(stdout);
+		}
+		destroy(state);
+		exit(0);
+	}
+}
+
+
+static void
+handleFileBasedBitStreams(struct state *state)
 {
 	long int byteCount;	// byte count for a number of consecutive bits, rounded up
 	int seekError;		// error during fseek()
@@ -1639,7 +1803,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Parse data
 		 */
-		readBinaryDigitsInASCIIFormat(state);
+		testBitsASCIIInput(state);
 
 		/*
 		 * Close file
@@ -1680,7 +1844,7 @@ fileBasedBitStreams(struct state *state)
 		/*
 		 * Parse data
 		 */
-		readHexDigitsInBinaryFormat(state);
+		testBitsBinaryInput(state);
 
 		/*
 		 * Close file
@@ -1704,8 +1868,17 @@ fileBasedBitStreams(struct state *state)
 }
 
 
+/*
+ * testBitsASCIIInput - read bits from the streamFile and save them into epsilon bit array
+ *
+ * given:
+ *      state           // pointer to run state
+ *
+ * Given the open steam streamFile, from file state->randomDataPath, convert its ASCII characters
+ * into 'bits' for the epsilon bit array.
+ */
 static void
-readBinaryDigitsInASCIIFormat(struct state *state)
+testBitsASCIIInput(struct state *state)
 {
 	long int i;
 	long int j;
@@ -1771,7 +1944,7 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 		/*
 		 * Perform statistical tests for this iteration
 		 */
-		nist_test_suite(state);
+		runStatisticalTests(state);
 	}
 
 	dbg(DBG_LOW, "End of iterate phase\n");
@@ -1780,16 +1953,16 @@ readBinaryDigitsInASCIIFormat(struct state *state)
 
 
 /*
- * readHexDigitsInBinaryFormat - read bits from the streamFile and convert them into epsilon bit array
+ * testBitsBinaryInput - read bits from the streamFile and convert them into epsilon bit array
  *
  * given:
  *      state           // pointer to run state
  *
- * Given the open steam streamFile, form file state->randomDataPath, convert them into 'bits'
+ * Given the open steam streamFile, from file state->randomDataPath, convert its bytes into 'bits'
  * found in the epsilon bit array.
  */
-void
-readHexDigitsInBinaryFormat(struct state *state)
+static void
+testBitsBinaryInput(struct state *state)
 {
 	long int num_0s;	// Count of 0 bits processed
 	long int num_1s;	// Count of 1 bits processed
@@ -1834,7 +2007,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 			/*
 			 * Add bits of the octet to the epsilon bit stream
 			 */
-			done = convertToBits(state, &byte, BITS_N_BYTE, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, &byte, BITS_N_BYTE, state->tp.n, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -1854,7 +2027,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 		/*
 		 * Perform statistical tests for this iteration
 		 */
-		nist_test_suite(state);
+		runStatisticalTests(state);
 
 	}
 	dbg(DBG_LOW, "End of iterate phase\n");
@@ -1863,7 +2036,7 @@ readHexDigitsInBinaryFormat(struct state *state)
 
 
 /*
- * convertToBits - convert binary bytes into the end of an epsilon bit array
+ * copyBitsToEpsilon - convert binary bytes into the end of an epsilon bit array
  *
  * given:
  *      state           // pointer to run state
@@ -1879,8 +2052,8 @@ readHexDigitsInBinaryFormat(struct state *state)
  *      false ==> we have NOT converted enough bits, yet
  */
 bool
-convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bitsNeeded, long int *num_0s, long int *num_1s,
-	      long int *bitsRead)
+copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bitsNeeded, long int *num_0s, long int *num_1s,
+		  long int *bitsRead)
 {
 	long int i;
 	long int j;
@@ -1927,175 +2100,6 @@ convertToBits(struct state * state, BYTE * x, long int xBitLength, long int bits
 	}
 
 	return false;
-}
-
-
-void
-invokeTestSuite(struct state *state)
-{
-	int io_ret;		// I/O return status
-
-	/*
-	 * Check preconditions (firewall)
-	 */
-	if (state == NULL) {
-		err(228, __func__, "state arg is NULL");
-	}
-
-	/*
-	 * Case: prep for writing to the datafile
-	 */
-	if (state->runMode == MODE_WRITE_ONLY) {
-
-		/*
-		 * Allocate the write buffer
-		 */
-		switch (state->dataFormat) {
-		case FORMAT_RAW_BINARY:
-			// Compression BITS_N_BYTE:1
-			state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
-			if (state->tmpepsilon == NULL) {
-				errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
-				     (state->tp.n / BITS_N_BYTE) + 1, sizeof(state->tmpepsilon[0]));
-			}
-			state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
-			break;
-
-		case FORMAT_ASCII_01:
-			state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
-			if (state->tmpepsilon == NULL) {
-				errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
-				     state->tp.n + 1, sizeof(state->tmpepsilon[0]));
-			}
-			state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
-			break;
-
-		default:
-			err(228, __func__, "Invalid format");
-			break;
-		}
-	}
-
-	/*
-	 * Case: prep for reading from a file or from a generator
-	 */
-	else {
-		/*
-		 * Announce test if in legacy output mode
-		 */
-		if (state->legacy_output == true) {
-			io_ret = fprintf(state->freqFile,
-					 "________________________________________________________________________________\n\n");
-			if (io_ret <= 0) {
-				errp(228, __func__, "error in writing to %s", state->freqFilePath);
-			}
-
-			if (state->generator == 0) {
-				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-						 state->randomDataPath, state->tp.alpha);
-				if (io_ret <= 0) {
-					errp(228, __func__, "error in writing to %s", state->freqFilePath);
-				}
-			} else {
-				io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-						 state->generatorDir[state->generator], state->tp.alpha);
-				if (io_ret <= 0) {
-					errp(228, __func__, "error in writing to %s", state->freqFilePath);
-				}
-			}
-			io_ret = fprintf(state->freqFile,
-					 "________________________________________________________________________________\n\n");
-			if (io_ret <= 0) {
-				errp(228, __func__, "error in writing to %s", state->freqFilePath);
-			}
-			io_ret = fflush(state->freqFile);
-			if (io_ret != 0) {
-				errp(228, __func__, "error flushing to %s", state->freqFilePath);
-			}
-		}
-	}
-
-	/*
-	 * Test data from a file or from an internal generator
-	 * NOTE: Introduce new pseudo random number generators in this switch
-	 */
-	switch (state->generator) {
-
-	case GENERATOR_FROM_FILE:
-		fileBasedBitStreams(state);
-		break;
-	case GENERATOR_LCG:
-		lcg(state);
-		break;
-	case GENERATOR_QCG1:
-		quadRes1(state);
-		break;
-	case GENERATOR_QCG2:
-		quadRes2(state);
-		break;
-	case GENERATOR_CCG:
-		cubicRes(state);
-		break;
-	case GENERATOR_XOR:
-		exclusiveOR(state);
-		break;
-	case GENERATOR_MODEXP:
-		modExp(state);
-		break;
-	case GENERATOR_BBS:
-		bbs(state);
-		break;
-	case GENERATOR_MS:
-		micali_schnorr(state);
-		break;
-	case GENERATOR_SHA1:
-		SHA1(state);
-		break;
-
-	default:
-		err(228, __func__, "Error in invokeTestSuite!");
-		break;
-	}
-
-	/*
-	 * -m w: only write generated data to -f randata
-	 *
-	 * Data already written, nothing else do to.
-	 */
-	if (state->runMode == MODE_WRITE_ONLY) {
-
-		/*
-		 * Announce end of write only run
-		 */
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "Exiting, completed writes to %s", state->randomDataPath);
-		} else {
-			printf("Exiting completed writes to %s\n", state->randomDataPath);
-			fflush(stdout);
-		}
-		destroy(state);
-		exit(0);
-	}
-
-	/*
-	 * -m i: iterate only, write state to -s statePath
-	 *
-	 * State already written, nothing else do to.
-	 */
-	else if (state->runMode == MODE_ITERATE_ONLY) {
-
-		/*
-		 * Announce end of iteration only run
-		 */
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "Exiting iterate only");
-		} else {
-			printf("Exiting iterate only\n");
-			fflush(stdout);
-		}
-		destroy(state);
-		exit(0);
-	}
 }
 
 
@@ -2151,13 +2155,13 @@ getTimestamp(char *buf, size_t len)
 
 
 /*
- * nist_test_suite - run an iteration for all enabled tests
+ * runStatisticalTests - run an iteration for all enabled tests
  *
  * given:
  *      state           // run state and which tests are enabled
  */
 void
-nist_test_suite(struct state *state)
+runStatisticalTests(struct state *state)
 {
 	char buf[BUFSIZ + 1];	// time string buffer
 
@@ -2177,7 +2181,7 @@ nist_test_suite(struct state *state)
 	}
 
 	/*
-	 * Perform iteration on all enabled tests
+	 * Perform one iteration on all enabled tests
 	 */
 	iterate(state);
 

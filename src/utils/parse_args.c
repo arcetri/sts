@@ -1,4 +1,4 @@
-// Parse_args.c
+// parse_args.c
 // Parse command line arguments for batch automation of sts.c
 
 /*
@@ -375,7 +375,7 @@ static const char * const usage =
 
 
 /*
- * Parse_args - parse command line arguments and setup run state
+ * parse_args - parse command line arguments and setup run state
  *
  * given:
  *      state           // run state it initialize and set according to command line
@@ -385,7 +385,7 @@ static const char * const usage =
  * This function does not return on error.
  */
 void
-Parse_args(struct state *state, int argc, char *argv[])
+parse_args(struct state *state, int argc, char **argv)
 {
 	int option;		// getopt() parsed option
 	extern char *optarg;	// Parsed option argument
@@ -432,7 +432,7 @@ Parse_args(struct state *state, int argc, char *argv[])
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bst:g:P:pi:I:Ow:cnf:F:j:m:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
