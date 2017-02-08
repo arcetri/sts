@@ -180,7 +180,7 @@ BlockFrequency_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-BlockFrequency_iterate(struct state *state)
+BlockFrequency_iterate(struct thread_state *thread_state)
 {
 	struct BlockFrequency_private_stats stat;	// Stats for this iteration
 	long int M;		// Length of each block to be tested
@@ -197,6 +197,10 @@ BlockFrequency_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(21, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(21, __func__, "state arg is NULL");
 	}
@@ -206,6 +210,9 @@ BlockFrequency_iterate(struct state *state)
 	}
 	if (state->epsilon == NULL) {
 		err(21, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(21, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
 		err(21, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
@@ -230,7 +237,7 @@ BlockFrequency_iterate(struct state *state)
 		 */
 		blockSum = 0;
 		for (j = 0; j < M; j++) {
-			if (state->epsilon[j + i * M]) {
+			if (state->epsilon[thread_state->thread_id][j + i * M]) {
 				blockSum++;
 			}
 		}
@@ -254,6 +261,13 @@ BlockFrequency_iterate(struct state *state)
 	p_value = cephes_igamc(N / 2.0, stat.chi_squared / 2.0);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -262,12 +276,12 @@ BlockFrequency_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;	        // FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;	        // FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -293,6 +307,13 @@ BlockFrequency_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -987,7 +1008,7 @@ BlockFrequency_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1047,7 +1068,7 @@ BlockFrequency_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

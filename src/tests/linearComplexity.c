@@ -87,6 +87,7 @@ LinearComplexity_init(struct state *state)
 	long int n;		// Length of a single bit stream
 	long int M;		// Length of each block to be tested
 	long int N;		// Number of independent M-bit blocks the bit stream is partitioned into
+	long int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -149,22 +150,39 @@ LinearComplexity_init(struct state *state)
 	}
 
 	/*
-	 * Allocate special Linear Feedback Shift Register arrays
+	 * Allocate special Linear Feedback Shift Register arrays for each thread
 	 */
-	state->linear_b = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_b[0]));
+	state->linear_b = malloc((size_t) state->numberOfThreads * sizeof(*state->linear_b));
 	if (state->linear_b == NULL) {
-		errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_b",
-		     state->tp.linearComplexitySequenceLength, sizeof(BitSequence));
+		errp(100, __func__, "cannot malloc for linear_b: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->linear_b));
 	}
-	state->linear_c = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_c[0]));
+	state->linear_c = malloc((size_t) state->numberOfThreads * sizeof(*state->linear_c));
 	if (state->linear_c == NULL) {
-		errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_c",
-		     state->tp.linearComplexitySequenceLength, sizeof(BitSequence));
+		errp(100, __func__, "cannot malloc for linear_c: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->linear_c));
 	}
-	state->linear_t = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_t[0]));
-	if (state->linear_t == NULL) {
-		errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_t",
-		     state->tp.linearComplexitySequenceLength, sizeof(BitSequence));
+	state->linear_t = malloc((size_t) state->numberOfThreads * sizeof(*state->linear_t));
+	if (state->linear_b == NULL) {
+		errp(100, __func__, "cannot malloc for linear_t: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->linear_t));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->linear_b[i] = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_b[i][0]));
+		if (state->linear_b[i] == NULL) {
+			errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_b[%ld]",
+			     state->tp.linearComplexitySequenceLength, sizeof(state->linear_b[i][0]), i);
+		}
+		state->linear_c[i] = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_c[i][0]));
+		if (state->linear_c[i] == NULL) {
+			errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_c[%ld]",
+			     state->tp.linearComplexitySequenceLength, sizeof(state->linear_c[i][0]), i);
+		}
+		state->linear_t[i] = malloc(state->tp.linearComplexitySequenceLength * sizeof(state->linear_t[i][0]));
+		if (state->linear_t[i] == NULL) {
+			errp(100, __func__, "cannot malloc of %ld elements of %ld bytes each for state->linear_t[%ld]",
+			     state->tp.linearComplexitySequenceLength, sizeof(state->linear_t[i][0]), i);
+		}
 	}
 
 	/*
@@ -207,7 +225,7 @@ LinearComplexity_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-LinearComplexity_iterate(struct state *state)
+LinearComplexity_iterate(struct thread_state *thread_state)
 {
 	struct LinearComplexity_private_stats stat;	// Stats for this iteration
 	long int M;		// Length of each block to be tested
@@ -227,6 +245,10 @@ LinearComplexity_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(101, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(101, __func__, "state arg is NULL");
 	}
@@ -237,14 +259,26 @@ LinearComplexity_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(101, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(101, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->linear_b == NULL) {
 		err(101, __func__, "state->linear_b is NULL");
+	}
+	if (state->linear_b[thread_state->thread_id] == NULL) {
+		err(101, __func__, "state->linear_b[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->linear_c == NULL) {
 		err(101, __func__, "state->linear_c is NULL");
 	}
+	if (state->linear_c[thread_state->thread_id] == NULL) {
+		err(101, __func__, "state->linear_c[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->linear_t == NULL) {
 		err(101, __func__, "state->linear_t is NULL");
+	}
+	if (state->linear_t[thread_state->thread_id] == NULL) {
+		err(101, __func__, "state->linear_t[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
 		err(101, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
@@ -274,10 +308,10 @@ LinearComplexity_iterate(struct state *state)
 		/*
 		 * Sub-step 2: Zeroize the two arrays b and c and set b[0] and c[0] to 1
 		 */
-		memset(state->linear_b, 0, M * sizeof(state->linear_b[0]));
-		memset(state->linear_c, 0, M * sizeof(state->linear_c[0]));
-		state->linear_c[0] = 1;
-		state->linear_b[0] = 1;
+		memset(state->linear_b[thread_state->thread_id], 0, M * sizeof(state->linear_b[thread_state->thread_id][0]));
+		memset(state->linear_c[thread_state->thread_id], 0, M * sizeof(state->linear_c[thread_state->thread_id][0]));
+		state->linear_c[thread_state->thread_id][0] = 1;
+		state->linear_b[thread_state->thread_id][0] = 1;
 
 		/*
 		 * Sub-step 3: initialize L and m to their initial values
@@ -294,9 +328,10 @@ LinearComplexity_iterate(struct state *state)
 			/*
 			 * Sub-step 4a: set the discrepancy
 			 */
-			d = (int) state->epsilon[i * M + j];
+			d = (int) state->epsilon[thread_state->thread_id][i * M + j];
 			for (k = 1; k <= L; k++) {
-				d += state->linear_c[k] * state->epsilon[i * M + j - k];
+				d += state->linear_c[thread_state->thread_id][k] *
+						state->epsilon[thread_state->thread_id][i * M + j - k];
 			}
 
 			d = d % 2;
@@ -305,13 +340,16 @@ LinearComplexity_iterate(struct state *state)
 				/*
 				 * Sub-step 4b: let t be a copy of c
 				 */
-				memcpy(state->linear_t, state->linear_c, M * sizeof(state->linear_t[0]));
+				memcpy(state->linear_t[thread_state->thread_id], state->linear_c[thread_state->thread_id],
+				       M * sizeof(state->linear_t[thread_state->thread_id][0]));
 
 				/*
 				 * Sub-step 4c: update c array
 				 */
 				for (k = j - m; k < M; k++) {
-					state->linear_c[k] = (BitSequence) ((state->linear_c[k] + state->linear_b[k - j + m]) % 2);
+					state->linear_c[thread_state->thread_id][k] =
+							(BitSequence) ((state->linear_c[thread_state->thread_id][k] +
+									state->linear_b[thread_state->thread_id][k - j + m]) % 2);
 				}
 
 				/*
@@ -320,7 +358,8 @@ LinearComplexity_iterate(struct state *state)
 				if (L <= j / 2) {
 					L = j + 1 - L;
 					m = j;
-					memcpy(state->linear_b, state->linear_t, M * sizeof(state->linear_b[0]));
+					memcpy(state->linear_b[thread_state->thread_id], state->linear_t[thread_state->thread_id],
+					       M * sizeof(state->linear_b[thread_state->thread_id][0]));
 				}
 			}
 		}
@@ -367,6 +406,13 @@ LinearComplexity_iterate(struct state *state)
 	p_value = cephes_igamc(K_LINEARCOMPLEXITY / 2.0, stat.chi2 / 2.0);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -375,12 +421,12 @@ LinearComplexity_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -406,6 +452,13 @@ LinearComplexity_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1141,7 +1194,7 @@ LinearComplexity_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1161,6 +1214,8 @@ LinearComplexity_metrics(struct state *state)
 void
 LinearComplexity_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1197,6 +1252,22 @@ LinearComplexity_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
+
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->linear_b[i] != NULL) {
+			free(state->linear_b[i]);
+			state->linear_b[i] = NULL;
+		}
+		if (state->linear_c[i] != NULL) {
+			free(state->linear_c[i]);
+			state->linear_c[i] = NULL;
+		}
+		if (state->linear_t[i] != NULL) {
+			free(state->linear_t[i]);
+			state->linear_t[i] = NULL;
+		}
+	}
+
 	if (state->linear_b != NULL) {
 		free(state->linear_b);
 		state->linear_b = NULL;
@@ -1213,7 +1284,7 @@ LinearComplexity_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

@@ -48,8 +48,8 @@ DIFF= diff
 
 # how to compile
 #
-LEGACY_LIBS= -lm
-LIBS= -lm -L/usr/local/lib -lfftw3
+LEGACY_LIBS= -lm -pthread
+LIBS= -lm -L/usr/local/lib -lfftw3 -pthread
 OPT=
 #OPT= -O3
 #DEBUG=

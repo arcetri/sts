@@ -44,18 +44,17 @@
 #include "utils/utilities.h"
 #include "utils/debug.h"
 #include "utils/stat_fncs.h"
-#include "constants/externs.h"
 
 
 /*
  * Driver interface - defines how each test is performed at each phase
  */
 struct driver {
-	void (*init) (struct state * state);		// Initialize the test and check input size recommendations
-	void (*iterate) (struct state * state);		// Perform a single iteration test on the bitstream
-	void (*print) (struct state * state);		// Log iteration info into stats.txt, data*.txt, results.txt unless -n
-	void (*metrics) (struct state * state);		// Uniformity and proportional analysis of a test
-	void (*destroy) (struct state * state);		// Final test cleanup and memory de-allocation
+	void (*init) (struct state *state);			// Initialize the test and check input size recommendations
+	void (*iterate) (struct thread_state * thread_state);	// Perform a single iteration test on the bitstream
+	void (*print) (struct state *state);			// Log iteration info into stats.txt, data*.txt, results.txt if -s
+	void (*metrics) (struct state *state);			// Uniformity and proportional analysis of a test
+	void (*destroy) (struct state *state);			// Final test cleanup and memory de-allocation
 };
 
 static const struct driver testDriver[NUMOFTESTS + 1] = {
@@ -323,8 +322,6 @@ init(struct state *state)
 	 */
 	for (i = 1; i <= NUMOFTESTS; i++) {
 		if (state->testVector[i] == true && testDriver[i].init != NULL) {
-
-			// Initialize a test
 			testDriver[i].init(state);
 		}
 	}
@@ -346,15 +343,35 @@ init(struct state *state)
 	}
 
 	/*
-	 * Allocate bit stream
+	 * Check that n is big enough
 	 */
 	if ((state->tp.n <= 0) || (state->tp.n < GLOBAL_MIN_BITCOUNT)) {
 		err(50, __func__, "bogus value n: %ld, must be >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
 	}
-	state->epsilon = calloc((size_t) state->tp.n, sizeof(BitSequence));
+
+	/*
+	 * Set the number of iterations not done yet to be equal to the total $numOfBitstreams
+	 */
+	state->iterationsMissing = state->tp.numOfBitStreams;
+
+	/*
+	 * Allocate the array for the bit streams copied to memory
+	 */
+	state->epsilon = calloc((size_t) state->numberOfThreads, sizeof(*state->epsilon));
 	if (state->epsilon == NULL) {
-		errp(50, __func__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->tp.n,
-		     sizeof(BitSequence));
+		errp(50, __func__, "cannot calloc for epsilon: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->epsilon));
+	}
+
+	/*
+	 * Allocate the array for the bit stream copied to memory for each thread
+	 */
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->epsilon[i] = calloc((size_t) state->tp.n, sizeof(BitSequence));
+		if (state->epsilon == NULL) {
+			errp(50, __func__, "cannot calloc for epsilon[%d]: %ld elements of %lu bytes each", i,
+			     state->tp.n, sizeof(BitSequence));
+		}
 	}
 
 	/*
@@ -367,37 +384,39 @@ init(struct state *state)
 
 
 /*
- * iterate - perform a single iteration of a bitstream
+ * iterate - perform a single run of all the enabled tests on a bitstream
  *
  * given:
  *      state           // current processing state
  */
 void
-iterate(struct state *state)
+iterate(struct thread_state *thread_state)
 {
 	int i;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(51, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
-		err(51, __func__, "state arg is NULL");
+		err(51, __func__, "state is NULL");
 	}
 
 	/*
 	 * Perform an iteration for each test on the current bitstream
 	 */
-	dbg(DBG_VHIGH, "before an iteration: %ld", state->curIteration);
 	for (i = 1; i <= NUMOFTESTS; ++i) {
 
 		/*
 		 * Call test iterate function if the test is enabled
 		 */
 		if (state->testVector[i] == true && testDriver[i].iterate != NULL) {
-			testDriver[i].iterate(state);
+			testDriver[i].iterate(thread_state);
 		}
 	}
-	dbg(DBG_VHIGH, "after an iteration: %ld", state->curIteration);
 
 	return;
 }
@@ -659,7 +678,7 @@ metrics(struct state *state)
 		 * Print summary of the metrics results of these tests
 		 */
 		io_ret = fprintf(state->finalRept, "A total of %ld tests (some of the %d tests actually consist of multiple "
-						 "sub-tests)\nwere conducted to evaluate the randomness of:\n\n\t%s.\n\n"
+						 "sub-tests)\nwere conducted to evaluate the randomness of:\n\n\t%s\n\n"
 						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "The numerous empirical results of these tests were then interpreted with\nan "
@@ -671,8 +690,11 @@ metrics(struct state *state)
 						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "Here are the results of the single tests:\n",
-				 total_number_of_tests, NUMOFTESTS, state->randomDataPath, state->successful_tests,
-				 total_number_of_tests, total_number_of_tests - state->successful_tests, total_number_of_tests);
+				 total_number_of_tests, NUMOFTESTS, state->generator == GENERATOR_FROM_FILE ?
+								    state->randomDataPath : state->generatorDir[state->generator],
+				 state->successful_tests, total_number_of_tests, total_number_of_tests - state->successful_tests,
+				 total_number_of_tests);
+
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}
@@ -971,6 +993,12 @@ destroy(struct state *state)
 	if (state->tmpepsilon != NULL) {
 		free(state->tmpepsilon);
 		state->tmpepsilon = NULL;
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->epsilon[i] != NULL) {
+			free(state->epsilon[i]);
+			state->epsilon[i] = NULL;
+		}
 	}
 	if (state->epsilon != NULL) {
 		free(state->epsilon);

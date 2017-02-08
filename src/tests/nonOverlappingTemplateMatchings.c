@@ -263,10 +263,17 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * Allocate special BitSequence
 	 */
-	state->nonper_seq = malloc(m * sizeof(state->nonper_seq[0]));
+	state->nonper_seq = malloc((size_t) state->numberOfThreads * sizeof(*state->nonper_seq));
 	if (state->nonper_seq == NULL) {
-		errp(130, __func__, "cannot malloc of %ld elements of %ld bytes each for state->nonper_seq",
-		     m, sizeof(BitSequence));
+		errp(130, __func__, "cannot malloc for nonper_seq: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->nonper_seq));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->nonper_seq[i] = malloc(m * sizeof(state->nonper_seq[i][0]));
+		if (state->nonper_seq[i] == NULL) {
+			errp(130, __func__, "cannot malloc of %ld elements of %ld bytes each for state->nonper_seq[%ld]",
+			     state->nonper_seq, sizeof(state->nonper_seq[i][0]), i);
+		}
 	}
 
 	/*
@@ -432,10 +439,10 @@ appendTemplate(struct state *state, ULONG value, long int m)
  * NOTE: The initialize function must be called first.
  */
 void
-NonOverlappingTemplateMatchings_iterate(struct state *state)
+NonOverlappingTemplateMatchings_iterate(struct thread_state *thread_state)
 {
 	struct NonOverlappingTemplateMatchings_private_stats stat;	// Stats for this iteration
-	struct nonover_stats nonover_stat;	// Stats for a template of this iteration
+	struct nonover_stats *nonover_stats;	// Stats for a template of this iteration
 	long int n;				// Length of a single bit stream
 	long int m;				// NonOverlapping Template Test - block length
 	unsigned int W_obs;			// Counter of the number of occurrences of a template in a block
@@ -449,6 +456,10 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(132, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(132, __func__, "state arg is NULL");
 	}
@@ -463,8 +474,14 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(132, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(132, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->nonper_seq == NULL) {
 		err(132, __func__, "state->nonper_seq is NULL");
+	}
+	if (state->nonper_seq[thread_state->thread_id] == NULL) {
+		err(132, __func__, "state->nonper_seq[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
 		err(132, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
@@ -503,14 +520,22 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 	}
 
 	/*
+	 * Initialize array of nonover_stats
+	 */
+	nonover_stats = malloc((size_t) numOfTemplates[m] * sizeof(*nonover_stats));
+
+	/*
 	 * Process all template values
 	 */
 	for (jj = 0; jj < numOfTemplates[m]; jj++) {
 
+		struct nonover_stats nonover_stat;
+
 		/*
 		 * Get the next template from the pool of precomputed ones
 		 */
-		memcpy(state->nonper_seq, addr_value(state->nonovTemplates, BitSequence, m * jj), m * sizeof(BitSequence));
+		memcpy(state->nonper_seq[thread_state->thread_id], addr_value(state->nonovTemplates, BitSequence, m * jj),
+		       m * sizeof(BitSequence));
 
 		/*
 		 * Zeroize the occurrences counters for this template
@@ -534,7 +559,8 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 				 * considered in the block.
 				 */
 				for (k = 0; k < m; k++) {
-					if (state->nonper_seq[k] != state->epsilon[i * stat.M + j + k]) {
+					if (state->nonper_seq[thread_state->thread_id][k] !=
+							state->epsilon[thread_state->thread_id][i * stat.M + j + k]) {
 						match = false;
 						break;
 					}
@@ -574,6 +600,25 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		 * Store the index of the template just tested in the stats
 		 */
 		nonover_stat.template_index = jj;
+		nonover_stats[jj] = nonover_stat;
+	}
+
+	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
+	 * Record stats and p-values for each template tested
+	 */
+	for (jj = 0; jj < numOfTemplates[m]; jj++) {
+
+		/*
+		 * Get the jj-th nonover_stat
+		 */
+		struct nonover_stats nonover_stat = nonover_stats[jj];
 
 		/*
 		 * Record success or failure for this iteration
@@ -584,13 +629,13 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
 			warn(__func__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f < 0.0\n",
-			     state->curIteration, jj, state->testNames[test_num], test_num,
+			     thread_state->iteration_being_done + 1, jj, state->testNames[test_num], test_num,
 			     nonover_stat.p_value);
 		} else if (isGreaterThanOne(nonover_stat.p_value)) {
 			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 			nonover_stat.success = false;	// FAILURE
 			warn(__func__, "iteration %ld template[%ld] of test %s[%d] produced bogus p_value: %f > 1.0\n",
-			     state->curIteration, jj, state->testNames[test_num], test_num,
+			     thread_state->iteration_being_done + 1, jj, state->testNames[test_num], test_num,
 			     nonover_stat.p_value);
 		} else if (nonover_stat.p_value < state->tp.alpha) {
 			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
@@ -603,7 +648,8 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		}
 
 		/*
-		 * Record values computed during this iteration
+		 * Record non-over stats computed during this iteration
+		 * This is the only case when we append a struct to the p-value array.
 		 */
 		append_value(state->p_val[test_num], &nonover_stat);
 	}
@@ -627,6 +673,13 @@ NonOverlappingTemplateMatchings_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1434,7 +1487,7 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1454,6 +1507,8 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 void
 NonOverlappingTemplateMatchings_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1495,6 +1550,12 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 		free(state->nonovTemplates);
 		state->nonovTemplates = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->nonper_seq[i] != NULL) {
+			free(state->nonper_seq[i]);
+			state->nonper_seq[i] = NULL;
+		}
+	}
 	if (state->nonper_seq != NULL) {
 		free(state->nonper_seq);
 		state->nonper_seq = NULL;
@@ -1503,7 +1564,7 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

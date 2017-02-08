@@ -34,6 +34,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <unistd.h>
 #include <math.h>
 #include "../constants/externs.h"
 #include "utilities.h"
@@ -99,6 +100,11 @@ static struct state const defaultstate = {
 	// dataFormatFlag & dataFormat
 	false,				// -F format was not given
 	FORMAT_RAW_BINARY,		// Read data as raw binary
+
+	// numberOfThreads
+	false,
+	0,
+	0,
 
 	// jobnumFlag & jobnum
 	false,				// No -j jobnum was given
@@ -295,9 +301,6 @@ static struct state const defaultstate = {
 
 	// legacy_output
 	false,
-
-	// curIteration
-	0,			// No interaction completed so far
 /* *INDENT-ON* */
 };
 
@@ -310,7 +313,7 @@ static const char * const usage =
 "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
 "               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
 "               [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
-"               [-m mode] [-h] bitcount\n"
+"               [-m mode] [-T numOfThreads] [-h] bitcount\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
 "    -b                 batch mode - no stdin (def: prompt when needed)\n"
@@ -348,29 +351,29 @@ static const char * const usage =
 "      10: Uniformity Cutoff Level:				0.0001\n"
 "      11: Alpha Confidence Level:				0.01\n"
 "\n"
-"    -p    In interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
+"    -p                 in interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
 "\n"
-"    -i iterations    number of bitstream runs (if -b, def: 1)\n"
-"                     this flag is the same as -P 7=iterations\n"
+"    -i iterations      number of iterations to do, i.e. number of bitstreams to test (if -b, def: 1)\n"
+"                       this flag is the same as -P 7=iterations\n"
 "\n"
-"    -I reportCycle   report after completion of reportCycle iterations (def: 0: do not report)\n"
-"    -O               try to mimic output format of legacy code (def: don't be output compatible)\n"
+"    -I reportCycle     report after completion of reportCycle iterations (def: 0: do not report)\n"
+"    -O                 try to mimic output format of legacy code (def: don't be output compatible)\n"
 "\n"
-"    -w workDir       write experiment results under workDir (def: .)\n"
-"    -c               don't create any directories needed for creating files (def: do create)\n"
-"    -s               create result.txt, data*.txt, and stats.txt (def: don't create)\n"
-"    -f randdata      -g 0 inputfile is randdata (required if -b and -g 0)\n"
-"    -F format        randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
-"    -j jobnum        seek into randdata, jobnum*bitcount*iterations bits (def: 0)\n"
+"    -w workDir         write experiment results under workDir (def: .)\n"
+"    -c                 don't create any directories needed for creating files (def: do create)\n"
+"    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
+"    -f randdata        when -g 0 is given, randdata is the path to the input file to test (required if -b and -g 0)\n"
+"    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
+"    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
 "\n"
-"    -m mode          w --> only write generated data to -f randdata in -F format (-g must not be 0)\n"
-"                     i --> iterate only (not currently implemented)\n"
-"                     a --> assess only (not currently implemented)\n"
-"                     b --> iterate and then assess (default: b)\n"
+"    -m mode            w --> generate pseudorandom data from '-g generator' and write it to '-f randdata' in '-F format'\n"
+"                       b --> test pseudo-random data from from '-g generator' (default mode)\n"
 "\n"
-"    -h               print this message and exit\n"
+"    -T numOfThreads    custom number of threads for this run (default: takes the number of cores of the CPU)\n"
 "\n"
-"    bitcount         length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
+"    -h                 print this message and exit\n"
+"\n"
+"    bitcount           length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
 /* *INDENT-ON* */
 
 
@@ -432,7 +435,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:T:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -481,7 +484,6 @@ parse_args(struct state *state, int argc, char **argv)
 				}
 			}
 			break;
-
 
 		case 'g':	// -g generator
 			state->generatorFlag = true;
@@ -665,24 +667,29 @@ parse_args(struct state *state, int argc, char **argv)
 				state->runMode = MODE_WRITE_ONLY;
 				state->resultstxtFlag = false;	// -m w implies that result.txt and stats.txt are not written
 				break;
-			case MODE_ASSESS_ONLY:
-			case MODE_ITERATE_ONLY:
-				usage_err(usage, 1, __func__, "-m %c not yet implemented, sorry!", (char) optarg[0]);
-				break;
 			case MODE_ITERATE_AND_ASSESS:
 				state->runMode = MODE_ITERATE_AND_ASSESS;
 				break;
 			default:
-				usage_err(usage, 1, __func__, "-m mode must be one of w, i, a, or b: %c", (char) optarg[0]);
+				usage_err(usage, 1, __func__, "-m mode must be one of w or b: %c", optarg[0]);
 				break;
+			}
+			break;
+
+		case 'T':	// -v debuglevel
+			state->numberOfThreadsFlag = true;
+			state->numberOfThreads = str2longint(&success, optarg);
+			if (success == false) {
+				usage_errp(usage, 1, __func__, "error in parsing -T numOfThreads: %s", optarg);
+			}
+			if (state->numberOfThreads < 0) {
+				usage_err(usage, 1, __func__, "-T numOfThreads: %lu must be >= 0", state->numberOfThreads);
 			}
 			break;
 
 		case 'h':	// -h (print out help)
 			usage_err(usage, 0, __func__, "this arg ignored");
 			break;
-
-			// ----------------------------------------------------------------
 
 		case '?':
 		default:
@@ -823,7 +830,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 * no custom number was provided
 	 */
 	if (state->uniformityBinsFlag == false && state->legacy_output == false) {
-		// state->tp.uniformity_bins = (long int) sqrt(state->tp.numOfBitStreams); TODO uncomment when the new metric print is done
+		state->tp.uniformity_bins = (long int) sqrt(state->tp.numOfBitStreams);
 	}
 
 	/*
@@ -834,6 +841,43 @@ parse_args(struct state *state, int argc, char **argv)
 		warn(__func__, "The number of uniformity bins was set back to %d due to '-O' legacy mode flag",
 		    DEFAULT_UNIFORMITY_BINS);
 		state->tp.uniformity_bins = DEFAULT_UNIFORMITY_BINS;
+	}
+
+	/*
+	 * When not reading from a file, sts currently supports only one thread
+	 */
+	if (state->generator != GENERATOR_FROM_FILE) {
+		dbg(DBG_LOW, "You chose to use one of the STS built in generators. Only one thread will be used for testing it.");
+		state->numberOfThreads = 1;
+	}
+
+	/*
+	 * If no custom number of threads was set, set the number of threads to be equal to the minimum
+	 * between the number of bitstreams and the number of cores of the computer where sts is running.
+	 */
+	else if (state->numberOfThreadsFlag == false) {
+		state->numberOfThreads = MIN(sysconf(_SC_NPROCESSORS_ONLN), state->tp.numOfBitStreams);
+	}
+
+	/*
+	 * If a custom number of threads was set and this number is greater than the number of processors
+	 * in the computer where sts is running, fire a warning to the user that this will not benefit sts.
+	 */
+	if (state->numberOfThreadsFlag == true && state->numberOfThreads > sysconf(_SC_NPROCESSORS_ONLN)) {
+		warn(__func__, "You selected a number of threads which is greater than the number of cores in this computer."
+				     " For better performance, you should choose a number of threads < %d.",
+		     sysconf(_SC_NPROCESSORS_ONLN));
+	}
+
+	/*
+	 * If a custom number of threads was set and this number is greater than the number of bitstreams
+	 * (aka iterations) set, fire a warning to the user that only $numOfBitstreams threads will be used.
+	 */
+	if (state->numberOfThreadsFlag == true && state->numberOfThreads > state->tp.numOfBitStreams) {
+		warn(__func__, "You chose to use %d threads. However this number is greater than the number of bitstreams, which"
+				     " you set to %d. Therefore only %d threads will be used.", state->numberOfThreads,
+		     state->tp.numOfBitStreams, state->tp.numOfBitStreams);
+		state->numberOfThreads = state->tp.numOfBitStreams;
 	}
 
 	/*
@@ -922,11 +966,11 @@ print_option_summary(struct state *state, char *where)
 	/*
 	 * Report on high level state
 	 */
-	dbg(DBG_LOW, "High level state for: %s", where);
-	dbg(DBG_LOW, "\tsts version: %s", version);
-	dbg(DBG_LOW, "\tdebuglevel = %ld", debuglevel);
+	dbg(DBG_MED, "High level state for: %s", where);
+	dbg(DBG_MED, "\tsts version: %s", version);
+	dbg(DBG_MED, "\tdebuglevel = %ld", debuglevel);
 	if (state->batchmode == true) {
-		dbg(DBG_LOW, "\tRunning in (non-interactive) batch mode");
+		dbg(DBG_MED, "\tRunning in (non-interactive) batch mode");
 		if (state->runModeFlag == true) {
 			switch (state->runMode) {
 
@@ -949,31 +993,23 @@ print_option_summary(struct state *state, char *where)
 				}
 				break;
 
-			case MODE_ITERATE_ONLY:
-				dbg(DBG_LOW, "\tWill iterate only (no assessment)");
-				break;
-
-			case MODE_ASSESS_ONLY:
-				dbg(DBG_LOW, "\tWill assess only (skip iteration)");
-				break;
-
 			case MODE_ITERATE_AND_ASSESS:
-				dbg(DBG_LOW, "\tWill iterate and assess");
+				dbg(DBG_MED, "\tWill test pseudo-random data from from the chosen '-g generator'");
 				break;
 
 			default:
-				dbg(DBG_LOW, "\tUnknown assessment mode: %c", state->runMode);
+				dbg(DBG_MED, "\tUnknown assessment mode: %c", state->runMode);
 				break;
 			}
 		} else {
-			dbg(DBG_LOW, "\tWill iterate and assess");
+			dbg(DBG_MED, "\tWill test pseudo-random data from from the chosen '-g generator");
 		}
 		dbg(DBG_MED, "\tTesting %lld bits of data (%lld bytes)", (long long) state->tp.numOfBitStreams *
 				(long long) state->tp.n, (((long long) state->tp.numOfBitStreams *
 				(long long) state->tp.n) + 7) / 8);
-		dbg(DBG_LOW, "\tPerforming %ld iterations each of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
+		dbg(DBG_MED, "\tPerforming %ld iterations each of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
 	} else {
-		dbg(DBG_LOW, "\tclassic (interactive mode)\n");
+		dbg(DBG_MED, "\tclassic (interactive mode)\n");
 	}
 
 	/*
@@ -1093,28 +1129,22 @@ print_option_summary(struct state *state, char *where)
 		switch (state->dataFormat) {
 		case FORMAT_ASCII_01:
 		case FORMAT_0:
-			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: %s",
-			    state->randomDataPath, "ASCII '0' and '1' character bits");
+			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
+					    "in -F format: %s", state->randomDataPath, "ASCII '0' and '1' character bits");
 			break;
 		case FORMAT_RAW_BINARY:
 		case FORMAT_1:
-			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: %s",
-			    state->randomDataPath, "raw 8 binary bits per byte");
+			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
+					    "in -F format: %s", state->randomDataPath, "raw 8 binary bits per byte");
 			break;
 		default:
-			dbg(DBG_MED, "\t  -m w: only write generated data to -f file: %s in -F format: unknown: %c",
-			    state->randomDataPath, (char) state->dataFormat);
+			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
+					    "in -F format: unknown: %c", state->randomDataPath, (char) state->dataFormat);
 			break;
 		}
 		break;
-	case MODE_ITERATE_ONLY:
-		dbg(DBG_MED, "\t  -m i: iterate only and exit");
-		break;
-	case MODE_ASSESS_ONLY:
-		dbg(DBG_MED, "\t  -m a: assess only and exit");
-		break;
 	case MODE_ITERATE_AND_ASSESS:
-		dbg(DBG_MED, "\t  -m b: iterate and then assess, no *.state files written");
+		dbg(DBG_MED, "\t  -m b: test pseudo-random data from from '-g generator'");
 		break;
 	default:
 		dbg(DBG_MED, "\t  -m %c: unknown runMode", state->runMode);
@@ -1165,12 +1195,18 @@ print_option_summary(struct state *state, char *where)
 	dbg(DBG_MED, "\tjobnum: -j %ld", state->jobnum);
 	if (state->jobnumFlag == true) {
 		dbg(DBG_MED, "\t-j jobnum was set to %ld", state->jobnum);
-		dbg(DBG_MED, "\t  will skip %lld bytes of data before processing\n",
+		dbg(DBG_MED, "\t  will skip %lld bytes of data before processing",
 		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
 	} else {
 		dbg(DBG_MED, "\tno -j jobnum was given");
-		dbg(DBG_MED, "\t  will start processing at the beginning of data\n");
+		dbg(DBG_MED, "\t  will start processing at the beginning of data");
 	}
+	if (state->numberOfThreadsFlag == true) {
+		dbg(DBG_MED, "\t-T numOfThreads was given", state->numberOfThreads);
+	} else {
+		dbg(DBG_MED, "\tno -T numOfThreads was given");
+	}
+	dbg(DBG_MED, "\t  will use %ld threads\n", state->numberOfThreads);
 
 	/*
 	 * Report on test parameters

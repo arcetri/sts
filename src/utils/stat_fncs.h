@@ -50,21 +50,21 @@ extern void Serial_init(struct state *state);
 /*
  * iterate functions
  */
-extern void Frequency_iterate(struct state *state);
-extern void BlockFrequency_iterate(struct state *state);
-extern void CumulativeSums_iterate(struct state *state);
-extern void Runs_iterate(struct state *state);
-extern void LongestRunOfOnes_iterate(struct state *state);
-extern void Rank_iterate(struct state *state);
-extern void DiscreteFourierTransform_iterate(struct state *state);
-extern void NonOverlappingTemplateMatchings_iterate(struct state *state);
-extern void OverlappingTemplateMatchings_iterate(struct state *state);
-extern void Universal_iterate(struct state *state);
-extern void ApproximateEntropy_iterate(struct state *state);
-extern void RandomExcursions_iterate(struct state *state);
-extern void RandomExcursionsVariant_iterate(struct state *state);
-extern void LinearComplexity_iterate(struct state *state);
-extern void Serial_iterate(struct state *state);
+extern void Frequency_iterate(struct thread_state *thread_state);
+extern void BlockFrequency_iterate(struct thread_state *thread_state);
+extern void CumulativeSums_iterate(struct thread_state *thread_state);
+extern void Runs_iterate(struct thread_state *thread_state);
+extern void LongestRunOfOnes_iterate(struct thread_state *thread_state);
+extern void Rank_iterate(struct thread_state *thread_state);
+extern void DiscreteFourierTransform_iterate(struct thread_state *thread_state);
+extern void NonOverlappingTemplateMatchings_iterate(struct thread_state *thread_state);
+extern void OverlappingTemplateMatchings_iterate(struct thread_state *thread_state);
+extern void Universal_iterate(struct thread_state *thread_state);
+extern void ApproximateEntropy_iterate(struct thread_state *thread_state);
+extern void RandomExcursions_iterate(struct thread_state *thread_state);
+extern void RandomExcursionsVariant_iterate(struct thread_state *thread_state);
+extern void LinearComplexity_iterate(struct thread_state *thread_state);
+extern void Serial_iterate(struct thread_state *thread_state);
 
 /*
  * Print functions

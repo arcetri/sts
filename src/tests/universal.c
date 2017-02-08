@@ -104,6 +104,7 @@ Universal_init(struct state *state)
 	long int n;		// Length of a single bit stream
 	long int L;		// Length of each block
 	long int p;		// Number of possible L-bit blocks and size of the table T
+	long int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -202,11 +203,19 @@ Universal_init(struct state *state)
 	p = (long int) 1 << L;
 
 	/*
-	 * Allocate the T table (with block number of the last occurrence of each block)
+	 * Allocate the T table (with block number of the last occurrence of each block) for each thread
 	 */
-	state->universal_T = malloc(p * sizeof(state->universal_T[0]));
+	state->universal_T = malloc((size_t) state->numberOfThreads * sizeof(*state->universal_T));
 	if (state->universal_T == NULL) {
-		errp(200, __func__, "cannot malloc of %ld elements of %ld bytes each for state->universal_T", p, sizeof(long));
+		errp(200, __func__, "cannot malloc for universal_T: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->universal_T));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->universal_T[i] = malloc(p * sizeof(state->universal_T[i][0]));
+		if (state->universal_T[i] == NULL) {
+			errp(200, __func__, "cannot malloc of %ld elements of %ld bytes each for state->universal_T[%ld]",
+			     p, sizeof(state->universal_T[i][0]), i);
+		}
 	}
 
 	/*
@@ -257,10 +266,9 @@ Universal_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-Universal_iterate(struct state *state)
+Universal_iterate(struct thread_state *thread_state)
 {
 	struct Universal_private_stats stat;	// Stats for this iteration
-	long int n;		// Length of a single bit stream
 	long int L;		// Length of each block
 	long int *T;		// Table with block number of the last occurrence of each block
 	long int p;		// Number of possible L-bit blocks and size of the table T
@@ -274,6 +282,10 @@ Universal_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(201, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(201, __func__, "state arg is NULL");
 	}
@@ -284,8 +296,14 @@ Universal_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(201, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(201, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->universal_T == NULL) {
 		err(201, __func__, "state->universal_T is NULL");
+	}
+	if (state->universal_T[thread_state->thread_id] == NULL) {
+		err(201, __func__, "state->universal_T[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(201, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -299,9 +317,8 @@ Universal_iterate(struct state *state)
 	/*
 	 * Collect parameters from state
 	 */
-	n = state->tp.n;
 	L = state->universal_L;
-	T = state->universal_T;
+	T = state->universal_T[thread_state->thread_id];
 
 	/*
 	 * Check preconditions (firewall)
@@ -320,7 +337,7 @@ Universal_iterate(struct state *state)
 		err(201, __func__, "L: %ld is too large, 10 * 1 << L will overflow long int", L);
 	}
 	stat.Q = 10 * p;
-	stat.K = (((n + L - 1) / L) - stat.Q); // (n + L - 1) / L == ceil(n / L)
+	stat.K = 100 * stat.Q;
 	stat.sum = 0.0;
 	memset(T, 0, p * sizeof(T[0]));	// zeroize T
 
@@ -337,7 +354,7 @@ Universal_iterate(struct state *state)
 		 */
 		decRep = 0;
 		for (j = 0; j < L; j++) {
-			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
+			decRep += state->epsilon[thread_state->thread_id][(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
 		}
 
 		/*
@@ -357,7 +374,7 @@ Universal_iterate(struct state *state)
 		 */
 		decRep = 0;
 		for (j = 0; j < L; j++) {
-			decRep += state->epsilon[(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
+			decRep += state->epsilon[thread_state->thread_id][(i - 1) * L + j] * ((long int) 1 << (L - 1 - j));
 		}
 
 		/*
@@ -386,6 +403,13 @@ Universal_iterate(struct state *state)
 	p_value = erfc(arg);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -394,12 +418,12 @@ Universal_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -425,6 +449,13 @@ Universal_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1133,7 +1164,7 @@ Universal_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1153,6 +1184,8 @@ Universal_metrics(struct state *state)
 void
 Universal_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1189,6 +1222,12 @@ Universal_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->universal_T[i] != NULL) {
+			free(state->universal_T[i]);
+			state->universal_T[i] = NULL;
+		}
+	}
 	if (state->universal_T != NULL) {
 		free(state->universal_T);
 		state->universal_T = NULL;
@@ -1197,7 +1236,7 @@ Universal_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

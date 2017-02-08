@@ -39,7 +39,7 @@
 #define	MATRIX_BACKWARD_ELIMINATION	1
 
 int
-computeRank(int M, int Q, BitSequence ** matrix)
+computeRank(int M, int Q, BitSequence **matrix)
 {
 	int i;
 	int rank;
@@ -56,8 +56,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_FORWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			err(122, __func__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
-			    matrix[i][i]);
+			err(122, __func__, "matrix[%d][%d] == %u (should contain 1 or 0).", i, i, matrix[i][i]);
 		}
 	}
 
@@ -72,8 +71,7 @@ computeRank(int M, int Q, BitSequence ** matrix)
 				perform_elementary_row_operations(MATRIX_BACKWARD_ELIMINATION, i, M, Q, matrix);
 			}
 		} else {
-			err(122, __func__, "unexpected value %d found in input matrix (should contain only 1 and 0 bits).",
-			    matrix[i][i]);
+			err(122, __func__, "matrix[%d][%d] == %u (should contain 1 or 0).", i, i, matrix[i][i]);
 		}
 	}
 
@@ -229,6 +227,7 @@ create_matrix(int M, int Q)
 			     (long int) Q, sizeof(BitSequence), i);
 		}
 	}
+
 	return matrix;
 }
 
@@ -243,7 +242,7 @@ create_matrix(int M, int Q)
  *      k       // offset for the bits to copy to this matrix (counts the matrices that were already filled)
  */
 void
-def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
+def_matrix(struct thread_state *thread_state, int M, int Q, BitSequence ** m, long int k)
 {
 	int i;
 	int j;
@@ -251,11 +250,18 @@ def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(225, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(121, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
 		err(121, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(151, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if (M < 0) {
 		err(121, __func__, "number of rows: %d must be > 0", M);
@@ -269,7 +275,7 @@ def_matrix(struct state *state, int M, int Q, BitSequence ** m, int k)
 
 	for (i = 0; i < M; i++) {
 		for (j = 0; j < Q; j++) {
-			m[i][j] = state->epsilon[k * (M * Q) + j + i * M];
+			m[i][j] = state->epsilon[thread_state->thread_id][k * (M * Q) + j + i * M];
 		}
 	}
 }
@@ -279,8 +285,8 @@ delete_matrix(int M, BitSequence ** matrix)
 {
 	int i;
 
-	for (i = 0; i < M; i++) {
+	for (i = 0; i < M; i++)
 		free(matrix[i]);
-	}
+
 	free(matrix);
 }

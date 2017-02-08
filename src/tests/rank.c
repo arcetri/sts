@@ -120,13 +120,13 @@ Rank_init(struct state *state)
 	/*
 	 * Collect parameters from state
 	 */
-	matrix_count = state->tp.n / (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK);;
+	matrix_count = state->tp.n / (NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK);
 
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
 	if (matrix_count < MIN_NUMBER_OF_MATRICES_RANK) {
-		warn(__func__, "disabling test %s[%d]: requires number of matrixes(matrix_count): %ld >= %d",
+		warn(__func__, "disabling test %s[%d]: requires number of matrices(matrix_count): %ld >= %d",
 		     state->testNames[test_num], test_num, matrix_count, MIN_NUMBER_OF_MATRICES_RANK);
 		state->testVector[test_num] = false;
 		return;
@@ -182,9 +182,16 @@ Rank_init(struct state *state)
 	}
 
 	/*
-	 * Allocate the special Rank test matrix
+	 * Allocate the array for the rank test matrices for each thread
 	 */
-	state->rank_matrix = create_matrix(NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK);
+	state->rank_matrix = malloc((size_t) state->numberOfThreads * sizeof(*state->rank_matrix));
+	if (state->rank_matrix == NULL) {
+		errp(50, __func__, "cannot malloc for rank_matrix: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->rank_matrix));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->rank_matrix[i] = create_matrix(NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK);
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -234,7 +241,7 @@ Rank_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-Rank_iterate(struct state *state)
+Rank_iterate(struct thread_state *thread_state)
 {
 	struct Rank_private_stats stat;	// Stats for this iteration
 	BitSequence **matrix;		// The matrix state->rank_matrix
@@ -247,6 +254,10 @@ Rank_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(171, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(171, __func__, "state arg is NULL");
 	}
@@ -257,8 +268,14 @@ Rank_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(171, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(171, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->rank_matrix == NULL) {
 		err(171, __func__, "state->rank_matrix is NULL");
+	}
+	if (state->rank_matrix[thread_state->thread_id] == NULL) {
+		err(171, __func__, "state->rank_matrix[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(171, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -270,6 +287,13 @@ Rank_iterate(struct state *state)
 	}
 
 	/*
+	 * Setup test parameters
+	 */
+	matrix = state->rank_matrix[thread_state->thread_id];
+	stat.F_M = 0;
+	stat.F_M_minus_one = 0;
+
+	/*
 	 * Zeroize the Rank test matrix
 	 */
 	for (i = 0; i < NUMBER_OF_ROWS_RANK; ++i) {
@@ -277,7 +301,7 @@ Rank_iterate(struct state *state)
 		/*
 		 * Find the row
 		 */
-		row = state->rank_matrix[i];
+		row = matrix[i];
 		if (row == NULL) {	// paranoia
 			err(171, __func__, "row pointer %ld of rank_matrix is NULL", i);
 		}
@@ -289,13 +313,6 @@ Rank_iterate(struct state *state)
 	}
 
 	/*
-	 * Setup test parameters
-	 */
-	matrix = state->rank_matrix;
-	stat.F_M = 0;
-	stat.F_M_minus_one = 0;
-
-	/*
 	 * Step 1a: divide the sequence into disjoint blocks of NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK bits
 	 */
 	for (k = 0; k < matrix_count; k++) {
@@ -303,7 +320,7 @@ Rank_iterate(struct state *state)
 		/*
 	 	 * Step 1b: copy bits of each block into a NUMBER_OF_ROWS_RANK * NUMBER_OF_COLS_RANK matrix
 	 	 */
-		def_matrix(state, NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, matrix, k);
+		def_matrix(thread_state, NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, matrix, k);
 
 		/*
 	 	 * Step 2: determine the binary rank of each matrix
@@ -344,6 +361,13 @@ Rank_iterate(struct state *state)
 	p_value = exp(-stat.chi_squared / 2.0);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -352,12 +376,12 @@ Rank_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -383,6 +407,13 @@ Rank_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1091,7 +1122,7 @@ Rank_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1111,7 +1142,7 @@ Rank_metrics(struct state *state)
 void
 Rank_destroy(struct state *state)
 {
-	int i;
+	int i, j;
 
 	/*
 	 * Check preconditions (firewall)
@@ -1149,18 +1180,23 @@ Rank_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
-	// Free the Rank test matrix
-	if (state->rank_matrix != NULL) {
 
-		// Free all rows of the Rank test matrix
-		for (i = 0; i < NUMBER_OF_ROWS_RANK; i++) {
-			if (state->rank_matrix[i] != NULL) {
-				free(state->rank_matrix[i]);
-				state->rank_matrix[i] = NULL;
+	/*
+	 * Free the matrices for each thread
+	 */
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->rank_matrix[i] != NULL) {
+			for (j = 0; j < NUMBER_OF_ROWS_RANK; j++) {
+				if (state->rank_matrix[i][j] != NULL) {
+					free(state->rank_matrix[i][j]);
+					state->rank_matrix[i][j] = NULL;
+				}
 			}
+			free(state->rank_matrix[i]);
+			state->rank_matrix[i] = NULL;
 		}
-
-		// Free the rows array of the Rank test matrix
+	}
+	if (state->rank_matrix != NULL) {
 		free(state->rank_matrix);
 		state->rank_matrix = NULL;
 	}
@@ -1168,7 +1204,7 @@ Rank_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

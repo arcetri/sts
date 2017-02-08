@@ -144,12 +144,19 @@ RandomExcursionsVariant_init(struct state *state)
 	}
 
 	/*
-	 * Allocate partial sums working array
+	 * Allocate partial sums working array for each thread
 	 */
-	state->ex_var_partial_sums = malloc(state->tp.n * sizeof(state->ex_var_partial_sums[0]));
+	state->ex_var_partial_sums = malloc((size_t) state->numberOfThreads * sizeof(*state->ex_var_partial_sums));
 	if (state->ex_var_partial_sums == NULL) {
-		errp(160, __func__, "cannot malloc of %ld elements of %ld bytes each for state->ex_var_partial_sums",
-		     state->tp.n, sizeof(long int));
+		errp(190, __func__, "cannot malloc for ex_var_partial_sums: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->ex_var_partial_sums));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->ex_var_partial_sums[i] = malloc(n * sizeof(state->ex_var_partial_sums[i][0]));
+		if (state->ex_var_partial_sums[i] == NULL) {
+			errp(190, __func__, "cannot malloc of %ld elements of %ld bytes each for state->ex_var_partial_sums[%ld]",
+			     state->tp.n, sizeof(state->ex_var_partial_sums[i][0]), i);
+		}
 	}
 
 	/*
@@ -192,18 +199,23 @@ RandomExcursionsVariant_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-RandomExcursionsVariant_iterate(struct state *state)
+RandomExcursionsVariant_iterate(struct thread_state *thread_state)
 {
 	struct RandomExcursionsVariant_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
 	long int *S;		// Array of the partial sums of the -1/+1 states
 	double p_value;		// p_value iteration test result(s)
+	double *p_values;	// Array of p-values produced by this test
 	long int i;
 	long int j;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(161, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(161, __func__, "state arg is NULL");
 	}
@@ -214,11 +226,17 @@ RandomExcursionsVariant_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(161, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(161, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->rnd_excursion_var_stateX == NULL) {
 		err(161, __func__, "state->rnd_excursion_var_stateX is NULL");
 	}
 	if (state->ex_var_partial_sums == NULL) {
 		err(161, __func__, "state->ex_var_partial_sums is NULL");
+	}
+	if (state->ex_var_partial_sums[thread_state->thread_id] == NULL) {
+		err(161, __func__, "state->ex_var_partial_sums[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(161, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -232,7 +250,7 @@ RandomExcursionsVariant_iterate(struct state *state)
 	/*
 	 * Collect parameters from state
 	 */
-	S = state->ex_var_partial_sums;
+	S = state->ex_var_partial_sums[thread_state->thread_id];
 	n = state->tp.n;
 
 	/*
@@ -243,17 +261,17 @@ RandomExcursionsVariant_iterate(struct state *state)
 	/*
 	 * Step 2: compute the partial sums of successively larger sub-sequences
 	 */
-	if ((int) state->epsilon[0] == 1) {
+	if ((int) state->epsilon[thread_state->thread_id][0] == 1) {
 		S[0] = 1;
-	} else if ((int) state->epsilon[0] == 0) {
+	} else if ((int) state->epsilon[thread_state->thread_id][0] == 0) {
 		S[0] = - 1;
 	} else {
 		err(41, __func__, "found a bit different than 1 or 0 in the sequence");
 	}
 	for (j = 1; j < n; j++) {
-		if ((int) state->epsilon[j] == 1) {
+		if ((int) state->epsilon[thread_state->thread_id][j] == 1) {
 			S[j] = S[j - 1] + 1;
-		} else if ((int) state->epsilon[j] == 0) {
+		} else if ((int) state->epsilon[thread_state->thread_id][j] == 0) {
 			S[j] = S[j - 1] - 1;
 		} else {
 			err(41, __func__, "found a bit different than 1 or 0 in the sequence");
@@ -285,6 +303,8 @@ RandomExcursionsVariant_iterate(struct state *state)
 	 */
 	if (stat.test_possible == true) {
 
+		p_values = malloc(NUMBER_OF_STATES_RND_EXCURSION_VAR * sizeof(*p_values));
+
 		/*
 		 * For each of the state values, compute the test statistic and the p-value
 		 */
@@ -308,6 +328,29 @@ RandomExcursionsVariant_iterate(struct state *state)
 					       * (4.0 * labs(state->rnd_excursion_var_stateX[i]) - 2.0))));
 
 			/*
+			 * Save p-value in the arrays of p-values
+			 */
+			p_values[i] = p_value;
+		}
+
+		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
+
+		/*
+		 * Copy each p-value to the state
+		 */
+		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION_VAR; i++) {
+
+			/*
+			 * Get the p-value for the current excursion state
+			 */
+			p_value = p_values[i];
+
+			/*
 			 * Record success or failure for this iteration
 			 */
 			state->count[test_num]++;	// Count this iteration
@@ -316,12 +359,12 @@ RandomExcursionsVariant_iterate(struct state *state)
 				state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 				stat.success[i] = false;	// FAILURE
 				warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-				     state->curIteration, state->testNames[test_num], test_num, p_value);
+				     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 			} else if (isGreaterThanOne(p_value)) {
 				state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 				stat.success[i] = false;	// FAILURE
 				warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-				     state->curIteration, state->testNames[test_num], test_num, p_value);
+				     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 			} else if (p_value < state->tp.alpha) {
 				state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 				state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -350,6 +393,13 @@ RandomExcursionsVariant_iterate(struct state *state)
 	 * Record values when the test could not be performed
 	 */
 	else {
+
+		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
 
 		/*
 		 * Count this iteration, which happens to be invalid
@@ -383,6 +433,13 @@ RandomExcursionsVariant_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1205,7 +1262,7 @@ RandomExcursionsVariant_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1225,6 +1282,8 @@ RandomExcursionsVariant_metrics(struct state *state)
 void
 RandomExcursionsVariant_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1265,6 +1324,12 @@ RandomExcursionsVariant_destroy(struct state *state)
 		free(state->rnd_excursion_var_stateX);
 		state->rnd_excursion_var_stateX = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->ex_var_partial_sums[i] != NULL) {
+			free(state->ex_var_partial_sums[i]);
+			state->ex_var_partial_sums[i] = NULL;
+		}
+	}
 	if (state->ex_var_partial_sums != NULL) {
 		free(state->ex_var_partial_sums);
 		state->ex_var_partial_sums = NULL;
@@ -1273,7 +1338,7 @@ RandomExcursionsVariant_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

@@ -62,7 +62,7 @@ static const enum test test_num = TEST_SERIAL;	// This test number
 /*
  * Forward static function declarations
  */
-static double compute_psi2(struct state *state, long int blocksize);
+static double compute_psi2(struct thread_state *thread_state, long int blocksize);
 static bool Serial_print_stat(FILE * stream, struct state *state, struct Serial_private_stats *stat, double p_value1,
 			      double p_value2);
 static bool Serial_print_p_value(FILE * stream, double p_value);
@@ -83,6 +83,7 @@ void
 Serial_init(struct state *state)
 {
 	long int m;		// Serial block length (state->tp.serialBlockLength)
+	long int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -126,10 +127,17 @@ Serial_init(struct state *state)
 		err(190, __func__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
 	}
 	state->serial_v_len = (long int) 1 << m;
-	state->serial_v = malloc(state->serial_v_len * sizeof(state->serial_v[0]));
+	state->serial_v = malloc((size_t) state->numberOfThreads * sizeof(*state->serial_v));
 	if (state->serial_v == NULL) {
-		errp(190, __func__, "cannot malloc of %ld elements of %ld bytes each for state->serial_v",
-		     state->serial_v_len, sizeof(long int));
+		errp(190, __func__, "cannot malloc for serial_v: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->serial_v));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->serial_v[i] = malloc(state->serial_v_len * sizeof(state->serial_v[i][0]));
+		if (state->serial_v[i] == NULL) {
+			errp(190, __func__, "cannot malloc of %ld elements of %ld bytes each for state->serial_v[%ld]",
+			     state->serial_v_len, sizeof(state->universal_T[i][0]), i);
+		}
 	}
 
 	/*
@@ -180,7 +188,7 @@ Serial_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-Serial_iterate(struct state *state)
+Serial_iterate(struct thread_state *thread_state)
 {
 	struct Serial_private_stats stat;	// Stats for this iteration
 	long int m;		// Serial block length (state->tp.serialBlockLength)
@@ -190,6 +198,10 @@ Serial_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(191, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(191, __func__, "state arg is NULL");
 	}
@@ -210,9 +222,9 @@ Serial_iterate(struct state *state)
 	/*
 	 * Perform the test
 	 */
-	stat.psim0 = compute_psi2(state, m);
-	stat.psim1 = compute_psi2(state, m - 1);
-	stat.psim2 = compute_psi2(state, m - 2);
+	stat.psim0 = compute_psi2(thread_state, m);
+	stat.psim1 = compute_psi2(thread_state, m - 1);
+	stat.psim2 = compute_psi2(thread_state, m - 2);
 
 	/*
 	 * Step 4: compute the test statistics
@@ -235,12 +247,12 @@ Serial_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value1 < 0.0 treated as a failure
 		stat.success1 = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value1: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value1);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value1);
 	} else if (isGreaterThanOne(p_value1)) {
 		state->failure[test_num]++;	// Bogus p_value1 > 1.0 treated as a failure
 		stat.success1 = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value1: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value1);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value1);
 	} else if (p_value1 < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value1 in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value1 but too low is a failure
@@ -252,6 +264,13 @@ Serial_iterate(struct state *state)
 	}
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration (2nd test)
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -260,12 +279,12 @@ Serial_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value2 < 0.0 treated as a failure
 		stat.success2 = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value2: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value2);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value2);
 	} else if (isGreaterThanOne(p_value2)) {
 		state->failure[test_num]++;	// Bogus p_value2 > 1.0 treated as a failure
 		stat.success2 = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value2: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value2);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value2);
 	} else if (p_value2 < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value2 in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value2 but too low is a failure
@@ -294,6 +313,13 @@ Serial_iterate(struct state *state)
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
 
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
+	}
+
 	return;
 }
 
@@ -308,7 +334,7 @@ Serial_iterate(struct state *state)
  * test statistic of the Serial test.
  */
 static double
-compute_psi2(struct state *state, long int blocksize)
+compute_psi2(struct thread_state *thread_state, long int blocksize)
 {
 	long int n;		// Length of a single bit stream
 	long int powLen;	// Number of possible m-bit sub-sequences
@@ -320,11 +346,18 @@ compute_psi2(struct state *state, long int blocksize)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(192, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(192, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
 		err(192, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(192, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if ((blocksize == 0) || (blocksize == -1)) {
 		return 0.0;
@@ -334,6 +367,9 @@ compute_psi2(struct state *state, long int blocksize)
 	}
 	if (state->serial_v == NULL) {
 		err(192, __func__, "state->serial_v is NULL");
+	}
+	if (state->serial_v[thread_state->thread_id] == NULL) {
+		err(192, __func__, "state->serial_v[%ld] is NULL", thread_state->thread_id);
 	}
 
 	/*
@@ -354,7 +390,7 @@ compute_psi2(struct state *state, long int blocksize)
 	/*
 	 * Zeroize those counters in the array v
 	 */
-	memset(state->serial_v, 0, powLen * sizeof(state->serial_v[0]));
+	memset(state->serial_v[thread_state->thread_id], 0, powLen * sizeof(state->serial_v[thread_state->thread_id][0]));
 
 	/*
 	 * Compute the mask that will be used by the algorithm
@@ -384,7 +420,7 @@ compute_psi2(struct state *state, long int blocksize)
 		 * and then discarding the left-most bit by doing an AND with the mask (in fact,
 		 * the mask is used to keep only the right-most blocksize bits of the number).
 		 */
-		dec = ((dec << 1) + (int) state->epsilon[i % n]) & mask;
+		dec = ((dec << 1) + (int) state->epsilon[thread_state->thread_id][i % n]) & mask;
 
 		/*
 		 * If we have already counted the first (blocksize - 1) bits of epsilon,
@@ -395,7 +431,7 @@ compute_psi2(struct state *state, long int blocksize)
 		 * which is smaller than blocksize.
 		 */
 		if (i >= blocksize) {
-			state->serial_v[dec]++;
+			state->serial_v[thread_state->thread_id][dec]++;
 		}
 	}
 
@@ -404,7 +440,7 @@ compute_psi2(struct state *state, long int blocksize)
 	 */
 	sum = 0.0;
 	for (i = 0; i < powLen; i++) {
-		sum += (double) state->serial_v[i] * (double) state->serial_v[i];
+		sum += (double) state->serial_v[thread_state->thread_id][i] * (double) state->serial_v[thread_state->thread_id][i];
 	}
 
 	/*
@@ -1164,7 +1200,7 @@ Serial_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1184,6 +1220,8 @@ Serial_metrics(struct state *state)
 void
 Serial_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1220,6 +1258,12 @@ Serial_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->serial_v[i] != NULL) {
+			free(state->serial_v[i]);
+			state->serial_v[i] = NULL;
+		}
+	}
 	if (state->serial_v != NULL) {
 		free(state->serial_v);
 		state->serial_v = NULL;
@@ -1228,7 +1272,7 @@ Serial_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

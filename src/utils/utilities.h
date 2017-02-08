@@ -46,14 +46,14 @@ extern int displayGeneratorOptions(void);
 extern void generatorOptions(struct state *state);
 extern void chooseTests(struct state *state);
 extern void fixParameters(struct state *state);
-extern bool copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bitsNeeded, long int *num_0s,
+extern bool copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBitLength, long int *num_0s,
 			      long int *num_1s, long int *bitsRead);
 extern void invokeTestSuite(struct state *state);
-extern void runStatisticalTests(struct state *state);
 extern void createDirectoryTree(struct state *state);
 extern void write_sequence(struct state *state);
 extern void print_option_summary(struct state *state, char *where);
 extern int sum_will_overflow_long(long int si_a, long int si_b);
 extern int multiplication_will_overflow_long(long int si_a, long int si_b);
+extern void getTimestamp(char *buf, size_t len);
 
 #endif				/* UTILITY_H */

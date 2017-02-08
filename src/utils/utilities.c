@@ -38,12 +38,12 @@
 #include <time.h>
 #include <errno.h>
 #include <limits.h>
+#include <pthread.h>
+#include <unistd.h>
 
 // for checking dir
 #include <fcntl.h>
-#include <unistd.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 
 // for stpncpy() and getline()
 #include <string.h>
@@ -53,18 +53,17 @@
 #include "../constants/externs.h"
 #include "utilities.h"
 #include "generators.h"
-#include "stat_fncs.h"
 #include "debug.h"
-#include "../constants/defs.h"
 
 
 /*
  * Forward static function declarations
  */
 static void handleFileBasedBitStreams(struct state *state);
-static void testBitsASCIIInput(struct state *state);
-static void testBitsBinaryInput(struct state *state);
-static void getTimestamp(char *buf, size_t len);
+static void *testBits(void *thread_args);
+static void parseBitsASCIIInput(struct thread_state *thread_state);
+static void parseBitsBinaryInput(struct thread_state *thread_state);
+static void seekStreamFile(struct state *state);
 
 
 /*
@@ -1744,35 +1743,14 @@ invokeTestSuite(struct state *state)
 		destroy(state);
 		exit(0);
 	}
-
-	/*
-         * -m i: iterate only, write state to -s statePath
-         *
-         * State already written, nothing else do to.
-         */
-	else if (state->runMode == MODE_ITERATE_ONLY) {
-
-		/*
-		 * Announce end of iteration only run
-		 */
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "Exiting iterate only");
-		} else {
-			printf("Exiting iterate only\n");
-			fflush(stdout);
-		}
-		destroy(state);
-		exit(0);
-	}
 }
 
 
 static void
-handleFileBasedBitStreams(struct state *state)
+seekStreamFile(struct state *state)
 {
 	long int byteCount;	// byte count for a number of consecutive bits, rounded up
 	int seekError;		// error during fseek()
-	int io_ret;		// I/O return status
 
 	/*
 	 * Check preconditions (firewall)
@@ -1785,13 +1763,12 @@ handleFileBasedBitStreams(struct state *state)
 	}
 
 	/*
-	 * Case: parse a set of ASCII '0' and '1' characters
+	 * Seek into the file according to the jobnum parameter given.
+	 *
+	 * The position where to seek depends on the data format. If the input is made of
+	 * ASCII 0 and 1 characters then we can seek by counting 1 position as 1 bit.
 	 */
 	if (state->dataFormat == FORMAT_ASCII_01) {
-
-		/*
-		 * Set file pointer after jobnum chunks into file
-		 */
 		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format\n",
 		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
 		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
@@ -1800,35 +1777,19 @@ handleFileBasedBitStreams(struct state *state)
 			errp(224, __func__, "could not seek %ld into file: %s",
 			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
 		}
-		/*
-		 * Parse data
-		 */
-		testBitsASCIIInput(state);
-
-		/*
-		 * Close file
-		 */
-		errno = 0;	// paranoia
-		io_ret = fclose(state->streamFile);
-		if (io_ret != 0) {
-			errp(224, __func__, "error closing: %s", state->randomDataPath);
-		}
-		state->streamFile = NULL;
-
 	}
 
 	/*
-	 * Case: parse raw 8-bit binary bytes
+	 * If the input is made of binary data we need to get count that each position is 8 bits.
 	 */
 	else if (state->dataFormat == FORMAT_RAW_BINARY) {
 
 		/*
-		 * Get number of bytes that hold a given set of consecutive bits
+		 * Get number of bytes that hold a given set of consecutive bits.
 		 *
 		 * We need to round up the byte count to the next whole byte.
-		 * However if the bit count is a multiple of 8, then we do
-		 * not increase it.  We only increase by one in
-		 * the case of a final partial byte.
+		 * However if the bit count is a multiple of 8, then we do not increase it.
+		 * We only increase by one in the case of a final partial byte.
 		 */
 		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8;
 
@@ -1841,35 +1802,143 @@ handleFileBasedBitStreams(struct state *state)
 		if (seekError != 0) {
 			err(224, __func__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
 		}
-		/*
-		 * Parse data
-		 */
-		testBitsBinaryInput(state);
-
-		/*
-		 * Close file
-		 */
-		errno = 0;	// paranoia
-		io_ret = fclose(state->streamFile);
-		if (io_ret != 0) {
-			errp(224, __func__, "error closing: %s", state->randomDataPath);
-		}
-		state->streamFile = NULL;
-	}
-
-	/*
-	 * Case: should not get here
-	 */
-	else {
-		err(224, __func__, "Input file format selection is invalid");
 	}
 
 	return;
 }
 
 
+static void
+handleFileBasedBitStreams(struct state *state)
+{
+	int io_ret;		// I/O return status
+	long int i;
+	pthread_t thread[state->numberOfThreads];
+	pthread_attr_t attr;
+	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	struct thread_state *thread_args = malloc(state->numberOfThreads * sizeof(struct thread_state));
+	void *status;
+
+	/*
+	 * Seek into the pre-determined position of the input file (depending on job-number)
+	 */
+	seekStreamFile(state);
+
+	/*
+	 * Initialize and set thread detached attribute
+	 */
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+	dbg(DBG_LOW, "Start of iterate phase");
+
+	/*
+	 * Run numberOfThreads threads
+	 */
+	for (i = 0; i < state->numberOfThreads; i++) {
+		thread_args[i].global_state = state;
+		thread_args[i].thread_id = i;
+		thread_args[i].mutex = &mutex;
+
+		io_ret = pthread_create(&thread[i], &attr, testBits, &thread_args[i]);
+		if (io_ret != 0) {
+			errp(224, __func__, "error on pthread_create()");
+		}
+	}
+
+	dbg(DBG_HIGH, "All threads created and running. Will wait for them.");
+
+	/*
+	 * Free attribute and wait for the threads to finish
+	 */
+	pthread_attr_destroy(&attr);
+	for (i = 0; i < state->numberOfThreads; i++) {
+		io_ret = pthread_join(thread[i], &status);
+		if (io_ret != 0) {
+			errp(224, __func__, "error on pthread_join()");
+		}
+	}
+	pthread_mutex_destroy(&mutex);
+
+	dbg(DBG_LOW, "End of iterate phase\n");
+
+	/*
+	 * Close the input file
+	 */
+	errno = 0;	// paranoia
+	io_ret = fclose(state->streamFile);
+	if (io_ret != 0) {
+		errp(224, __func__, "error closing: %s", state->randomDataPath);
+	}
+	state->streamFile = NULL;
+
+	return;
+}
+
+
+static void
+*testBits(void *thread_args)
+{
+	struct thread_state *thread_state = (struct thread_state *) thread_args;
+	char buf[BUFSIZ + 1];	// time string buffer
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (thread_state == NULL) {
+		err(225, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
+	if (state == NULL) {
+		err(225, __func__, "state arg is NULL");
+	}
+
+	dbg(DBG_HIGH, "Thread %ld started.", thread_state->thread_id);
+
+	while (1) {
+		pthread_mutex_lock(thread_state->mutex);
+
+		if (state->iterationsMissing == 0) {
+			pthread_mutex_unlock(thread_state->mutex);
+			break;
+		}
+
+		thread_state->iteration_being_done = state->tp.numOfBitStreams - state->iterationsMissing;
+		state->iterationsMissing -= 1;
+
+		/*
+		 * Parse and data for this iteration
+		 */
+		if (state->dataFormat == FORMAT_ASCII_01) {
+			parseBitsASCIIInput(thread_state);
+		} else {
+			parseBitsBinaryInput(thread_state);
+		}
+
+		pthread_mutex_unlock(thread_state->mutex);
+
+		/*
+		 * Perform one iteration on the bitstreams read from the streamFile
+		 */
+		iterate(thread_state);
+
+		/*
+		 * Report iteration done (if requested)
+		 */
+		if (state->reportCycle > 0 && (((thread_state->iteration_being_done % state->reportCycle) == 0) ||
+					       (thread_state->iteration_being_done == state->tp.numOfBitStreams))) {
+			getTimestamp(buf, BUFSIZ);
+			msg("Completed iteration %ld of %ld at %s", thread_state->iteration_being_done + 1,
+			    state->tp.numOfBitStreams, buf);
+		}
+	}
+
+	pthread_exit((void *) thread_state->thread_id);
+}
+
+
 /*
- * testBitsASCIIInput - read bits from the streamFile and save them into epsilon bit array
+ * parseBitsASCIIInput - read bits from the streamFile and save them into epsilon bit array
  *
  * given:
  *      state           // pointer to run state
@@ -1878,10 +1947,9 @@ handleFileBasedBitStreams(struct state *state)
  * into 'bits' for the epsilon bit array.
  */
 static void
-testBitsASCIIInput(struct state *state)
+parseBitsASCIIInput(struct thread_state *thread_state)
 {
 	long int i;
-	long int j;
 	long int num_0s;
 	long int num_1s;
 	long int bitsRead;
@@ -1891,69 +1959,71 @@ testBitsASCIIInput(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(225, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(225, __func__, "state arg is NULL");
 	}
 	if (state->streamFile == NULL) {
 		err(225, __func__, "streamFile arg is NULL");
 	}
-
-	/*
-	 * Perform iterations on consecutive bitstreams read from the streamFile as binary digits in ASCII
-	 */
-	dbg(DBG_LOW, "Start of iterate phase");
-	for (i = 0; i < state->tp.numOfBitStreams; i++) {
-
-		/*
-		 * Copy the next n bits from the streamFile to epsilon
-		 */
-		num_0s = 0;
-		num_1s = 0;
-		bitsRead = 0;
-		for (j = 0; j < state->tp.n; j++) {
-			io_ret = fscanf(state->streamFile, "%1d", &bit);
-			if (io_ret == EOF) {
-				warn(__func__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
-				     bitsRead);
-				return;
-			} else {
-				bitsRead++;
-				if (bit == 0) {
-					num_0s++;
-				} else {
-					num_1s++;
-				}
-				state->epsilon[j] = (BitSequence) bit;
-			}
-		}
-
-		/*
-		 * Write stats to freq.txt if in legacy_output mode
-		 */
-		if (state->legacy_output == true) {
-			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-			if (io_ret <= 0) {
-				errp(225, __func__, "error in writing to %s", state->freqFilePath);
-			}
-			io_ret = fflush(state->freqFile);
-			if (io_ret != 0) {
-				errp(225, __func__, "error flushing to %s", state->freqFilePath);
-			}
-		}
-
-		/*
-		 * Perform statistical tests for this iteration
-		 */
-		runStatisticalTests(state);
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(227, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 
-	dbg(DBG_LOW, "End of iterate phase\n");
+	/*
+	 * Seek to the position of the first bit which has not been copied into the stream yet
+	 */
+	if (fseek(state->streamFile, (thread_state->iteration_being_done * state->tp.n), SEEK_SET) != 0) {
+		errp(226, __func__, "could not seek %ld further into file: %s",
+		     (thread_state->iteration_being_done * state->tp.n), state->randomDataPath);
+	}
+
+	/*
+	 * Copy the next n bits from the streamFile to epsilon
+	 */
+	num_0s = 0;
+	num_1s = 0;
+	bitsRead = 0;
+	for (i = 0; i < state->tp.n; i++) {
+		io_ret = fscanf(state->streamFile, "%1d", &bit);
+		if (io_ret == EOF) {
+			warn(__func__, "Insufficient data in file %s: %ld bits were read", state->randomDataPath,
+			     bitsRead);
+			return;
+		} else {
+			bitsRead++;
+			if (bit == 0) {
+				num_0s++;
+			} else {
+				num_1s++;
+			}
+			state->epsilon[thread_state->thread_id][i] = (BitSequence) bit;
+		}
+	}
+
+	/*
+	 * Write stats to freq.txt if in legacy_output mode
+	 */
+	if (state->legacy_output == true) {
+		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+		if (io_ret <= 0) {
+			errp(225, __func__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(225, __func__, "error flushing to %s", state->freqFilePath);
+		}
+	}
+
 	return;
 }
 
 
 /*
- * testBitsBinaryInput - read bits from the streamFile and convert them into epsilon bit array
+ * parseBitsBinaryInput - read bits from the streamFile and convert them into epsilon bit array
  *
  * given:
  *      state           // pointer to run state
@@ -1962,7 +2032,7 @@ testBitsASCIIInput(struct state *state)
  * found in the epsilon bit array.
  */
 static void
-testBitsBinaryInput(struct state *state)
+parseBitsBinaryInput(struct thread_state *thread_state)
 {
 	long int num_0s;	// Count of 0 bits processed
 	long int num_1s;	// Count of 1 bits processed
@@ -1970,11 +2040,14 @@ testBitsBinaryInput(struct state *state)
 	bool done;		// true ==> we have converted enough data
 	BYTE byte;		// single bite
 	int io_ret;		// I/O return status
-	long int i;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(225, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(226, __func__, "state arg is NULL");
 	}
@@ -1983,54 +2056,49 @@ testBitsBinaryInput(struct state *state)
 	}
 
 	/*
-	 * Perform iterations on consecutive bitstreams read from the streamFile as octets
+	 * Seek to the position of the first bit which has not been copied into the stream yet
 	 */
-	dbg(DBG_LOW, "Start of iterate phase");
-	for (i = 0; i < state->tp.numOfBitStreams; i++) {
-
-		/*
-		 * Copy the next n bits from the streamFile to epsilon
-		 */
-		num_0s = 0;
-		num_1s = 0;
-		bitsRead = 0;
-		do {
-			/*
-			 * Read the next binary octet
-			 */
-			io_ret = fgetc(state->streamFile);
-			if (io_ret < 0) {
-				errp(226, __func__, "read error in stream file: %s", state->randomDataPath);
-			}
-			byte = (BYTE) io_ret;
-
-			/*
-			 * Add bits of the octet to the epsilon bit stream
-			 */
-			done = copyBitsToEpsilon(state, &byte, BITS_N_BYTE, state->tp.n, &num_0s, &num_1s, &bitsRead);
-		} while (done == false);
-
-		/*
-		 * Write stats to freq.txt if in legacy_output mode
-		 */
-		if (state->legacy_output == true) {
-			io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
-			if (io_ret <= 0) {
-				errp(226, __func__, "error in writing to %s", state->freqFilePath);
-			}
-			io_ret = fflush(state->freqFile);
-			if (io_ret != 0) {
-				errp(226, __func__, "error flushing to %s", state->freqFilePath);
-			}
-		}
-
-		/*
-		 * Perform statistical tests for this iteration
-		 */
-		runStatisticalTests(state);
-
+	if (fseek(state->streamFile, thread_state->iteration_being_done * state->tp.n / BITS_N_BYTE, SEEK_SET) != 0) {
+		errp(226, __func__, "could not seek %ld further into file: %s",
+		     thread_state->iteration_being_done * state->tp.n / BITS_N_BYTE, state->randomDataPath);
 	}
-	dbg(DBG_LOW, "End of iterate phase\n");
+
+	/*
+	 * Copy the next n bits from the streamFile to epsilon
+	 */
+	num_0s = 0;
+	num_1s = 0;
+	bitsRead = 0;
+	do {
+		/*
+		 * Read the next binary octet
+		 */
+		io_ret = fgetc(state->streamFile);
+		if (io_ret < 0) {
+			errp(226, __func__, "read error in stream file: %s", state->randomDataPath);
+		}
+		byte = (BYTE) io_ret;
+
+		/*
+		 * Add bits of the octet to the epsilon bit stream
+		 */
+		done = copyBitsToEpsilon(state, thread_state->thread_id, &byte, BITS_N_BYTE, &num_0s, &num_1s, &bitsRead);
+	} while (done == false);
+
+	/*
+	 * Write stats to freq.txt if in legacy_output mode
+	 */
+	if (state->legacy_output == true) {
+		io_ret = fprintf(state->freqFile, "\t\tBITSREAD = %ld 0s = %ld 1s = %ld\n", bitsRead, num_0s, num_1s);
+		if (io_ret <= 0) {
+			errp(226, __func__, "error in writing to %s", state->freqFilePath);
+		}
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(226, __func__, "error flushing to %s", state->freqFilePath);
+		}
+	}
+
 	return;
 }
 
@@ -2052,7 +2120,7 @@ testBitsBinaryInput(struct state *state)
  *      false ==> we have NOT converted enough bits, yet
  */
 bool
-copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bitsNeeded, long int *num_0s, long int *num_1s,
+copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBitLength, long int *num_0s, long int *num_1s,
 		  long int *bitsRead)
 {
 	long int i;
@@ -2062,6 +2130,7 @@ copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bi
 	BYTE mask;
 	long int zeros;
 	long int ones;
+	long int bitsNeeded;
 
 	/*
 	 * Check preconditions (firewall)
@@ -2069,9 +2138,11 @@ copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bi
 	if (state == NULL) {
 		err(227, __func__, "state arg is NULL");
 	}
-	if (state->epsilon == NULL) {
-		err(227, __func__, "state->epsilon is NULL");
+	if (state->epsilon[thread_id] == NULL) {
+		err(227, __func__, "state->epsilon[%ld] is NULL", thread_id);
 	}
+
+	bitsNeeded = state->tp.n;
 
 	count = 0;
 	zeros = ones = 0;
@@ -2088,7 +2159,7 @@ copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bi
 				zeros++;
 			}
 			mask >>= 1;
-			state->epsilon[*bitsRead] = (BitSequence) bit;
+			state->epsilon[thread_id][*bitsRead] = (BitSequence) bit;
 			(*bitsRead)++;
 			if (*bitsRead == bitsNeeded) {
 				return true;
@@ -2116,7 +2187,7 @@ copyBitsToEpsilon(struct state *state, BYTE *x, long int xBitLength, long int bi
  *
  * This function does not retun on error.
  */
-static void
+void
 getTimestamp(char *buf, size_t len)
 {
 	time_t seconds;		// seconds since the epoch
@@ -2155,55 +2226,6 @@ getTimestamp(char *buf, size_t len)
 
 
 /*
- * runStatisticalTests - run an iteration for all enabled tests
- *
- * given:
- *      state           // run state and which tests are enabled
- */
-void
-runStatisticalTests(struct state *state)
-{
-	char buf[BUFSIZ + 1];	// time string buffer
-
-	/*
-	 * Check preconditions (firewall)
-	 */
-	if (state == NULL) {
-		err(230, __func__, "state arg is NULL");
-	}
-
-	/*
-	 * If you "like to watch", report the very beginning
-	 */
-	if (state->reportCycle > 0 && state->curIteration == 0) {
-		getTimestamp(buf, BUFSIZ);
-		msg("Starting first iteration of %ld at %s", state->tp.numOfBitStreams, buf);
-	}
-
-	/*
-	 * Perform one iteration on all enabled tests
-	 */
-	iterate(state);
-
-	/*
-	 * Count the iteration and report process if requested
-	 */
-	++state->curIteration;
-	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
-				       (state->curIteration == state->tp.numOfBitStreams))) {
-		getTimestamp(buf, BUFSIZ);
-		if (state->curIteration == state->tp.numOfBitStreams) {
-			msg("Completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
-		} else {
-			msg("Completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
-		}
-	}
-
-	return;
-}
-
-
-/*
  * write_sequence - write the epsilon stream to a randomDataPath
  *
  * given:
@@ -2212,7 +2234,6 @@ runStatisticalTests(struct state *state)
 void
 write_sequence(struct state *state)
 {
-	char buf[BUFSIZ + 1];	// time string buffer
 	int io_ret;		// I/O return status
 	int count;
 	long int i;
@@ -2243,9 +2264,9 @@ write_sequence(struct state *state)
 		for (i = 0, j = 0, count = 0, state->tmpepsilon[0] = 0; i < state->tp.n; i++) {
 
 			// Store bit in current output byte
-			if (state->epsilon[i] == 1) {
+			if (state->epsilon[0][i] == 1) {
 				state->tmpepsilon[j] |= (1 << count);
-			} else if (state->epsilon[i] != 0) {
+			} else if (state->epsilon[0][i] != 0) {
 				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
 			}
 			++count;
@@ -2284,9 +2305,9 @@ write_sequence(struct state *state)
 		 * Store output as ASCII string of numbers
 		 */
 		for (i = 0; i < state->tp.n; i++) {
-			if (state->epsilon[i] == 0) {
+			if (state->epsilon[0][i] == 0) {
 				state->tmpepsilon[i] = '0';
-			} else if (state->epsilon[i] == 1) {
+			} else if (state->epsilon[0][i] == 1) {
 				state->tmpepsilon[i] = '1';
 			} else {
 				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
@@ -2313,20 +2334,9 @@ write_sequence(struct state *state)
 		break;
 	}
 
-	/*
-	 * Count the iteration and report process if requested
-	 */
-	++state->curIteration;
-	if (state->reportCycle > 0 && (((state->curIteration % state->reportCycle) == 0) ||
-				       (state->curIteration == state->tp.numOfBitStreams))) {
-		getTimestamp(buf, BUFSIZ);
-		if (state->curIteration == state->tp.numOfBitStreams) {
-			msg("Completed last iteration of %ld at %s", state->tp.numOfBitStreams, buf);
-		} else {
-			msg("Completed iteration %ld of %ld at %s", state->curIteration, state->tp.numOfBitStreams, buf);
-		}
-	}
+	return;
 }
+
 
 /*
  * sum_will_overflow_long - check if a sum operation will lead to overflow
@@ -2348,6 +2358,7 @@ sum_will_overflow_long(long int si_a, long int si_b)
 
 	return 0;		// will not overflow
 }
+
 
 /*
  * multiplication_will_overflow_long - check if a multiplication operation will lead to overflow

@@ -461,7 +461,7 @@ usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ..
 	} else {
 		fprintf(stderr, "usage: %s %s\n", program, usage);
 	}
-	fprintf(stderr, "\nversion: %s\n", version);
+	fprintf(stderr, "version: %s\n", version);
 
 	/*
 	 * Clean up stdarg stuff

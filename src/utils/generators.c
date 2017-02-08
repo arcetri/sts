@@ -28,13 +28,61 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>
 #include <errno.h>
 #include "../constants/externs.h"
 #include "utilities.h"
 #include "generators.h"
 #include "genutils.h"
 #include "debug.h"
+
+
+static void
+generator_iterate(struct state *state)
+{
+	long int iteration_being_done = state->tp.numOfBitStreams - state->iterationsMissing;
+	state->iterationsMissing -= 1;
+
+	if (iteration_being_done == 0) {
+		dbg(DBG_LOW, "Start of iterate phase");
+	}
+
+	/*
+	 * Create a fake thread for the iteration.
+	 * This is done because when the STS generators are used STS currently
+	 * supports only 1 thread.
+	 */
+	struct thread_state fake_thread_state;
+	fake_thread_state.global_state = state;
+	fake_thread_state.thread_id = 0;
+	fake_thread_state.iteration_being_done = iteration_being_done;
+	fake_thread_state.mutex = NULL;
+	iterate(&fake_thread_state);
+}
+
+
+static void
+generator_report_iteration(struct state *state)
+{
+	char buf[BUFSIZ + 1];	// time string buffer
+	long int iteration_being_done;
+
+	/*
+	 * Count the iteration and report process if requested
+	 */
+	iteration_being_done = state->tp.numOfBitStreams - state->iterationsMissing;
+
+	if (state->reportCycle > 0 && (((iteration_being_done % state->reportCycle) == 0) ||
+				       (iteration_being_done == state->tp.numOfBitStreams))) {
+		getTimestamp(buf, BUFSIZ);
+		msg("Completed iteration %ld of %ld at %s", iteration_being_done,
+		    state->tp.numOfBitStreams, buf);
+	}
+
+	if (iteration_being_done == state->tp.numOfBitStreams) {
+		dbg(DBG_LOW, "End of iterate phase\n");
+	}
+}
+
 
 static double
 lcg_rand(long int N, double SEED, double *DUNIF, long int NDIM)
@@ -78,6 +126,7 @@ lcg_rand(long int N, double SEED, double *DUNIF, long int NDIM)
 	return SEED;
 }
 
+
 void
 lcg(struct state *state)
 {
@@ -91,13 +140,15 @@ lcg(struct state *state)
 	long int v;
 	long int bitsRead;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(80, __func__, "state arg is NULL");
 	}
 
 	SEED = 23482349.0;
-	DUNIF = calloc(state->tp.n, sizeof(double));
+	DUNIF = calloc((size_t) state->tp.n, sizeof(double));
 	if (DUNIF == NULL) {
 		errp(80, __func__, "could not calloc for DUNIF: %ld doubles of %lu bytes each", state->tp.n, sizeof(double));
 	}
@@ -116,7 +167,7 @@ lcg(struct state *state)
 				num_1s++;
 			}
 			bitsRead++;
-			state->epsilon[i] = bit;
+			state->epsilon[0][i] = (BitSequence) bit;
 		}
 
 		/*
@@ -130,15 +181,18 @@ lcg(struct state *state)
 				errp(80, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
+
 	free(DUNIF);
-	free(state->epsilon);
-	state->epsilon = NULL;
+
+	return;
 }
 
 
@@ -155,7 +209,9 @@ quadRes1(struct state *state)
 	BYTE g[64];		// XXX - array size uses magic number
 	BYTE x[128];		// XXX - array size uses magic number
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(81, __func__, "state arg is NULL");
 	}
@@ -166,20 +222,16 @@ quadRes1(struct state *state)
 	ahtopb
 	    ("3844506a9456c564b8b8538e0cc15aff46c95e69600f084f0657c2401b3c2447"
 	     "34b62ea9bb95be4923b9b7e84eeaf1a224894ef0328d44bc3eb3e983644da3f5", g, 64);
-	num_0s = 0;
-	num_1s = 0;
-	done = 0;
-	bitsRead = 0;
+
 	for (k = 0; k < state->tp.numOfBitStreams; k++) {
 		num_0s = 0;
 		num_1s = 0;
-		done = 0;
 		bitsRead = 0;
 		do {
 			memset(x, 0x00, 128);
 			ModMult(x, g, 64, g, 64, p, 64);
 			memcpy(g, x + 64, 64);
-			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, g, 512, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -193,17 +245,18 @@ quadRes1(struct state *state)
 				errp(81, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
 
 	return;
 }
+
 
 void
 quadRes2(struct state *state)
@@ -221,7 +274,9 @@ quadRes2(struct state *state)
 	long int num_1s;
 	long int bitsRead;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(82, __func__, "state arg is NULL");
 	}
@@ -237,7 +292,6 @@ quadRes2(struct state *state)
 	for (k = 0; k < state->tp.numOfBitStreams; k++) {
 		num_0s = 0;
 		num_1s = 0;
-		done = 0;
 		bitsRead = 0;
 		do {
 			memset(t1, 0x00, 65);
@@ -247,7 +301,7 @@ quadRes2(struct state *state)
 			Mult(x, t1, 65, g, 64);	/* x(2x+3) */
 			add(x, 129, One, 1);	/* x(2x+3)+1 */
 			memcpy(g, x + 65, 64);
-			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, g, 512, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -261,16 +315,18 @@ quadRes2(struct state *state)
 				errp(82, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
+
 
 void
 cubicRes(struct state *state)
@@ -285,7 +341,9 @@ cubicRes(struct state *state)
 	long int num_1s;
 	long int bitsRead;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(83, __func__, "state arg is NULL");
 	}
@@ -299,14 +357,13 @@ cubicRes(struct state *state)
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
-		done = 0;
 		do {
 			memset(tmp, 0x00, 128);
 			memset(x, 0x00, 192);
 			Mult(tmp, g, 64, g, 64);
 			Mult(x, tmp, 128, g, 64);	// Don't need to mod by 2^512, just take low 64 bytes
 			memcpy(g, x + 128, 64);
-			done = copyBitsToEpsilon(state, g, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, x, 512, &num_0s, &num_1s, &bitsRead);
 		} while (done == false);
 
 		/*
@@ -320,16 +377,18 @@ cubicRes(struct state *state)
 				errp(83, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
+
 
 void
 exclusiveOR(struct state *state)
@@ -340,7 +399,10 @@ exclusiveOR(struct state *state)
 	long int num_1s;
 	long int bitsRead;
 	BYTE bit_sequence[127];	// XXX - array size uses magic number
-	// firewall
+
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(84, __func__, "state arg is NULL");
 	}
@@ -353,7 +415,7 @@ exclusiveOR(struct state *state)
 	bitsRead = 0;
 	for (i = 0; i < 127; i++) {
 		if (bit_sequence[i] == '1') {
-			state->epsilon[bitsRead] = 1;
+			state->epsilon[0][bitsRead] = 1;
 			num_1s++;
 		} else {
 			state->epsilon[bitsRead] = 0;
@@ -364,7 +426,7 @@ exclusiveOR(struct state *state)
 	for (i = 127; i < state->tp.n * state->tp.numOfBitStreams; i++) {
 		if (bit_sequence[(i - 1) % 127] != bit_sequence[(i - 127) % 127]) {
 			bit_sequence[i % 127] = 1;
-			state->epsilon[bitsRead] = 1;
+			state->epsilon[0][bitsRead] = 1;
 			num_1s++;
 		} else {
 			bit_sequence[i % 127] = 0;
@@ -385,18 +447,20 @@ exclusiveOR(struct state *state)
 					errp(84, __func__, "error flushing to: %s", state->freqFilePath);
 				}
 			}
+
 			if (state->runMode == MODE_WRITE_ONLY) {
 				write_sequence(state);
 			} else {
-				runStatisticalTests(state);
+				generator_iterate(state);
 			}
+			generator_report_iteration(state);
+
 			num_0s = 0;
 			num_1s = 0;
 			bitsRead = 0;
 		}
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
 
@@ -415,7 +479,9 @@ modExp(struct state *state)
 	BYTE x[192];		// XXX - array size uses magic number
 	BYTE y[20];		// XXX - array size uses magic number
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(85, __func__, "state arg is NULL");
 	}
@@ -432,11 +498,10 @@ modExp(struct state *state)
 		num_0s = 0;
 		num_1s = 0;
 		bitsRead = 0;
-		done = 0;
 		do {
 			memset(x, 0x00, 128);
 			ModExp(x, g, 64, y, 20, p, 64);	/* NOTE: g must be less than p */
-			done = copyBitsToEpsilon(state, x, 512, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, x, 512, &num_0s, &num_1s, &bitsRead);
 			memcpy(y, x + 44, 20);
 		} while (done == false);
 
@@ -451,14 +516,15 @@ modExp(struct state *state)
 				errp(85, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
 
@@ -477,7 +543,9 @@ bbs(struct state *state)
 	long int num_0s;
 	long int num_1s;
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(86, __func__, "state arg is NULL");
 	}
@@ -506,10 +574,10 @@ bbs(struct state *state)
 			memcpy(x, x + 128, 128);
 			if ((x[127] & 0x01) == 0) {
 				num_0s++;
-				state->epsilon[i] = 0;
+				state->epsilon[0][i] = 0;
 			} else {
 				num_1s++;
-				state->epsilon[i] = 1;
+				state->epsilon[0][i] = 1;
 			}
 			bitsRead++;
 			if ((i % 50000) == 0) {
@@ -533,14 +601,15 @@ bbs(struct state *state)
 				errp(86, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
 
@@ -566,7 +635,9 @@ micali_schnorr(struct state *state)
 	BYTE Y[384];		// XXX - array size uses magic number
 	BYTE Tail[105];		// XXX - array size uses magic number
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(87, __func__, "state arg is NULL");
 	}
@@ -593,7 +664,7 @@ micali_schnorr(struct state *state)
 			for (j = 0; j < 3; j++) {
 				bshl(Tail, 105);
 			}
-			done = copyBitsToEpsilon(state, Tail, k, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, Tail, k, &num_0s, &num_1s, &bitsRead);
 			memset(X, 0x00, 128);
 			memcpy(X + 104, Y, 24);
 			for (j = 0; j < 5; j++) {
@@ -612,14 +683,15 @@ micali_schnorr(struct state *state)
 				errp(87, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }
 
@@ -647,7 +719,9 @@ SHA1(struct state *state)
 	bool done;		// true ==> enough data has been converted
 	ULONG tx[5] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };	// XXX - array size uses magic number
 
-	// firewall
+	/*
+	 * Check preconditions (firewall)
+	 */
 	if (state == NULL) {
 		err(88, __func__, "state arg is NULL");
 	}
@@ -774,7 +848,7 @@ SHA1(struct state *state)
 #endif
 			// End: SHA Steps A-E
 
-			done = copyBitsToEpsilon(state, G, 160, state->tp.n, &num_0s, &num_1s, &bitsRead);
+			done = copyBitsToEpsilon(state, 0, G, 160, &num_0s, &num_1s, &bitsRead);
 			add(Xkey, 20, G, 20);
 			add(Xkey, 20, One, 1);
 		} while (done == false);
@@ -790,13 +864,14 @@ SHA1(struct state *state)
 				errp(88, __func__, "error flushing to: %s", state->freqFilePath);
 			}
 		}
+
 		if (state->runMode == MODE_WRITE_ONLY) {
 			write_sequence(state);
 		} else {
-			runStatisticalTests(state);
+			generator_iterate(state);
 		}
+		generator_report_iteration(state);
 	}
-	free(state->epsilon);
-	state->epsilon = NULL;
+
 	return;
 }

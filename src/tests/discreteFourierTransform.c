@@ -33,7 +33,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <limits.h>
 #include <complex.h>
 #include "../constants/externs.h"
 #include "../utils/utilities.h"
@@ -147,51 +146,62 @@ DiscreteFourierTransform_init(struct state *state)
 	sqrt_log20_n = sqrt(log(20.0) * (double) state->tp.n);	// 2.995732274 * n
 
 	/*
-	 * Allocate array X, that will be used as input to the DFT
+	 * Allocate arrays that will be used by the DFT libraries, for each thread
 	 */
-	state->fft_X = malloc((state->tp.n) * sizeof(state->fft_X[0]));
+	state->fft_X = malloc((size_t) state->numberOfThreads * sizeof(*state->fft_X));
 	if (state->fft_X == NULL) {
-		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_X", n, sizeof(double));
+		errp(40, __func__, "cannot malloc for fft_X: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->fft_X));
 	}
-
-	/*
-	 * Zeroize array X
-	 */
-	for (i = 0; i < (state->tp.n + 1); ++i) {
-		state->fft_X[i] = 0.0;
-	}
-
-	/*
-	 * Allocate special arrays that will be used by the DFT libraries
-	 */
 #if defined(LEGACY_FFT)
-	state->fft_wsave = malloc(2 * state->tp.n * sizeof(state->fft_wsave[0]));
+	state->fft_wsave = malloc((size_t) state->numberOfThreads * sizeof(*state->fft_wsave));
 	if (state->fft_wsave == NULL) {
-		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_wsave",
-		     2 * state->tp.n, sizeof(double));
-	}
-	for (i = 0; i < 2 * state->tp.n; ++i) {
-		state->fft_wsave[i] = 0.0;
+		errp(40, __func__, "cannot malloc for fft_wsave: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->fft_wsave));
 	}
 #else /* LEGACY_FFT */
-	state->fftw_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
+	state->fftw_out = malloc((size_t) state->numberOfThreads * sizeof(*state->fftw_out));
 	if (state->fftw_out == NULL) {
-		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fftw_out",
-		     n / 2 + 1, sizeof(fftw_complex));
+		errp(40, __func__, "cannot malloc for fftw_out: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->fftw_out));
 	}
-	if(n > INT_MAX) {
-		errp(40, __func__, "cannot create a plan: library requires bitcount(n): %ld <= INT_MAX = %d",
-		     n, INT_MAX);
+	state->fftw_p = malloc((size_t) state->numberOfThreads * sizeof(*state->fftw_p));
+	if (state->fftw_p == NULL) {
+		errp(40, __func__, "cannot malloc for fftw_p: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->fftw_p));
 	}
-	state->fftw_p = fftw_plan_dft_r2c_1d((int) n, state->fft_X, state->fftw_out, FFTW_ESTIMATE);
 #endif /* LEGACY_FFT */
-	state->fft_m = malloc((state->tp.n / 2 + 1) * sizeof(state->fft_m[0]));
+	state->fft_m = malloc((size_t) state->numberOfThreads * sizeof(*state->fft_m));
 	if (state->fft_m == NULL) {
-		errp(40, __func__, "cannot malloc of %ld elements of %ld bytes each for state->fft_m",
-		     state->tp.n / 2 + 1, sizeof(double));
+		errp(40, __func__, "cannot malloc for fft_m: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->fft_m));
 	}
-	for (i = 0; i < (state->tp.n / 2 + 1); ++i) {
-		state->fft_m[i] = 0.0;
+
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->fft_X[i] = calloc((size_t) state->tp.n, sizeof(state->fft_X[i][0]));
+		if (state->fft_X[i] == NULL) {
+			errp(40, __func__, "cannot calloc of %ld elements of %ld bytes each for state->fft_X[%ld]",
+			     n, sizeof(state->fft_X[i][0]), i);
+		}
+#if defined(LEGACY_FFT)
+		state->fft_wsave[i] = calloc((size_t) 2 * state->tp.n, sizeof(state->fft_wsave[i][0]));
+		if (state->fft_wsave[i] == NULL) {
+			errp(40, __func__, "cannot calloc of %ld elements of %ld bytes each for state->fft_wsave[%ld]",
+			     2 * n, sizeof(state->fft_wsave[i][0]), i);
+		}
+#else /* LEGACY_FFT */
+		state->fftw_out[i] = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (n / 2 + 1));
+		if (state->fftw_out[i] == NULL) {
+			errp(40, __func__, "cannot fftw_malloc of %ld elements of %ld bytes each for state->fftw_out[%ld]",
+			     n / 2 + 1, sizeof(fftw_complex), i);
+		}
+		state->fftw_p[i] = fftw_plan_dft_r2c_1d((int) n, state->fft_X[i], state->fftw_out[i], FFTW_ESTIMATE);
+#endif /* LEGACY_FFT */
+		state->fft_m[i] = calloc((size_t) (n / 2 + 1), sizeof(state->fft_m[i][0]));
+		if (state->fft_m[i] == NULL) {
+			errp(40, __func__, "cannot calloc of %ld elements of %ld bytes each for state->fft_m[%ld]",
+			     n / 2 + 1, sizeof(state->fft_m[i][0]), i);
+		}
 	}
 
 	/*
@@ -234,7 +244,7 @@ DiscreteFourierTransform_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-DiscreteFourierTransform_iterate(struct state *state)
+DiscreteFourierTransform_iterate(struct thread_state *thread_state)
 {
 	struct DiscreteFourierTransform_private_stats stat;	// Stats for this iteration
 	long int n;			// Length of a single bit stream
@@ -253,6 +263,10 @@ DiscreteFourierTransform_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(41, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(41, __func__, "state arg is NULL");
 	}
@@ -263,11 +277,20 @@ DiscreteFourierTransform_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(41, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->fft_X == NULL) {
 		err(41, __func__, "state->fft_X is NULL");
 	}
+	if (state->fft_X[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->fft_X[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->fft_m == NULL) {
 		err(41, __func__, "state->fft_m is NULL");
+	}
+	if (state->fft_m[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->fft_m[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(41, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -281,12 +304,21 @@ DiscreteFourierTransform_iterate(struct state *state)
 	if (state->fft_wsave == NULL) {
 		err(41, __func__, "state->fft_wsave is NULL");
 	}
+	if (state->fft_wsave[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->fft_wsave[%ld] is NULL", thread_state->thread_id);
+	}
 #else
 	if (state->fftw_out == NULL) {
 		err(41, __func__, "state->fftw_out is NULL");
 	}
+	if (state->fftw_out[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->fftw_out[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->fftw_p == NULL) {
 		err(41, __func__, "state->fftw_p is NULL");
+	}
+	if (state->fftw_p[thread_state->thread_id] == NULL) {
+		err(41, __func__, "state->fftw_p[%ld] is NULL", thread_state->thread_id);
 	}
 #endif /* LEGACY_FFT */
 
@@ -294,22 +326,22 @@ DiscreteFourierTransform_iterate(struct state *state)
 	 * Collect parameters from state
 	 */
 	n = state->tp.n;
-	X = state->fft_X;
+	X = state->fft_X[thread_state->thread_id];
 #if defined(LEGACY_FFT)
-	wsave = state->fft_wsave;
+	wsave = state->fft_wsave[thread_state->thread_id];
 #else /* LEGACY_FFT */
-	out = state->fftw_out;
-	p = state->fftw_p;
+	out = state->fftw_out[thread_state->thread_id];
+	p = state->fftw_p[thread_state->thread_id];
 #endif /* LEGACY_FFT */
-	m = state->fft_m;
+	m = state->fft_m[thread_state->thread_id];
 
 	/*
 	 * Step 1: initialize X for this iteration
 	 */
 	for (i = 0; i < n; i++) {
-		if ((int) state->epsilon[i] == 1) {
+		if ((int) state->epsilon[thread_state->thread_id][i] == 1) {
 			X[i] = 1;
-		} else if ((int) state->epsilon[i] == 0) {
+		} else if ((int) state->epsilon[thread_state->thread_id][i] == 0) {
 			X[i] = -1;
 		} else {
 			err(41, __func__, "found a bit different than 1 or 0 in the sequence");
@@ -344,10 +376,6 @@ DiscreteFourierTransform_iterate(struct state *state)
 	fftw_execute(p);
 #endif /* LEGACY_FFT */
 
-	/*
-	 * Step 3: compute modulus (absolute value) of the first (n / 2 + 1) elements (in our case
-	 * all the ones that we have) of the DFT output.
-	 */
 #if defined(LEGACY_FFT)
 	/*
 	 * Step 3a: compute modulus (absolute value) of the first element of the DFT output.
@@ -372,6 +400,10 @@ DiscreteFourierTransform_iterate(struct state *state)
 		m[i+1] = fabs(X[n-1]);
 	}
 #else /* LEGACY_FFT */
+	/*
+	 * Step 3: compute modulus (absolute value) of the first (n / 2 + 1) elements (in our case
+	 * all the ones that we have) of the DFT output.
+	 */
 	for (i = 0; i < n / 2 + 1; i++) {
 		m[i] = cabs(out[i]);
 	}
@@ -404,6 +436,13 @@ DiscreteFourierTransform_iterate(struct state *state)
 	p_value = erfc(fabs(stat.d) / state->c.sqrt2);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -412,12 +451,12 @@ DiscreteFourierTransform_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -443,6 +482,13 @@ DiscreteFourierTransform_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1117,7 +1163,7 @@ DiscreteFourierTransform_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1137,6 +1183,8 @@ DiscreteFourierTransform_metrics(struct state *state)
 void
 DiscreteFourierTransform_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1173,6 +1221,34 @@ DiscreteFourierTransform_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
+
+
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->fft_X[i] != NULL) {
+			free(state->fft_X[i]);
+			state->fft_X[i] = NULL;
+		}
+#if defined(LEGACY_FFT)
+		if (state->fft_wsave[i] != NULL) {
+			free(state->fft_wsave[i]);
+			state->fft_wsave[i] = NULL;
+		}
+#else /* LEGACY_FFT */
+		if (state->fftw_out[i] != NULL) {
+			fftw_free(state->fftw_out[i]);
+			state->fftw_out[i] = NULL;
+		}
+		if (state->fftw_p[i] != NULL) {
+			fftw_destroy_plan(state->fftw_p[i]);
+			state->fftw_p[i] = NULL;
+		}
+#endif /* LEGACY_FFT */
+		if (state->fft_m[i] != NULL) {
+			free(state->fft_m[i]);
+			state->fft_m[i] = NULL;
+		}
+	}
+
 	if (state->fft_X != NULL) {
 		free(state->fft_X);
 		state->fft_X = NULL;
@@ -1184,11 +1260,11 @@ DiscreteFourierTransform_destroy(struct state *state)
 	}
 #else /* LEGACY_FFT */
 	if (state->fftw_out != NULL) {
-		fftw_free(state->fftw_out);
+		free(state->fftw_out);
 		state->fftw_out = NULL;
 	}
 	if (state->fftw_p != NULL) {
-		fftw_destroy_plan(state->fftw_p);
+		free(state->fftw_p);
 		state->fftw_p = NULL;
 	}
 #endif /* LEGACY_FFT */
@@ -1200,7 +1276,7 @@ DiscreteFourierTransform_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

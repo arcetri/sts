@@ -158,7 +158,7 @@ Frequency_init(struct state *state)
  * NOTE: The initialize function must be called before this function is called.
  */
 void
-Frequency_iterate(struct state *state)
+Frequency_iterate(struct thread_state *thread_state)
 {
 	struct Frequency_private_stats stat;	// Stats for this iteration
 	long int n;		// Length of a single bit stream
@@ -170,6 +170,10 @@ Frequency_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(71, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(71, __func__, "state arg is NULL");
 	}
@@ -180,6 +184,9 @@ Frequency_iterate(struct state *state)
 	}
 	if (state->epsilon == NULL) {
 		err(71, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(71, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(71, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -200,9 +207,9 @@ Frequency_iterate(struct state *state)
 	 */
 	stat.S_n = 0;
 	for (i = 0; i < n; i++) {
-		if ((int) state->epsilon[i] == 1) {
+		if ((int) state->epsilon[thread_state->thread_id][i] == 1) {
 			stat.S_n++;
-		} else if ((int) state->epsilon[i] == 0) {
+		} else if ((int) state->epsilon[thread_state->thread_id][i] == 0) {
 			stat.S_n--;
 		} else {
 			err(41, __func__, "found a bit different than 1 or 0 in the sequence");
@@ -221,6 +228,13 @@ Frequency_iterate(struct state *state)
 	p_value = erfc(f);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -229,12 +243,12 @@ Frequency_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;	        // FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;	        // FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -260,6 +274,13 @@ Frequency_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -923,7 +944,7 @@ Frequency_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -983,7 +1004,7 @@ Frequency_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

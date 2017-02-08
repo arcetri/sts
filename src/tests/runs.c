@@ -180,7 +180,7 @@ Runs_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-Runs_iterate(struct state *state)
+Runs_iterate(struct thread_state *thread_state)
 {
 	struct Runs_private_stats stat;	// Stats for this iteration
 	long int n;			// Length of a single bit stream
@@ -191,6 +191,10 @@ Runs_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(181, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(181, __func__, "state arg is NULL");
 	}
@@ -200,6 +204,9 @@ Runs_iterate(struct state *state)
 	}
 	if (state->epsilon == NULL) {
 		err(181, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(181, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(181, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -220,7 +227,7 @@ Runs_iterate(struct state *state)
 	 */
 	S = 0;
 	for (k = 0; k < n; k++) {
-		if (state->epsilon[k]) {
+		if (state->epsilon[thread_state->thread_id][k]) {
 			S++;
 		}
 	}
@@ -241,7 +248,7 @@ Runs_iterate(struct state *state)
 		 */
 		stat.V_n = 1;
 		for (k = 1; k < n; k++) {
-			if (state->epsilon[k] != state->epsilon[k - 1]) {
+			if (state->epsilon[thread_state->thread_id][k] != state->epsilon[thread_state->thread_id][k - 1]) {
 				stat.V_n++;
 			}
 		}
@@ -254,6 +261,13 @@ Runs_iterate(struct state *state)
 		p_value = erfc(stat.erfc_arg);
 
 		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
+
+		/*
 		 * Record success or failure for this iteration
 		 */
 		state->count[test_num]++;	// Count this iteration
@@ -262,12 +276,12 @@ Runs_iterate(struct state *state)
 			state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 			stat.success = false;		// FAILURE
 			warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-			     state->curIteration, state->testNames[test_num], test_num, p_value);
+			     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 		} else if (isGreaterThanOne(p_value)) {
 			state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 			stat.success = false;		// FAILURE
 			warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-			     state->curIteration, state->testNames[test_num], test_num, p_value);
+			     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 		} else if (p_value < state->tp.alpha) {
 			state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 			state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -297,13 +311,21 @@ Runs_iterate(struct state *state)
 		 */
 		state->count[test_num]++;
 
-		/*
-		 * Record statistics of this invalid iteration
-		 */
 		stat.pi = UNSET_DOUBLE;
 		stat.V_n = 0;
 		stat.erfc_arg = UNSET_DOUBLE;
 		stat.success = false;	// FAILURE
+
+		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
+
+		/*
+		 * Record statistics of this invalid iteration
+		 */
 		if (state->resultstxtFlag == true) {
 			append_value(state->stats[test_num], &stat);
 		}
@@ -322,6 +344,13 @@ Runs_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1054,7 +1083,7 @@ Runs_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1114,7 +1143,7 @@ Runs_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

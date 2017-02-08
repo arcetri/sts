@@ -227,7 +227,13 @@
  *          very clear nor were some of the lines printed in various stats.txt files.  When the -O
  *          flag is NOT given we replaced that with an easier way to understand test results.
  *
- *      23) Other issues not listed
+ *      23) Speed up results through parallel processing
+ *
+ *          The original code ran on a single thread and used only a single core of the machine where executed.
+ *          We wanted to take advantage of multi-core parallel processing to decrease execution time. We did
+ *          so by running separate iterations on multiple cores in parallel through multi-threading.
+ *
+ *      24) Other issues not listed
  *
  *          The above list of goals is incomplete.  In the interest of not extending this long comment
  *          much further, we will just mention that other important goals were attempted to be reached.
@@ -235,21 +241,12 @@
  * We are not finished in our code modification and test improvement.  We are in the process of making even more
  * important changes to this code.  In particular we are planning to:
  *
- *      A) Speed up results through parallel processing
- *
- *          We want to take advantage of multi-core parallel processing to decrease execution time.
- *          We want to be able to run separate iterations on multiple hosts in parallel.  Much of the
- *          motivation behind changes such as "(5) Eliminate we much as possible, the use of global variables"
- *          and "(1) Allow to test to be executed without human intervention" was to make it possible for
- *          parallel processing that would allow for faster testing and/or testing of even larger
- *          amounts of test data.
- *
- *      B) Visualize test results in a graphical way
+ *      A) Visualize test results in a graphical way
  *
  *          We plan to use gnu-plot to visualize the results of a run in a graphical way.
  *          This can be considered an follow-up on the change "(22) Improve the program output".
  *
- *      C) Update the SP800-22Rev1a document
+ *      B) Update the SP800-22Rev1a document
  *
  *          While much of the text in the SP800-22Rev1a document still applies, some text needs
  *          to be revised.  For example, language about the new command line needs to be added.
@@ -257,7 +254,7 @@
  *          document.  And in a few cases, bugs, typos or misleading SP800-22Rev1a text needs
  *          to be fixed.
  *
- *      D) Add entropy analysis
+ *      C) Add entropy analysis
  *
  *          The approximate entropy test is of limited value.  Improved entropy tests need to
  *          be added to the existing test suite such as some of those outlined in FIPS 800-90B.
@@ -296,7 +293,7 @@
 
 
 // STS version
-const char *const version = "3.0.0";
+const char *const version = "3.1.0";
 
 // Program name
 char *program = "sts";

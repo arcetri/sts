@@ -59,7 +59,7 @@ static const enum test test_num = TEST_APEN;	// This test number
 /*
  * Forward static function declarations
  */
-static double compute_phi(struct state *state, long int blocksize);
+static double compute_phi(struct thread_state *thread_state, long int blocksize);
 static bool ApproximateEntropy_print_stat(FILE * stream, struct state *state, struct ApproximateEntropy_private_stats *stat,
 					  double p_value);
 static bool ApproximateEntropy_print_p_value(FILE * stream, double p_value);
@@ -79,7 +79,8 @@ static void ApproximateEntropy_metric_print(struct state *state, long int sample
 void
 ApproximateEntropy_init(struct state *state)
 {
-	long int m;		// Approximate Entropy Test - block length
+	long int m;		// Approximate Entropy Test - block lengt
+	long int i;
 
 	/*
 	 * Check preconditions (firewall)
@@ -131,10 +132,21 @@ ApproximateEntropy_init(struct state *state)
 		err(10, __func__, "m is too large, 1 << (m:%ld) can't be longer than %ld bits", m, BITS_N_LONGINT - 1);
 	}
 	state->apen_C_len = (long int) 1 << (m + 1);
-	state->apen_C = malloc(state->apen_C_len * sizeof(state->apen_C[0]));
+
+	/*
+	 * Allocate the array for the frequency count for each thread
+	 */
+	state->apen_C = malloc((size_t) state->numberOfThreads * sizeof(*state->apen_C));
 	if (state->apen_C == NULL) {
-		errp(10, __func__, "cannot malloc of %ld elements of %ld bytes each for state->apen_C",
-		     state->apen_C_len, sizeof(long int));
+		errp(10, __func__, "cannot malloc for apen_C: %ld elements of %ld bytes each", state->numberOfThreads,
+		     sizeof(*state->apen_C));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->apen_C[i] = malloc(state->apen_C_len * sizeof(state->apen_C[i][0]));
+		if (state->apen_C[i] == NULL) {
+			errp(10, __func__, "cannot malloc of %ld elements of %ld bytes each for state->apen_C[%ld]",
+			     state->apen_C_len, sizeof(state->apen_C[i][0]), i);
+		}
 	}
 
 	/*
@@ -177,7 +189,7 @@ ApproximateEntropy_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-ApproximateEntropy_iterate(struct state *state)
+ApproximateEntropy_iterate(struct thread_state *thread_state)
 {
 	struct ApproximateEntropy_private_stats stat;	// Stats for this iteration
 	long int m;					// Approximate Entropy Test - block length
@@ -187,18 +199,16 @@ ApproximateEntropy_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(11, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(11, __func__, "state arg is NULL");
 	}
 	if (state->testVector[test_num] != true) {
 		dbg(DBG_LOW, "iterate function[%d] %s called when test vector was false", test_num, __func__);
 		return;
-	}
-	if (state->epsilon == NULL) {
-		err(11, __func__, "state->epsilon is NULL");
-	}
-	if (state->apen_C == NULL) {
-		err(11, __func__, "state->apen_C is NULL");
 	}
 	if (state->cSetup != true) {
 		err(11, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -218,8 +228,8 @@ ApproximateEntropy_iterate(struct state *state)
 	/*
 	 * Step 4 and 5: compute phi for blocksize m and m+1
 	 */
-	stat.phi[0] = compute_phi(state, m);
-	stat.phi[1] = compute_phi(state, m + 1);
+	stat.phi[0] = compute_phi(thread_state, m);
+	stat.phi[1] = compute_phi(thread_state, m + 1);
 
 	/*
 	 * Step 6: compute the test statistic
@@ -233,6 +243,13 @@ ApproximateEntropy_iterate(struct state *state)
 	p_value = cephes_igamc((double) ((long int) 1 << (m - 1)), stat.chi_squared / 2.0);
 
 	/*
+	 * Lock mutex before making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_lock(thread_state->mutex);
+	}
+
+	/*
 	 * Record success or failure for this iteration
 	 */
 	state->count[test_num]++;	// Count this iteration
@@ -241,12 +258,12 @@ ApproximateEntropy_iterate(struct state *state)
 		state->failure[test_num]++;	// Bogus p_value < 0.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (isGreaterThanOne(p_value)) {
 		state->failure[test_num]++;	// Bogus p_value > 1.0 treated as a failure
 		stat.success = false;		// FAILURE
 		warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-		     state->curIteration, state->testNames[test_num], test_num, p_value);
+		     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 	} else if (p_value < state->tp.alpha) {
 		state->valid_p_val[test_num]++;	// Valid p_value in [0.0, 1.0] range
 		state->failure[test_num]++;	// Valid p_value but too low is a failure
@@ -274,6 +291,13 @@ ApproximateEntropy_iterate(struct state *state)
 		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
 
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
+	}
+
 	return;
 }
 
@@ -289,7 +313,7 @@ ApproximateEntropy_iterate(struct state *state)
  * test statistic of the ApproximateEntropy test.
  */
 static double
-compute_phi(struct state *state, long int blocksize)
+compute_phi(struct thread_state *thread_state, long int blocksize)
 {
 	long int n;		// Length of a single bit stream
 	long int powLen;	// Number of possible m-bit sub-sequences
@@ -301,11 +325,18 @@ compute_phi(struct state *state, long int blocksize)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(18, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(18, __func__, "state arg is NULL");
 	}
 	if (state->epsilon == NULL) {
 		err(18, __func__, "state->epsilon is NULL");
+	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(18, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
 	}
 	if (blocksize == 0) {
 		return 0.0;
@@ -315,6 +346,9 @@ compute_phi(struct state *state, long int blocksize)
 	}
 	if (state->apen_C == NULL) {
 		err(18, __func__, "state->apen_C is NULL");
+	}
+	if (state->apen_C[thread_state->thread_id] == NULL) {
+		err(18, __func__, "state->apen_C[%ld] is NULL", thread_state->thread_id);
 	}
 
 	/*
@@ -335,7 +369,7 @@ compute_phi(struct state *state, long int blocksize)
 	/*
 	 * Zeroize those counters in the array C
 	 */
-	memset(state->apen_C, 0, powLen * sizeof(state->apen_C[0]));
+	memset(state->apen_C[thread_state->thread_id], 0, powLen * sizeof(state->apen_C[thread_state->thread_id][0]));
 
 	/*
 	 * Compute the mask that will be used by the algorithm
@@ -365,7 +399,7 @@ compute_phi(struct state *state, long int blocksize)
 		 * and then discarding the left-most bit by doing an AND with the mask (in fact,
 		 * the mask is used to keep only the right-most blocksize bits of the number).
 		 */
-		dec = ((dec << 1) + (int) state->epsilon[i % n]) & mask;
+		dec = ((dec << 1) + (int) state->epsilon[thread_state->thread_id][i % n]) & mask;
 
 		/*
 		 * If we have already counted the first (blocksize - 1) bits of epsilon,
@@ -376,7 +410,7 @@ compute_phi(struct state *state, long int blocksize)
 		 * which is smaller than blocksize.
 		 */
 		if (i >= blocksize) {
-			state->apen_C[dec]++;
+			state->apen_C[thread_state->thread_id][dec]++;
 		}
 	}
 
@@ -385,7 +419,8 @@ compute_phi(struct state *state, long int blocksize)
 	 */
 	sum = 0.0;
 	for (i = 0; i < powLen; i++) {
-		sum += (double) state->apen_C[i] * log(state->apen_C[i] / (double) n);
+		sum += (double) state->apen_C[thread_state->thread_id][i] *
+				log(state->apen_C[thread_state->thread_id][i] / (double) n);
 	}
 
 	/*
@@ -835,7 +870,7 @@ ApproximateEntropy_metric_print(struct state *state, long int sampleCount, long 
 	 * Compute uniformity p-value
 	 */
 	chi2 = 0.0;
-	expCount = sampleCount / state->tp.uniformity_bins; // TODO make uniformity bins to sqrt(i_count) by default
+	expCount = sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
 		uniformity = 0.0;	// Not enough samples for uniformity check
 	} else {
@@ -1074,7 +1109,7 @@ ApproximateEntropy_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1094,6 +1129,8 @@ ApproximateEntropy_metrics(struct state *state)
 void
 ApproximateEntropy_destroy(struct state *state)
 {
+	long int i;
+
 	/*
 	 * Check preconditions (firewall)
 	 */
@@ -1130,6 +1167,12 @@ ApproximateEntropy_destroy(struct state *state)
 		free(state->subDir[test_num]);
 		state->subDir[test_num] = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->apen_C[i] != NULL) {
+			free(state->apen_C[i]);
+			state->apen_C[i] = NULL;
+		}
+	}
 	if (state->apen_C != NULL) {
 		free(state->apen_C);
 		state->apen_C = NULL;
@@ -1138,7 +1181,7 @@ ApproximateEntropy_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

@@ -121,14 +121,26 @@ RandomExcursions_init(struct state *state)
 	}
 
 	/*
-	 * Allocate the partial sums and the cycle arrays
+	 * Allocate the partial sums and the cycle arrays for each thread
 	 */
-	state->rnd_excursion_S = malloc(n * sizeof(state->rnd_excursion_S[0]));
+	state->rnd_excursion_S = malloc((size_t) state->numberOfThreads * sizeof(*state->rnd_excursion_S));
 	if (state->rnd_excursion_S == NULL) {
-		errp(150, __func__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_S",
-		     n, sizeof(long int));
+		errp(150, __func__, "cannot malloc for rnd_excursion_S: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->rnd_excursion_S));
 	}
-	state->rnd_excursion_cycle = create_dyn_array(sizeof(long int), DEFAULT_CHUNK, (long int) state->c.sqrtn, true);
+	state->rnd_excursion_cycle = malloc((size_t) state->numberOfThreads * sizeof(*state->rnd_excursion_cycle));
+	if (state->rnd_excursion_cycle == NULL) {
+		errp(150, __func__, "cannot malloc for rnd_excursion_cycle: %ld elements of %lu bytes each", state->numberOfThreads,
+		     sizeof(*state->rnd_excursion_cycle));
+	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		state->rnd_excursion_S[i] = malloc(n * sizeof(state->rnd_excursion_S[i][0]));
+		if (state->rnd_excursion_S[i] == NULL) {
+			errp(150, __func__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_S[%ld]",
+			     state->rnd_excursion_S, sizeof(state->rnd_excursion_S[i][0]), i);
+		}
+		state->rnd_excursion_cycle[i] = create_dyn_array(sizeof(long int), DEFAULT_CHUNK, (long int) state->c.sqrtn, true);
+	}
 
 	/*
 	 * Create working sub-directory if forming files such as results.txt and stats.txt
@@ -238,7 +250,7 @@ RandomExcursions_init(struct state *state)
  * NOTE: The initialize function must be called first.
  */
 void
-RandomExcursions_iterate(struct state *state)
+RandomExcursions_iterate(struct thread_state *thread_state)
 {
 	struct RandomExcursions_private_stats stat;	// Stats for this iteration
 	long int n;					// Length of a single bit stream
@@ -253,6 +265,7 @@ RandomExcursions_iterate(struct state *state)
 	long int cycleStop;		// Index where a cycle ends
 	long int occurrences;		// Number of occurrences of a given state value in a cycle
 	double p_value;			// p_value iteration test result(s)
+	double *p_values;		// Array of p-values produced by this test
 	double sum_term;		// Value whose square is used to compute the test statistic
 	long int i;
 	long int j;
@@ -260,6 +273,10 @@ RandomExcursions_iterate(struct state *state)
 	/*
 	 * Check preconditions (firewall)
 	 */
+	if (thread_state == NULL) {
+		err(151, __func__, "thread_state arg is NULL");
+	}
+	struct state *state = thread_state->global_state;
 	if (state == NULL) {
 		err(151, __func__, "state arg is NULL");
 	}
@@ -270,14 +287,23 @@ RandomExcursions_iterate(struct state *state)
 	if (state->epsilon == NULL) {
 		err(151, __func__, "state->epsilon is NULL");
 	}
+	if (state->epsilon[thread_state->thread_id] == NULL) {
+		err(151, __func__, "state->epsilon[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->rnd_excursion_stateX == NULL) {
 		err(151, __func__, "state->rnd_excursion_stateX is NULL");
 	}
 	if (state->rnd_excursion_S == NULL) {
 		err(151, __func__, "state->rnd_excursion_S is NULL");
 	}
+	if (state->rnd_excursion_S[thread_state->thread_id] == NULL) {
+		err(151, __func__, "state->rnd_excursion_S[%ld] is NULL", thread_state->thread_id);
+	}
 	if (state->rnd_excursion_cycle == NULL) {
 		err(151, __func__, "state->rnd_excursion_cycle is NULL");
+	}
+	if (state->rnd_excursion_cycle[thread_state->thread_id] == NULL) {
+		err(151, __func__, "state->rnd_excursion_cycle[%ld] is NULL", thread_state->thread_id);
 	}
 	if (state->cSetup != true) {
 		err(151, __func__, "test constants not setup prior to calling %s for %s[%d]",
@@ -292,8 +318,8 @@ RandomExcursions_iterate(struct state *state)
 	 * Collect parameters from state
 	 */
 	n = state->tp.n;
-	S = state->rnd_excursion_S;
-	cycle = state->rnd_excursion_cycle;
+	S = state->rnd_excursion_S[thread_state->thread_id];
+	cycle = state->rnd_excursion_cycle[thread_state->thread_id];
 
 	/*
 	 * Clear the cycle array for this iteration
@@ -303,17 +329,17 @@ RandomExcursions_iterate(struct state *state)
 	/*
 	 * Step 3: compute the partial sums of successively larger sub-sequences
 	 */
-	if ((int) state->epsilon[0] == 1) {
+	if ((int) state->epsilon[thread_state->thread_id][0] == 1) {
 		S[0] = 1;
-	} else if ((int) state->epsilon[0] == 0) {
+	} else if ((int) state->epsilon[thread_state->thread_id][0] == 0) {
 		S[0] = - 1;
 	} else {
 		err(41, __func__, "found a bit different than 1 or 0 in the sequence");
 	}
 	for (i = 1; i < n; i++) {
-		if ((int) state->epsilon[i] == 1) {
+		if ((int) state->epsilon[thread_state->thread_id][i] == 1) {
 			S[i] = S[i - 1] + 1;
-		} else if ((int) state->epsilon[i] == 0) {
+		} else if ((int) state->epsilon[thread_state->thread_id][i] == 0) {
 			S[i] = S[i - 1] - 1;
 		} else {
 			err(41, __func__, "found a bit different than 1 or 0 in the sequence");
@@ -452,6 +478,8 @@ RandomExcursions_iterate(struct state *state)
 			}
 		}
 
+		p_values = malloc(NUMBER_OF_STATES_RND_EXCURSION * sizeof(*p_values));
+
 		/*
 		 * Compute the test statistic and the p-value for each of the states.
 		 */
@@ -490,28 +518,51 @@ RandomExcursions_iterate(struct state *state)
 			p_value = cephes_igamc((double) (DEGREES_OF_FREEDOM_RND_EXCURSION - 1) / 2.0, stat.chi2[i] / 2.0);
 
 			/*
+			 * Save p-value in the arrays of p-values
+			 */
+			p_values[i] = p_value;
+		}
+
+		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
+
+		/*
+		 * Copy each p-value to the state
+		 */
+		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION; i++) {
+
+			/*
+			 * Get the p-value for the current excursion state
+			 */
+			p_value = p_values[i];
+
+			/*
 			 * Record success or failure for this iteration of this state
 			 */
 			state->count[test_num]++;	// Count this iteration
 			state->valid[test_num]++;	// Count this valid iteration
 			if (isNegative(p_value)) {
 				state->failure[test_num]++;		// Bogus p_value < 0.0 treated as a failure
-				stat.success[i] = false;	// FAILURE
+				stat.success[i] = false;		// FAILURE
 				warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f < 0.0\n",
-				     state->curIteration, state->testNames[test_num], test_num, p_value);
+				     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 			} else if (isGreaterThanOne(p_value)) {
 				state->failure[test_num]++;		// Bogus p_value > 1.0 treated as a failure
-				stat.success[i] = false;	// FAILURE
+				stat.success[i] = false;		// FAILURE
 				warn(__func__, "iteration %ld of test %s[%d] produced bogus p_value: %f > 1.0\n",
-				     state->curIteration, state->testNames[test_num], test_num, p_value);
+				     thread_state->iteration_being_done + 1, state->testNames[test_num], test_num, p_value);
 			} else if (p_value < state->tp.alpha) {
 				state->valid_p_val[test_num]++;		// Valid p_value in [0.0, 1.0] range
 				state->failure[test_num]++;		// Valid p_value but too low is a failure
-				stat.success[i] = false;	// FAILURE
+				stat.success[i] = false;		// FAILURE
 			} else {
 				state->valid_p_val[test_num]++;		// Valid p_value in [0.0, 1.0] range
 				state->success[test_num]++;		// Valid p_value not too low is a success
-				stat.success[i] = true;	// SUCCESS
+				stat.success[i] = true;			// SUCCESS
 			}
 
 			/*
@@ -532,6 +583,12 @@ RandomExcursions_iterate(struct state *state)
 	 * Record values when the test could not be performed
 	 */
 	else {
+		/*
+		 * Lock mutex before making changes to the shared state
+		 */
+		if (thread_state->mutex != NULL) {
+			pthread_mutex_lock(thread_state->mutex);
+		}
 
 		/*
 		 * Count this iteration, which happens to be invalid
@@ -565,6 +622,13 @@ RandomExcursions_iterate(struct state *state)
 		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
 		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
 		state->driver_state[test_num] = DRIVER_ITERATE;
+	}
+
+	/*
+	 * Unlock mutex after making changes to the shared state
+	 */
+	if (thread_state->mutex != NULL) {
+		pthread_mutex_unlock(thread_state->mutex);
 	}
 
 	return;
@@ -1415,7 +1479,7 @@ RandomExcursions_metrics(struct state *state)
 	/*
 	 * Set driver state to DRIVER_METRICS
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
 	state->driver_state[test_num] = DRIVER_METRICS;
 
@@ -1477,12 +1541,22 @@ RandomExcursions_destroy(struct state *state)
 		free(state->rnd_excursion_stateX);
 		state->rnd_excursion_stateX = NULL;
 	}
+	for (i = 0; i < state->numberOfThreads; i++) {
+		if (state->rnd_excursion_S[i] != NULL) {
+			free(state->rnd_excursion_S[i]);
+			state->rnd_excursion_S[i] = NULL;
+		}
+		if (state->rnd_excursion_cycle[i] != NULL) {
+			free_dyn_array(state->rnd_excursion_cycle[i]);
+			state->rnd_excursion_cycle[i] = NULL;
+		}
+	}
 	if (state->rnd_excursion_S != NULL) {
 		free(state->rnd_excursion_S);
 		state->rnd_excursion_S = NULL;
 	}
 	if (state->rnd_excursion_cycle != NULL) {
-		free_dyn_array(state->rnd_excursion_cycle);
+		free(state->rnd_excursion_cycle);
 		state->rnd_excursion_cycle = NULL;
 	}
 	// Free the theoretical probabilities matrix
@@ -1504,7 +1578,7 @@ RandomExcursions_destroy(struct state *state)
 	/*
 	 * Set driver state to DRIVER_DESTROY
 	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
+	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
 	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
 	state->driver_state[test_num] = DRIVER_DESTROY;
 

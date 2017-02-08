@@ -26,6 +26,7 @@
 
 #   include "../utils/config.h"
 #   include "../utils/dyn_alloc.h"
+#   include <pthread.h>
 #if !defined(LEGACY_FFT)
 #   include <fftw3.h>
 #endif /* LEGACY_FFT */
@@ -248,17 +249,15 @@ enum test {
 // Format of data when read from a file
 enum format {
 	FORMAT_ASCII_01 = 'a',		// Use ascii '0' and '1' chars, 1 bit per octet
-	FORMAT_0 = '0',			// Alias for FORMAT_ASCII_01 - redirects to it
+	FORMAT_0 = '0',			// Alias for FORMAT_ASCII_01 - redirects to it // TODO remove
 	FORMAT_RAW_BINARY = 'r',	// Data in raw binary, 8 bits per octet
 	FORMAT_1 = '1',			// Alias for FORMAT_RAW_BINARY - redirects to it
 };
 
 // Run modes
 enum run_mode {
-	MODE_WRITE_ONLY = 'w',		// Only write generated data to -f randata in -F format, without testing it
-	MODE_ITERATE_ONLY = 'i',	// Iterate only, write state to -s statePath and exit, without assessing results
-	MODE_ASSESS_ONLY = 'a',		// Assess only, read state from *.state files under -r stateDir and assess results
-	MODE_ITERATE_AND_ASSESS = 'b',	// Iterate and then assess, no *.state files written
+	MODE_WRITE_ONLY = 'w',		// Generate data from '-g generator' and write it to '-f randdata' in '-F format'
+	MODE_ITERATE_AND_ASSESS = 'b',	// Test the data specified from -'-g generator' (default mode)
 };
 
 // Driver state
@@ -400,6 +399,10 @@ struct state {
 	bool dataFormatFlag;		// true if -F format was given
 	enum format dataFormat;		// -F format: 'r': raw binary, 'a': ASCII '0'/'1' chars
 
+	bool numberOfThreadsFlag;	// true if -T numberOfFlag was given
+	long int numberOfThreads;	// Number of threads to use for the current execution
+	long int iterationsMissing;	// Number of iterations that need to be completed
+
 	bool jobnumFlag;		// true if -j jobnum was given
 	long int jobnum;		// -j jobnum: seek into randdata num*bitcount*iterations bits
 
@@ -430,7 +433,7 @@ struct state {
 
 	bool is_excursion[NUMOFTESTS + 1];	// true --> test is a form of random excursion
 
-	BitSequence *epsilon;			// Bit stream
+	BitSequence **epsilon;			// Bit stream
 	BitSequence *tmpepsilon;		// Buffer to write to file in dataFormat
 
 	long int count[NUMOFTESTS + 1];		// Count of completed iterations, including tests skipped due to conditions
@@ -448,43 +451,48 @@ struct state {
 
 	struct dyn_array *nonovTemplates;	// Array of non-overlapping template words for TEST_NON_OVERLAPPING
 
-	double *fft_m;				// test m array for TEST_DFT
-	double *fft_X;				// test X array for TEST_DFT
+	double **fft_m;				// test m array for TEST_DFT
+	double **fft_X;				// test X array for TEST_DFT
 # if defined(LEGACY_FFT)
-	double *fft_wsave;			// test wsave array for legacy dfft library in TEST_DFT
+	double **fft_wsave;			// test wsave array for legacy dfft library in TEST_DFT
 #else /* LEGACY_FFT */
-	fftw_plan fftw_p;			// Plan containing information about the fastest way to compute the transform
-	fftw_complex *fftw_out;			// Output array for fftw library output in TEST_DFT
+	fftw_plan *fftw_p;			// Plan containing information about the fastest way to compute the transform
+	fftw_complex **fftw_out;		// Output array for fftw library output in TEST_DFT
 #endif /* LEGACY_FFT */
 
-	BitSequence **rank_matrix;		// Rank test 32 by 32 matrix for TEST_RANK
+	BitSequence ***rank_matrix;		// Rank test 32 by 32 matrix for TEST_RANK
 
 	long int *rnd_excursion_var_stateX;	// Pointer to NUMBER_OF_STATES_RND_EXCURSION_VAR states for TEST_RND_EXCURSION_VAR
-	long int *ex_var_partial_sums;		// Array of n partial sums for TEST_RND_EXCURSION_VAR
+	long int **ex_var_partial_sums;		// Array of n partial sums for TEST_RND_EXCURSION_VAR
 
-	BitSequence *linear_b;			// LFSR array b for TEST_LINEARCOMPLEXITY
-	BitSequence *linear_c;			// LFSR array c for TEST_LINEARCOMPLEXITY
-	BitSequence *linear_t;			// LFSR array t for TEST_LINEARCOMPLEXITY
+	BitSequence **linear_b;			// LFSR array b for TEST_LINEARCOMPLEXITY
+	BitSequence **linear_c;			// LFSR array c for TEST_LINEARCOMPLEXITY
+	BitSequence **linear_t;			// LFSR array t for TEST_LINEARCOMPLEXITY
 
-	long int *apen_C;			// Frequency count for TEST_APEN
+	long int **apen_C;			// Frequency count for TEST_APEN
 	long int apen_C_len;			// Number of long ints in apen_C for TEST_APEN
 
-	long int *serial_v;			// Frequency count for TEST_SERIAL
+	long int **serial_v;			// Frequency count for TEST_SERIAL
 	long int serial_v_len;			// Number of long ints in serial_v for TEST_SERIAL
 
-	BitSequence *nonper_seq;		// Special BitSequence for TEST_NON_OVERLAPPING
+	BitSequence **nonper_seq;		// Special BitSequence for TEST_NON_OVERLAPPING
 
 	long int universal_L;			// Length of each block for TEST_UNIVERSAL
-	long int *universal_T;			// Working Universal template
+	long int **universal_T;			// Working Universal template
 
-	long int *rnd_excursion_S;		// Sum of -1/+1 states for TEST_RND_EXCURSION
-	struct dyn_array *rnd_excursion_cycle;	// Contains the index of the ending position of each cycle for TEST_RND_EXCURSION
+	long int **rnd_excursion_S;		// Sum of -1/+1 states for TEST_RND_EXCURSION
+	struct dyn_array **rnd_excursion_cycle;	// Contains the index of the ending position of each cycle for TEST_RND_EXCURSION
 	long int *rnd_excursion_stateX;		// Pointer to NUMBER_OF_STATES_RND_EXCURSION states for TEST_RND_EXCURSION_VAR
 	double **rnd_excursion_pi_terms;	// Theoretical probabilities for states of TEST_RND_EXCURSION_VAR
 
 	bool legacy_output;			// true ==> try to mimic output format of legacy code
+};
 
-	long int curIteration;			// Number of iterations on all enabled tests completed so far
+struct thread_state {
+	long int thread_id;
+	struct state *global_state;
+	long int iteration_being_done;
+	pthread_mutex_t *mutex;
 };
 
 /* *INDENT-ON* */
@@ -493,7 +501,7 @@ struct state {
  * Driver - a driver like API to setup a given test, iterate on bitstreams, analyze test results
  */
 extern void init(struct state *state);
-extern void iterate(struct state *state);
+extern void iterate(struct thread_state *thread_state);
 extern void print(struct state *state);
 extern void metrics(struct state *state);
 extern void destroy(struct state *state);
