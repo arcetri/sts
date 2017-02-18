@@ -63,7 +63,6 @@ static void handleFileBasedBitStreams(struct state *state);
 static void *testBits(void *thread_args);
 static void parseBitsASCIIInput(struct thread_state *thread_state);
 static void parseBitsBinaryInput(struct thread_state *thread_state);
-static void seekStreamFile(struct state *state);
 
 
 /*
@@ -1747,10 +1746,15 @@ invokeTestSuite(struct state *state)
 
 
 static void
-seekStreamFile(struct state *state)
+handleFileBasedBitStreams(struct state *state)
 {
-	long int byteCount;	// byte count for a number of consecutive bits, rounded up
-	int seekError;		// error during fseek()
+	int io_ret;		// I/O return status
+	long int i;
+	pthread_t thread[state->numberOfThreads];
+	pthread_attr_t attr;
+	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	struct thread_state *thread_args = malloc(state->numberOfThreads * sizeof(struct thread_state));
+	void *status;
 
 	/*
 	 * Check preconditions (firewall)
@@ -1758,25 +1762,15 @@ seekStreamFile(struct state *state)
 	if (state == NULL) {
 		err(224, __func__, "state arg is NULL");
 	}
-	if (state->streamFile == NULL) {
-		err(224, __func__, "streamFile arg is NULL");
-	}
 
 	/*
-	 * Seek into the file according to the jobnum parameter given.
+	 * Compute seek position into the input file according to the jobnum parameter given.
 	 *
 	 * The position where to seek depends on the data format. If the input is made of
 	 * ASCII 0 and 1 characters then we can seek by counting 1 position as 1 bit.
 	 */
 	if (state->dataFormat == FORMAT_ASCII_01) {
-		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld = %ld on %s for ASCII 0/1 format\n",
-		    state->jobnum, state->tp.n, state->tp.numOfBitStreams,
-		    (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
-		seekError = fseek(state->streamFile, (state->jobnum * state->tp.n * state->tp.numOfBitStreams), SEEK_SET);
-		if (seekError != 0) {
-			errp(224, __func__, "could not seek %ld into file: %s",
-			     (state->jobnum * state->tp.n * state->tp.numOfBitStreams), state->randomDataPath);
-		}
+		state->base_seek = state->jobnum * state->tp.n * state->tp.numOfBitStreams;
 	}
 
 	/*
@@ -1791,38 +1785,8 @@ seekStreamFile(struct state *state)
 		 * However if the bit count is a multiple of 8, then we do not increase it.
 		 * We only increase by one in the case of a final partial byte.
 		 */
-		byteCount = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8;
-
-		/*
-		 * Set file pointer after jobnum chunks into file
-		 */
-		dbg(DBG_HIGH, "Seeking %ld * %ld * %ld/8 = %ld on %s for raw binary format\n",
-		    state->jobnum, state->tp.n, state->tp.numOfBitStreams, byteCount, state->randomDataPath);
-		seekError = fseek(state->streamFile, ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + 7) / 8, SEEK_SET);
-		if (seekError != 0) {
-			err(224, __func__, "could not seek %ld into file: %s", byteCount, state->randomDataPath);
-		}
+		state->base_seek = ((state->jobnum * state->tp.n * state->tp.numOfBitStreams) + BITS_N_BYTE - 1) / BITS_N_BYTE;
 	}
-
-	return;
-}
-
-
-static void
-handleFileBasedBitStreams(struct state *state)
-{
-	int io_ret;		// I/O return status
-	long int i;
-	pthread_t thread[state->numberOfThreads];
-	pthread_attr_t attr;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	struct thread_state *thread_args = malloc(state->numberOfThreads * sizeof(struct thread_state));
-	void *status;
-
-	/*
-	 * Seek into the pre-determined position of the input file (depending on job-number)
-	 */
-	seekStreamFile(state);
 
 	/*
 	 * Initialize and set thread detached attribute
@@ -1976,7 +1940,7 @@ parseBitsASCIIInput(struct thread_state *thread_state)
 	/*
 	 * Seek to the position of the first bit which has not been copied into the stream yet
 	 */
-	if (fseek(state->streamFile, (thread_state->iteration_being_done * state->tp.n), SEEK_SET) != 0) {
+	if (fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n, SEEK_SET) != 0) {
 		errp(226, __func__, "could not seek %ld further into file: %s",
 		     (thread_state->iteration_being_done * state->tp.n), state->randomDataPath);
 	}
@@ -2058,7 +2022,9 @@ parseBitsBinaryInput(struct thread_state *thread_state)
 	/*
 	 * Seek to the position of the first bit which has not been copied into the stream yet
 	 */
-	if (fseek(state->streamFile, thread_state->iteration_being_done * state->tp.n / BITS_N_BYTE, SEEK_SET) != 0) {
+	if (fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n /
+							BITS_N_BYTE, SEEK_SET) != 0) {
+
 		errp(226, __func__, "could not seek %ld further into file: %s",
 		     thread_state->iteration_being_done * state->tp.n / BITS_N_BYTE, state->randomDataPath);
 	}
@@ -2146,7 +2112,7 @@ copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBi
 
 	count = 0;
 	zeros = ones = 0;
-	for (i = 0; i < (xBitLength + 7) / 8; i++) {
+	for (i = 0; i < (xBitLength + BITS_N_BYTE - 1) / BITS_N_BYTE; i++) {
 		mask = 0x80;
 		for (j = 0; j < 8; j++) {
 			if (*(x + i) & mask) {
@@ -2222,6 +2188,109 @@ getTimestamp(char *buf, size_t len)
 	}
 	buf[len] = '\0';	// paranoia
 	return;
+}
+
+
+void write_p_val_to_file(struct state *state)
+{
+	long int i, j;
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(231, __func__, "state arg was NULL");
+	}
+
+	char *filename;
+	asprintf(&filename, "%ld_%ld_%ld.pvalues", state->jobnum, state->tp.numOfBitStreams, state->tp.n);
+
+	char *filepath = filePathName(state->workDir, filename);
+
+	FILE *p_val_file;
+	p_val_file = fopen(filepath, "wb");
+
+	for (i = 1; i <= NUMOFTESTS; i++) {
+		if (state->testVector[i] == true) {
+
+			// Write the number of the test
+			fwrite(&i, sizeof(i), 1, p_val_file);
+
+			// Write the number of p-values for this test
+			fwrite(&(state->p_val[i]->count), sizeof(state->p_val[i]->count), 1, p_val_file);
+
+			// Write the p-values
+			for (j = 0; j < state->p_val[i]->count; j++) {
+
+				double p_val;
+
+				if (i != TEST_NON_OVERLAPPING) {
+					p_val = get_value(state->p_val[i], double, j);
+				} else {
+					struct nonover_stats *nonov = addr_value(state->p_val[i], struct nonover_stats, j);
+					p_val = nonov->p_value;
+				}
+
+				fwrite(&p_val, sizeof(p_val), 1, p_val_file);
+			}
+		}
+	}
+
+	fclose(p_val_file);
+	free(filename);
+}
+
+
+void read_from_p_val_file(struct state *state)
+{
+	long int f, test_num, p_val_index;
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (state == NULL) {
+		err(231, __func__, "state arg was NULL");
+	}
+
+	for (f = 0; f < state->files_count; f++) {
+
+		// Open the file
+		char *filename = state->filenames[f];
+		FILE *p_val_file = fopen(filename, "rb");
+
+		// Read the test number
+		fread(&test_num, sizeof(test_num), 1, p_val_file);
+
+		// Until there are p-values
+		while (!feof(p_val_file) && test_num <= NUMOFTESTS) {
+
+			// Read number of p-values for this test
+			long int number_of_p_vals;
+			fread(&number_of_p_vals, sizeof(number_of_p_vals), 1, p_val_file);
+
+			// Read all the p-values for this test
+			for (p_val_index = 0; p_val_index < number_of_p_vals; p_val_index++) {
+
+				double p_val;
+				fread(&p_val, sizeof(p_val), 1, p_val_file);
+
+				// Append each p-value read to the p-values of this test
+				if (test_num != TEST_NON_OVERLAPPING) {
+					append_value(state->p_val[test_num], &p_val);
+				} else {
+					struct nonover_stats nonov;
+					nonov.p_value = p_val;
+					append_value(state->p_val[test_num], &nonov);
+				}
+			}
+
+			// Read the next test number
+			fread(&test_num, sizeof(test_num), 1, p_val_file);
+		}
+
+		// Close the file that has been read
+		fclose(p_val_file);
+	}
 }
 
 

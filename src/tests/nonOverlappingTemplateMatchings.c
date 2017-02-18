@@ -50,18 +50,6 @@ struct NonOverlappingTemplateMatchings_private_stats {
 
 
 /*
- * Special data for each template of each iteration in p_val (instead of just p_value doubles)
- */
-struct nonover_stats {
-	double p_value;			// Test p_value for a given template
-	bool success;			// Success or failure for a given template
-	double chi2;			// Test statistic for a given template
-	long int template_index;	// Template number of a given template
-	unsigned int Wj[BLOCKS_NON_OVERLAPPING]; // Number of times that m-bit template occurs within each block
-};
-
-
-/*
  * Static const variables declarations
  */
 static const enum test test_num = TEST_NON_OVERLAPPING;	// This test number
@@ -215,10 +203,6 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 		err(130, __func__, "test constants not setup prior to calling %s for %s[%d]",
 		    __func__, state->testNames[test_num], test_num);
 	}
-	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(130, __func__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
-	}
 
 	/*
 	 * Collect parameters from state
@@ -329,13 +313,6 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	state->datatxt_fmt[test_num] = data_filename_format((int) numOfTemplates[m]);
 	dbg(DBG_HIGH, "%s[%d] will form data*.txt filenames with the following format: %s",
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
-
-	/*
-	 * Set driver state to DRIVER_INIT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
-	state->driver_state[test_num] = DRIVER_INIT;
 
 	return;
 }
@@ -482,10 +459,6 @@ NonOverlappingTemplateMatchings_iterate(struct thread_state *thread_state)
 	}
 	if (state->nonper_seq[thread_state->thread_id] == NULL) {
 		err(132, __func__, "state->nonper_seq[%ld] is NULL", thread_state->thread_id);
-	}
-	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(132, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
 	/*
@@ -664,15 +637,6 @@ NonOverlappingTemplateMatchings_iterate(struct thread_state *thread_state)
 	 */
 	if (state->resultstxtFlag == true) {
 		append_value(state->stats[test_num], &stat);
-	}
-
-	/*
-	 * Set driver state to DRIVER_ITERATE
-	 */
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
-		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
-		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
 
 	/*
@@ -1015,10 +979,6 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 	if (state->datatxt_fmt[test_num] == NULL) {
 		err(135, __func__, "format for data0*.txt filename is NULL");
 	}
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(135, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Open stats.txt file
@@ -1179,13 +1139,6 @@ NonOverlappingTemplateMatchings_print(struct state *state)
 			data_txt = NULL;
 		}
 	}
-
-	/*
-	 * Set driver state to DRIVER_PRINT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
-	state->driver_state[test_num] = DRIVER_PRINT;
 
 	return;
 }
@@ -1389,13 +1342,6 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 		    state->tp.numOfBitStreams, state->partitionCount[test_num],
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
-	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
-		err(137, __func__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
-	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
-		err(137, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Allocate uniformity frequency bins
@@ -1484,13 +1430,6 @@ NonOverlappingTemplateMatchings_metrics(struct state *state)
 	free(freqPerBin);
 	freqPerBin = NULL;
 
-	/*
-	 * Set driver state to DRIVER_METRICS
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
-	state->driver_state[test_num] = DRIVER_METRICS;
-
 	return;
 }
 
@@ -1560,13 +1499,6 @@ NonOverlappingTemplateMatchings_destroy(struct state *state)
 		free(state->nonper_seq);
 		state->nonper_seq = NULL;
 	}
-
-	/*
-	 * Set driver state to DRIVER_DESTROY
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
-	state->driver_state[test_num] = DRIVER_DESTROY;
 
 	return;
 }

@@ -98,10 +98,6 @@ RandomExcursionsVariant_init(struct state *state)
 		err(160, __func__, "test constants not setup prior to calling %s for %s[%d]",
 		    __func__, state->testNames[test_num], test_num);
 	}
-	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(160, __func__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
-	}
 
 	/*
 	 * Collect parameters from state
@@ -177,13 +173,6 @@ RandomExcursionsVariant_init(struct state *state)
 	dbg(DBG_HIGH, "%s[%d] will form data*.txt filenames with the following format: %s",
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
-	/*
-	 * Set driver state to DRIVER_INIT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
-	state->driver_state[test_num] = DRIVER_INIT;
-
 	return;
 }
 
@@ -241,10 +230,6 @@ RandomExcursionsVariant_iterate(struct thread_state *thread_state)
 	if (state->cSetup != true) {
 		err(161, __func__, "test constants not setup prior to calling %s for %s[%d]",
 		    __func__, state->testNames[test_num], test_num);
-	}
-	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(161, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
 	/*
@@ -424,15 +409,6 @@ RandomExcursionsVariant_iterate(struct thread_state *thread_state)
 		for (i = 0; i < NUMBER_OF_STATES_RND_EXCURSION_VAR; i++) {
 			append_value(state->p_val[test_num], &p_value);
 		}
-	}
-
-	/*
-	 * Set driver state to DRIVER_ITERATE
-	 */
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
-		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
-		state->driver_state[test_num] = DRIVER_ITERATE;
 	}
 
 	/*
@@ -793,10 +769,6 @@ RandomExcursionsVariant_print(struct state *state)
 	if (state->datatxt_fmt[test_num] == NULL) {
 		err(165, __func__, "format for data0*.txt filename is NULL");
 	}
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(165, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Open stats.txt file
@@ -957,13 +929,6 @@ RandomExcursionsVariant_print(struct state *state)
 			data_txt = NULL;
 		}
 	}
-
-	/*
-	 * Set driver state to DRIVER_PRINT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
-	state->driver_state[test_num] = DRIVER_PRINT;
 
 	return;
 }
@@ -1165,13 +1130,6 @@ RandomExcursionsVariant_metrics(struct state *state)
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
-	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
-		err(167, __func__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
-	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
-		err(167, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Allocate uniformity frequency bins
@@ -1259,13 +1217,6 @@ RandomExcursionsVariant_metrics(struct state *state)
 	free(freqPerBin);
 	freqPerBin = NULL;
 
-	/*
-	 * Set driver state to DRIVER_METRICS
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
-	state->driver_state[test_num] = DRIVER_METRICS;
-
 	return;
 }
 
@@ -1334,13 +1285,6 @@ RandomExcursionsVariant_destroy(struct state *state)
 		free(state->ex_var_partial_sums);
 		state->ex_var_partial_sums = NULL;
 	}
-
-	/*
-	 * Set driver state to DRIVER_DESTROY
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
-	state->driver_state[test_num] = DRIVER_DESTROY;
 
 	return;
 }

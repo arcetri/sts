@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <limits.h>
+#include <errno.h>
 #include "constants/defs.h"
 #include "utils/utilities.h"
 #include "utils/debug.h"
@@ -258,7 +259,7 @@ init(struct state *state)
 			errp(50, __func__, "Could not open freq.txt file: %s", state->freqFilePath);
 		}
 
-		if (state->runMode != MODE_WRITE_ONLY) {
+		if (state->runMode == MODE_ITERATE_AND_ASSESS || state->runMode == MODE_ASSESS_ONLY) {
 			state->finalReptPath = filePathName(state->workDir, "finalAnalysisReport.txt");
 			dbg(DBG_MED, "Will use finalAnalysisReport.txt file: %s", state->finalReptPath);
 			state->finalRept = fopen(state->finalReptPath, "w");
@@ -268,7 +269,7 @@ init(struct state *state)
 		}
 
 	} else {
-		if (state->runMode != MODE_WRITE_ONLY) {
+		if (state->runMode == MODE_ITERATE_AND_ASSESS || state->runMode == MODE_ASSESS_ONLY) {
 			state->finalReptPath = filePathName(state->workDir, "result.txt");
 			dbg(DBG_MED, "Will use result.txt file: %s", state->finalReptPath);
 			state->finalRept = fopen(state->finalReptPath, "w");
@@ -678,7 +679,8 @@ metrics(struct state *state)
 		 * Print summary of the metrics results of these tests
 		 */
 		io_ret = fprintf(state->finalRept, "A total of %ld tests (some of the %d tests actually consist of multiple "
-						 "sub-tests)\nwere conducted to evaluate the randomness of:\n\n\t%s\n\n"
+						 "sub-tests)\nwere conducted to evaluate the randomness of %ld bitstreams of "
+						 "%ld bits from:\n\n\t%s\n\n"
 						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "The numerous empirical results of these tests were then interpreted with\nan "
@@ -690,10 +692,10 @@ metrics(struct state *state)
 						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "Here are the results of the single tests:\n",
-				 total_number_of_tests, NUMOFTESTS, state->generator == GENERATOR_FROM_FILE ?
-								    state->randomDataPath : state->generatorDir[state->generator],
-				 state->successful_tests, total_number_of_tests, total_number_of_tests - state->successful_tests,
-				 total_number_of_tests);
+				 total_number_of_tests, NUMOFTESTS, state->tp.numOfBitStreams, state->tp.n,
+				 state->generator == GENERATOR_FROM_FILE ? state->randomDataPath :
+				 state->generatorDir[state->generator], state->successful_tests, total_number_of_tests,
+				 total_number_of_tests - state->successful_tests, total_number_of_tests);
 
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
@@ -960,6 +962,7 @@ static void finishMetricTestsSentence(test_metric_result result, struct state *s
 void
 destroy(struct state *state)
 {
+	int io_ret;			// I/O return status
 	int i;
 
 	/*
@@ -967,6 +970,38 @@ destroy(struct state *state)
 	 */
 	if (state == NULL) {
 		err(54, __func__, "state arg is NULL");
+	}
+
+	/*
+	 * Close down the frequency file
+	 */
+	if (state->freqFile != NULL) {
+		errno = 0;	// paranoia
+		io_ret = fflush(state->freqFile);
+		if (io_ret != 0) {
+			errp(5, __func__, "error flushing freqFile");
+		}
+		errno = 0;	// paranoia
+		io_ret = fclose(state->freqFile);
+		if (io_ret != 0) {
+			errp(5, __func__, "error closing freqFile");
+		}
+	}
+
+	/*
+	 * Flush the output file buffer and close the file
+	 */
+	if (state->finalRept != NULL) {
+		errno = 0;                // paranoia
+		io_ret = fflush(state->finalRept);
+		if (io_ret != 0) {
+			errp(5, __func__, "error flushing finalRept");
+		}
+		errno = 0;                // paranoia
+		io_ret = fclose(state->finalRept);
+		if (io_ret != 0) {
+			errp(5, __func__, "error closing finalRept");
+		}
 	}
 
 	/*

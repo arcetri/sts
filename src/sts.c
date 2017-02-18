@@ -233,6 +233,15 @@
  *          We wanted to take advantage of multi-core parallel processing to decrease execution time. We did
  *          so by running separate iterations on multiple cores in parallel through multi-threading.
  *
+ *      24) Allow testing of huge datasets in a distributed fashion
+ *
+ *          In addition to point 23, we added the possibility to test data in multiple computers (distributed mode).
+ *          This could be useful when testing huge datasets, where using one computer only might take too much time
+ *          even when executed in parallel (with multithreading). The distributed mode allows the user to run sts to
+ *          test a specific part of the input data and save the resulting p-values of the testing to an output file.
+ *          Thus the user can test different chunks of the input data with different machines and later collect all the
+ *          p-values and assess them with one final run of sts in ASSESS_ONLY mode.
+ *
  *      24) Other issues not listed
  *
  *          The above list of goals is incomplete.  In the interest of not extending this long comment
@@ -285,7 +294,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include "constants/defs.h"
 #include "utils/utilities.h"
 #include "constants/externs.h"
@@ -306,7 +314,6 @@ int
 main(int argc, char *argv[])
 {
 	struct state run_state;		// Options set and dynamic arrays for this run
-	int io_ret;			// I/O return status
 
 	/*
 	 * Set default test parameters and parse command line
@@ -326,50 +333,38 @@ main(int argc, char *argv[])
 	}
 
 	/*
-	 * Run test suite iterations
+	 * Run test suite iterations if needed
 	 */
-	invokeTestSuite(&run_state);
+	if (run_state.runMode != MODE_ASSESS_ONLY) {
+		invokeTestSuite(&run_state);
 
-	/*
-	 * Close down the frequency file
-	 */
-	if (run_state.freqFile != NULL) {
-		errno = 0;	// paranoia
-		io_ret = fflush(run_state.freqFile);
-		if (io_ret != 0) {
-			errp(5, __func__, "error flushing freqFile");
-		}
-		errno = 0;	// paranoia
-		io_ret = fclose(run_state.freqFile);
-		if (io_ret != 0) {
-			errp(5, __func__, "error closing freqFile");
+		/*
+		 * Print p-values and stats of each test in separate files (if needed)
+		 */
+		if (run_state.resultstxtFlag == true) {
+			print(&run_state);
 		}
 	}
 
 	/*
-	 * Print p-values and stats of each test in separate files (if needed)
+	 * If only iterations were to be done, save the p-values to file
 	 */
-	if (run_state.resultstxtFlag == true) {
-		print(&run_state);
+	if (run_state.runMode == MODE_ITERATE_ONLY) {
+		write_p_val_to_file(&run_state);
+	}
+
+	/*
+	 * If there were no iterations to do, but only assess, read the data from given files
+	 */
+	else if (run_state.runMode == MODE_ASSESS_ONLY) {
+		read_from_p_val_file(&run_state);
 	}
 
 	/*
 	 * Perform metrics processing for each test and write final result to file
 	 */
-	metrics(&run_state);
-
-	/*
-	 * Flush the output file buffer and close the file
-	 */
-	errno = 0;		// paranoia
-	io_ret = fflush(run_state.finalRept);
-	if (io_ret != 0) {
-		errp(5, __func__, "error flushing finalRept");
-	}
-	errno = 0;		// paranoia
-	io_ret = fclose(run_state.finalRept);
-	if (io_ret != 0) {
-		errp(5, __func__, "error closing finalRept");
+	if (run_state.runMode != MODE_ITERATE_ONLY) {
+		metrics(&run_state);
 	}
 
 	/*
@@ -381,12 +376,18 @@ main(int argc, char *argv[])
 	 * Tell user that the execution is completed
 	 */
 	msg("Execution completed!");
-	if (run_state.runMode != MODE_WRITE_ONLY) {
+	if (run_state.runMode == MODE_ITERATE_AND_ASSESS || run_state.runMode == MODE_ASSESS_ONLY) {
 		if (run_state.legacy_output == true) {
 			msg("Check the finalAnalysisReport.txt file for the results");
 		} else {
-			msg("Check the results.txt file for the results");
+			msg("Check the result.txt file for the results");
 		}
+	}
+
+	else if (run_state.runMode == MODE_ITERATE_ONLY) {
+		msg("A binary file (with extension .pvalues) containing the p-values of the tests has been generated.\n"
+				    "You can later assess the results of this and other runs by executing "
+				    "sts in '-m a' mode and passing that file(s) as an argument with the '-d' flag.");
 	}
 
 	// All Done!!! -- Jessica Noll, Age 2

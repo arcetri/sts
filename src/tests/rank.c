@@ -108,10 +108,6 @@ Rank_init(struct state *state)
 		err(170, __func__, "test constants not setup prior to calling %s for %s[%d]",
 		    __func__, state->testNames[test_num], test_num);
 	}
-	if (state->driver_state[test_num] != DRIVER_NULL && state->driver_state[test_num] != DRIVER_DESTROY) {
-		err(170, __func__, "driver state %d for %s[%d] != DRIVER_NULL: %d and != DRIVER_DESTROY: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_NULL, DRIVER_DESTROY);
-	}
 	if (((long int) NUMBER_OF_ROWS_RANK * (long int) NUMBER_OF_COLS_RANK) > (long int) LONG_MAX) {	// paranoia
 		err(170, __func__, "NUMBER_OF_ROWS_RANK: %d * NUMBER_OF_COLS_RANK: %d cannot fit into a long int because"
 				"the product is > %ld", NUMBER_OF_ROWS_RANK, NUMBER_OF_COLS_RANK, LONG_MAX);
@@ -219,13 +215,6 @@ Rank_init(struct state *state)
 	dbg(DBG_HIGH, "%s[%d] will form data*.txt filenames with the following format: %s",
 	    state->testNames[test_num], test_num, state->datatxt_fmt[test_num]);
 
-	/*
-	 * Set driver state to DRIVER_INIT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_INIT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_INIT);
-	state->driver_state[test_num] = DRIVER_INIT;
-
 	return;
 }
 
@@ -280,10 +269,6 @@ Rank_iterate(struct thread_state *thread_state)
 	if (state->cSetup != true) {
 		err(171, __func__, "test constants not setup prior to calling %s for %s[%d]",
 		    __func__, state->testNames[test_num], test_num);
-	}
-	if (state->driver_state[test_num] != DRIVER_INIT && state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(171, __func__, "driver state %d for %s[%d] != DRIVER_INIT: %d and != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_INIT, DRIVER_ITERATE);
 	}
 
 	/*
@@ -399,15 +384,6 @@ Rank_iterate(struct thread_state *thread_state)
 		append_value(state->stats[test_num], &stat);
 	}
 	append_value(state->p_val[test_num], &p_value);
-
-	/*
-	 * Set driver state to DRIVER_ITERATE
-	 */
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_ITERATE: %d",
-		    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_ITERATE);
-		state->driver_state[test_num] = DRIVER_ITERATE;
-	}
 
 	/*
 	 * Unlock mutex after making changes to the shared state
@@ -668,10 +644,6 @@ Rank_print(struct state *state)
 	if (state->datatxt_fmt[test_num] == NULL) {
 		err(174, __func__, "format for data0*.txt filename is NULL");
 	}
-	if (state->driver_state[test_num] != DRIVER_ITERATE) {
-		err(174, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Open stats.txt file
@@ -817,13 +789,6 @@ Rank_print(struct state *state)
 			data_txt = NULL;
 		}
 	}
-
-	/*
-	 * Set driver state to DRIVER_PRINT
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_PRINT: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_PRINT);
-	state->driver_state[test_num] = DRIVER_PRINT;
 
 	return;
 }
@@ -1025,13 +990,6 @@ Rank_metrics(struct state *state)
 		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
 		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
-	if (state->driver_state[test_num] != DRIVER_PRINT && state->resultstxtFlag == true) {
-		err(176, __func__, "driver state %d for %s[%d] != DRIVER_PRINT: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_PRINT);
-	} else if (state->driver_state[test_num] != DRIVER_ITERATE && state->resultstxtFlag == false) {
-		err(176, __func__, "driver state %d for %s[%d] != DRIVER_ITERATE: %d",
-		    state->driver_state[test_num], state->testNames[test_num], test_num, DRIVER_ITERATE);
-	}
 
 	/*
 	 * Allocate uniformity frequency bins
@@ -1119,13 +1077,6 @@ Rank_metrics(struct state *state)
 	free(freqPerBin);
 	freqPerBin = NULL;
 
-	/*
-	 * Set driver state to DRIVER_METRICS
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_METRICS: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_METRICS);
-	state->driver_state[test_num] = DRIVER_METRICS;
-
 	return;
 }
 
@@ -1200,13 +1151,6 @@ Rank_destroy(struct state *state)
 		free(state->rank_matrix);
 		state->rank_matrix = NULL;
 	}
-
-	/*
-	 * Set driver state to DRIVER_DESTROY
-	 */
-	dbg(DBG_HIGH, "state for driver for %s[%d] changing from %d to DRIVER_DESTROY: %d",
-	    state->testNames[test_num], test_num, state->driver_state[test_num], DRIVER_DESTROY);
-	state->driver_state[test_num] = DRIVER_DESTROY;
 
 	return;
 }

@@ -106,9 +106,14 @@ static struct state const defaultstate = {
 	0,
 	0,
 
-	// jobnumFlag & jobnum
+	// jobnumFlag, jobnum & base_seek
 	false,				// No -j jobnum was given
 	0,				// Begin at start of randdata (-j 0)
+	0,				// Default seek to 0
+
+	// files_count & filenames
+	0,				// Number of files where to take the p-values from
+	NULL,				// Paths of the files where to take the p-values from
 
 	// tp, promptFlag, uniformityBinsFlag
 	{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
@@ -176,9 +181,6 @@ static struct state const defaultstate = {
 	},
 	{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 	 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	},
-	{DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
-	 DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL, DRIVER_NULL,
 	},
 
 	// partitionCount, datatxt_fmt
@@ -313,7 +315,7 @@ static const char * const usage =
 "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
 "               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
 "               [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
-"               [-m mode] [-T numOfThreads] [-h] bitcount\n"
+"               [-m mode] [-T numOfThreads] [-d pvaluesfile1 [pvaluesfile2] ..] [-h] bitcount\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
 "    -b                 batch mode - no stdin (def: prompt when needed)\n"
@@ -368,8 +370,12 @@ static const char * const usage =
 "\n"
 "    -m mode            w --> generate pseudorandom data from '-g generator' and write it to '-f randdata' in '-F format'\n"
 "                       b --> test pseudo-random data from from '-g generator' (default mode)\n"
+" 			i --> test the given data, but not assess it, and instead save the p-values in a binary file\n"
+" 			a --> collect the p-values from the binary files specified from '-d file...' and assess them\n"
 "\n"
 "    -T numOfThreads    custom number of threads for this run (default: takes the number of cores of the CPU)\n"
+"\n"
+"    -d pvaluesfile1 [pvaluesfile2] ..    binary files with p-values previously computed (requires mode -m a)\n"
 "\n"
 "    -h                 print this message and exit\n"
 "\n"
@@ -435,7 +441,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:T:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:T:d:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -670,8 +676,14 @@ parse_args(struct state *state, int argc, char **argv)
 			case MODE_ITERATE_AND_ASSESS:
 				state->runMode = MODE_ITERATE_AND_ASSESS;
 				break;
+			case MODE_ITERATE_ONLY:
+				state->runMode = MODE_ITERATE_ONLY;
+				break;
+			case MODE_ASSESS_ONLY:
+				state->runMode = MODE_ASSESS_ONLY;
+				break;
 			default:
-				usage_err(usage, 1, __func__, "-m mode must be one of w or b: %c", optarg[0]);
+				usage_err(usage, 1, __func__, "-m mode must be one of w, b, i or a: %c", optarg[0]);
 				break;
 			}
 			break;
@@ -685,6 +697,17 @@ parse_args(struct state *state, int argc, char **argv)
 			if (state->numberOfThreads < 0) {
 				usage_err(usage, 1, __func__, "-T numOfThreads: %lu must be >= 0", state->numberOfThreads);
 			}
+			break;
+
+		case 'd':	// -d files with precomputed p-values
+			optind--;
+			state->filenames = malloc(sizeof(state->filenames[0]) * (argc - optind));
+
+			for (i = 0; optind < argc && *argv[optind] != '-'; optind++, i++) {
+				state->filenames[i] = strdup(argv[optind]);
+				state->files_count++;
+			}
+
 			break;
 
 		case 'h':	// -h (print out help)
@@ -881,6 +904,18 @@ parse_args(struct state *state, int argc, char **argv)
 	}
 
 	/*
+	 * When running in ASSESS_ONLY MODE
+	 */
+	if (state->runMode == MODE_ASSESS_ONLY) {
+
+		if (state->resultstxtFlag == true) {
+			warn(__func__, "You have chosen to use the sts in mode 'a' (assess only). In this mode the -s flag is "
+					"not supported. This run won't produce any stats.txt or results.txt file.");
+			state->resultstxtFlag = false;
+		}
+	}
+
+	/*
 	 * Report on how we will run, if debugging
 	 */
 	if (debuglevel > 0) {
@@ -997,6 +1032,16 @@ print_option_summary(struct state *state, char *where)
 				dbg(DBG_MED, "\tWill test pseudo-random data from from the chosen '-g generator'");
 				break;
 
+			case MODE_ITERATE_ONLY:
+				dbg(DBG_MED, "\tWill test the given data, but not assess it, and instead save the p-values "
+						"in a binary file");
+				break;
+
+			case MODE_ASSESS_ONLY:
+				dbg(DBG_MED, "\tCollect the p-values from the binary files specified from '-d file...' and "
+						"assess them'");
+				break;
+
 			default:
 				dbg(DBG_MED, "\tUnknown assessment mode: %c", state->runMode);
 				break;
@@ -1006,7 +1051,7 @@ print_option_summary(struct state *state, char *where)
 		}
 		dbg(DBG_MED, "\tTesting %lld bits of data (%lld bytes)", (long long) state->tp.numOfBitStreams *
 				(long long) state->tp.n, (((long long) state->tp.numOfBitStreams *
-				(long long) state->tp.n) + 7) / 8);
+				(long long) state->tp.n) + BITS_N_BYTE - 1) / BITS_N_BYTE);
 		dbg(DBG_MED, "\tPerforming %ld iterations each of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
 	} else {
 		dbg(DBG_MED, "\tclassic (interactive mode)\n");
@@ -1146,6 +1191,12 @@ print_option_summary(struct state *state, char *where)
 	case MODE_ITERATE_AND_ASSESS:
 		dbg(DBG_MED, "\t  -m b: test pseudo-random data from from '-g generator'");
 		break;
+	case MODE_ITERATE_ONLY:
+		dbg(DBG_MED, "\t  -m i: test the given data, but not assess it, and instead save the p-values in a binary file");
+		break;
+	case MODE_ASSESS_ONLY:
+		dbg(DBG_MED, "\t  -m a: collect the p-values from the binary files specified from '-d file...' and assess them");
+		break;
 	default:
 		dbg(DBG_MED, "\t  -m %c: unknown runMode", state->runMode);
 		break;
@@ -1196,7 +1247,8 @@ print_option_summary(struct state *state, char *where)
 	if (state->jobnumFlag == true) {
 		dbg(DBG_MED, "\t-j jobnum was set to %ld", state->jobnum);
 		dbg(DBG_MED, "\t  will skip %lld bytes of data before processing",
-		    ((long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + 7 / 8)));
+		    (long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + BITS_N_BYTE -
+				    1 / BITS_N_BYTE));
 	} else {
 		dbg(DBG_MED, "\tno -j jobnum was given");
 		dbg(DBG_MED, "\t  will start processing at the beginning of data");

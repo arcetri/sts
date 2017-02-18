@@ -249,7 +249,7 @@ enum test {
 // Format of data when read from a file
 enum format {
 	FORMAT_ASCII_01 = 'a',		// Use ascii '0' and '1' chars, 1 bit per octet
-	FORMAT_0 = '0',			// Alias for FORMAT_ASCII_01 - redirects to it // TODO remove
+	FORMAT_0 = '0',			// Alias for FORMAT_ASCII_01 - redirects to it
 	FORMAT_RAW_BINARY = 'r',	// Data in raw binary, 8 bits per octet
 	FORMAT_1 = '1',			// Alias for FORMAT_RAW_BINARY - redirects to it
 };
@@ -257,17 +257,9 @@ enum format {
 // Run modes
 enum run_mode {
 	MODE_WRITE_ONLY = 'w',		// Generate data from '-g generator' and write it to '-f randdata' in '-F format'
-	MODE_ITERATE_AND_ASSESS = 'b',	// Test the data specified from -'-g generator' (default mode)
-};
-
-// Driver state
-enum driver_state {
-	DRIVER_NULL = 0,		// No driver state assigned
-	DRIVER_INIT,			// Initialized test for driver
-	DRIVER_ITERATE,			// Done iteration for driver
-	DRIVER_PRINT,			// Logged iteration info for driver
-	DRIVER_METRICS,			// Done uniformity and proportional analysis for driver
-	DRIVER_DESTROY,			// Done final test cleanup and de-allocation for driver
+	MODE_ITERATE_AND_ASSESS = 'b',	// Test the data specified from '-g generator' (default mode)
+	MODE_ITERATE_ONLY = 'i',	// Test the given data, but not assess it, and instead save the p-values in a binary file
+	MODE_ASSESS_ONLY = 'a',		// Collect the p-values from the binary files specified from '-d file...' and assess them
 };
 
 #   define MIN_PARAM (1)	// minimum -P parameter number
@@ -362,6 +354,17 @@ struct metric_results {
 };
 
 /*
+ * Special data for each template of each iteration in p_val (instead of just p_value doubles) for the NONOVERLAPPING test
+ */
+struct nonover_stats {
+	double p_value;			// Test p_value for a given template
+	bool success;			// Success or failure for a given template
+	double chi2;			// Test statistic for a given template
+	long int template_index;	// Template number of a given template
+	unsigned int Wj[BLOCKS_NON_OVERLAPPING]; // Number of times that m-bit template occurs within each block
+};
+
+/*
  * state - execution state, initialized and set up by the command line, augmented by test results
  */
 struct state {
@@ -405,6 +408,10 @@ struct state {
 
 	bool jobnumFlag;		// true if -j jobnum was given
 	long int jobnum;		// -j jobnum: seek into randdata num*bitcount*iterations bits
+	long int base_seek;		// Seek position for the input file indicating where we want to start testing it
+
+	long int files_count;		// Number of files where to take the p-values from
+	char **filenames;		// Paths of the files where to take the p-values from
 
 	TP tp;				// Test parameters
 	bool promptFlag;		// -p: true -> in interactive mode (no -b), do not prompt for change of parameters
@@ -423,7 +430,6 @@ struct state {
 
 	char *testNames[NUMOFTESTS + 1];		// Name of each test
 	char *subDir[NUMOFTESTS + 1];			// NULL or name of working subdirectory (under workDir)
-	enum driver_state driver_state[NUMOFTESTS +1];	// Driver state for each test
 
 	int partitionCount[NUMOFTESTS + 1];	// Partition the result for test i into partitionCount[i] data*.txt files
 	char *datatxt_fmt[NUMOFTESTS + 1];	// Format of data*.txt filenames or NULL
