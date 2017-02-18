@@ -33,3 +33,5 @@ CMakeLists.txt
 .idea
 /cmake-build-debug/
 result.txt
+finalAnalysisReport.txt
+freq.txt
