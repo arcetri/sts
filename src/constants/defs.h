@@ -112,7 +112,7 @@
 #   define NUMOFTESTS			(15)		// MAX TESTS DEFINED - must match max enum test value below
 #   define NUMOFGENERATORS		(10)		// MAX PRNGs
 
-#   define DEFAULT_BLOCK_FREQUENCY	(128)		// -P 1=M, Block Frequency Test - block length
+#   define DEFAULT_BLOCK_FREQUENCY	(16384)		// -P 1=M, Block Frequency Test - block length
 #   define DEFAULT_NON_OVERLAPPING	(9)		// -P 2=m, NonOverlapping Template Test - block length
 #   define DEFAULT_OVERLAPPING		(9)		// -P 3=m, Overlapping Template Test - block length
 #   define DEFAULT_APEN			(10)		// -P 4=m, Approximate Entropy Test - block length
@@ -120,7 +120,7 @@
 #   define DEFAULT_LINEARCOMPLEXITY	(500)		// -P 6=M, Linear Complexity Test - block length
 #   define DEFAULT_ITERATIONS		(1)		// -P 7=iterations (-i iterations)
 #   define DEFAULT_UNIFORMITY_BINS	(10)		// -P 8=bins, uniformity test is thru this many bins
-#   define DEFAULT_BITCOUNT		(1000000)	// -P 9=bitcount, Length of a single bit stream
+#   define DEFAULT_BITCOUNT		(1048576)	// -P 9=bitcount, Length of a single bit stream
 #   define DEFAULT_UNIFORMITY_LEVEL	(0.0001)	// -P 10=uni_level, uniformity errors have values below this
 #   define DEFAULT_ALPHA		(0.01)		// -P 11=alpha, p_value significance level
 
@@ -365,6 +365,15 @@ struct nonover_stats {
 };
 
 /*
+ * Struct representing a node of the filenames linked-list
+ */
+struct Node
+{
+	char *filename;
+	struct Node *next;
+};
+
+/*
  * state - execution state, initialized and set up by the command line, augmented by test results
  */
 struct state {
@@ -410,8 +419,8 @@ struct state {
 	long int jobnum;		// -j jobnum: seek into randdata num*bitcount*iterations bits
 	long int base_seek;		// Seek position for the input file indicating where we want to start testing it
 
-	long int files_count;		// Number of files where to take the p-values from
-	char **filenames;		// Paths of the files where to take the p-values from
+	char *pvalues_dir;		// Directory where to look for the .pvalues binary files
+	struct Node *filenames;		// Names of the .pvalues files
 
 	TP tp;				// Test parameters
 	bool promptFlag;		// -p: true -> in interactive mode (no -b), do not prompt for change of parameters

@@ -2194,36 +2194,54 @@ getTimestamp(char *buf, size_t len)
 void write_p_val_to_file(struct state *state)
 {
 	long int i, j;
+	char *filename, *work_filepath, *final_filepath;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(231, __func__, "state arg was NULL");
+		err(232, __func__, "state arg was NULL");
 	}
 
-	char *filename;
-	asprintf(&filename, "%ld_%ld_%ld.pvalues", state->jobnum, state->tp.numOfBitStreams, state->tp.n);
+	/*
+	 * Compute the filename of the working file (.work)
+	 */
+	asprintf(&filename, "sts.%04ld.%ld.%ld.work", state->jobnum, state->tp.numOfBitStreams, state->tp.n);
+	work_filepath = filePathName(state->workDir, filename);
+	free(filename);
 
-	char *filepath = filePathName(state->workDir, filename);
-
+	/*
+	 * Create and open the working binary file
+	 */
 	FILE *p_val_file;
-	p_val_file = fopen(filepath, "wb");
+	p_val_file = fopen(work_filepath, "wb");
 
+	/*
+	 * Write the p-values of each test in the working file
+	 */
 	for (i = 1; i <= NUMOFTESTS; i++) {
 		if (state->testVector[i] == true) {
 
-			// Write the number of the test
+			/*
+			 * Write the number of the test
+			 */
 			fwrite(&i, sizeof(i), 1, p_val_file);
 
-			// Write the number of p-values for this test
+			/*
+			 * Write the number of p-values for this test
+			 */
 			fwrite(&(state->p_val[i]->count), sizeof(state->p_val[i]->count), 1, p_val_file);
 
-			// Write the p-values
+			/*
+			 * Write the p-values
+			 */
 			for (j = 0; j < state->p_val[i]->count; j++) {
 
 				double p_val;
 
+				/*
+				 * Also when the test is NON_OVERLAPPING, take the p-value only.
+				 */
 				if (i != TEST_NON_OVERLAPPING) {
 					p_val = get_value(state->p_val[i], double, j);
 				} else {
@@ -2236,45 +2254,80 @@ void write_p_val_to_file(struct state *state)
 		}
 	}
 
+	/*
+	 * Close the "working" file
+	 */
 	fclose(p_val_file);
+
+	/*
+	 * Compute the final filename
+	 */
+	asprintf(&filename, "sts.%04ld.%ld.%ld.pvalues", state->jobnum, state->tp.numOfBitStreams, state->tp.n);
+	final_filepath = filePathName(state->workDir, filename);
+
+	/*
+	 * Rename the work file (.work) to have its final filename (.pvalues)
+	 */
+	if (rename(work_filepath, final_filepath) <= 0) {
+		errp(232, __func__, "error in renaming %s to %s", work_filepath, final_filepath);
+	}
+
+	/*
+	 * Free allocated memory
+	 */
 	free(filename);
+	free(work_filepath);
+	free(final_filepath);
 }
 
 
 void read_from_p_val_file(struct state *state)
 {
-	long int f, test_num, p_val_index;
+	long int test_num, p_val_index;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
 	if (state == NULL) {
-		err(231, __func__, "state arg was NULL");
+		err(232, __func__, "state arg was NULL");
 	}
 
-	for (f = 0; f < state->files_count; f++) {
+	struct Node *current = state->filenames;
+	while (current != NULL) {
 
-		// Open the file
-		char *filename = state->filenames[f];
-		FILE *p_val_file = fopen(filename, "rb");
+		/*
+		 * Open the file
+		 */
+		char *filename = current->filename;
+		FILE *p_val_file = fopen(filePathName(state->pvalues_dir, filename), "rb");
 
-		// Read the test number
+		/*
+		 * Read the first test number
+		 */
 		fread(&test_num, sizeof(test_num), 1, p_val_file);
 
-		// Until there are p-values
+		/*
+		 * Read the content of the file
+		 */
 		while (!feof(p_val_file) && test_num <= NUMOFTESTS) {
 
-			// Read number of p-values for this test
+			/*
+			 * Read number of p-values for the current testnum
+			 */
 			long int number_of_p_vals;
 			fread(&number_of_p_vals, sizeof(number_of_p_vals), 1, p_val_file);
 
-			// Read all the p-values for this test
+			/*
+			 * Read all the p-values for this test
+			 */
 			for (p_val_index = 0; p_val_index < number_of_p_vals; p_val_index++) {
 
 				double p_val;
 				fread(&p_val, sizeof(p_val), 1, p_val_file);
 
-				// Append each p-value read to the p-values of this test
+				/*
+				 * Append each p-value read to the p-values of this test
+				 */
 				if (test_num != TEST_NON_OVERLAPPING) {
 					append_value(state->p_val[test_num], &p_val);
 				} else {
@@ -2284,12 +2337,50 @@ void read_from_p_val_file(struct state *state)
 				}
 			}
 
-			// Read the next test number
+			/*
+			 * Read the next test number
+			 */
 			fread(&test_num, sizeof(test_num), 1, p_val_file);
 		}
 
-		// Close the file that has been read
+		/*
+		 * Close the file that has been read
+		 */
 		fclose(p_val_file);
+		current = current->next;
+	}
+}
+
+
+/*
+ * Appends the given string to the linked list which is pointed to by the given head
+ */
+void
+append_string_to_linked_list(struct Node **head, char* string)
+{
+	struct Node *current = *head;
+
+	/*
+	 * Create the new node to append to the linked list
+	 */
+	struct Node *new_node = malloc(sizeof(*new_node));
+	new_node->filename = strdup(string);
+	new_node->next = NULL;
+
+	/*
+	 * If the linked list is empty, just make the head to be this new node
+	 */
+	if (current == NULL)
+		*head = new_node;
+
+	/*
+	 * Otherwise, go till the last node and append the new node after it
+	 */
+	else {
+		while (current->next != NULL)
+			current = current->next;
+
+		current->next = new_node;
 	}
 }
 

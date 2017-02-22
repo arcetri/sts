@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 #include "constants/defs.h"
@@ -478,6 +479,7 @@ metrics(struct state *state)
 	bool case2;
 	double p_hat;
 	int io_ret;		// I/O return status
+	bool is_first = false;
 	int i;
 
 	/*
@@ -565,7 +567,6 @@ metrics(struct state *state)
 			}
 		}
 		p_hat = 1.0 - state->tp.alpha;
-		passRate = 0;
 		if (case1 == true) {
 			if (state->maxGeneralSampleSize == 0) {
 				io_ret = fprintf(state->finalRept,
@@ -676,12 +677,34 @@ metrics(struct state *state)
 		}
 
 		/*
-		 * Print summary of the metrics results of these tests
+		 * Print a brief summary of what file / generator tested and how
 		 */
 		io_ret = fprintf(state->finalRept, "A total of %ld tests (some of the %d tests actually consist of multiple "
 						 "sub-tests)\nwere conducted to evaluate the randomness of %ld bitstreams of "
-						 "%ld bits from:\n\n\t%s\n\n"
-						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
+						 "%ld bits from:\n\n\t%s\n\n",
+				 total_number_of_tests, NUMOFTESTS, state->tp.numOfBitStreams, state->tp.n,
+				 state->generator == GENERATOR_FROM_FILE ?
+				 (strcmp(state->randomDataPath, "/dev/null") != 0 ? state->randomDataPath : "-UNKNOWN-") :
+				 state->generatorDir[state->generator]);
+		if (io_ret <= 0) {
+			errp(5, __func__, "error in writing to finalRept");
+		}
+
+		/*
+		 * If in distributed mode, specify from which files the p-values were taken
+		 */
+		if (state->runMode == MODE_ASSESS_ONLY) {
+			io_ret = fprintf(state->finalRept, "using the p-values from the following files:\n\n\t%s/"
+					"sts.*.*.%ld.pvalues\n\n", state->pvalues_dir, state->tp.n);
+			if (io_ret <= 0) {
+				errp(5, __func__, "error in writing to finalRept");
+			}
+		}
+
+		/*
+		 * Print a brief explanation on the metric analyses that were conducted on the p-values
+		 */
+		io_ret = fprintf(state->finalRept, "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "The numerous empirical results of these tests were then interpreted with\nan "
 						 "examination of the proportion of sequences that pass a statistical test\n"
@@ -689,14 +712,11 @@ metrics(struct state *state)
 						 "(uniformity analysis). The results were the following:\n\n"
 						 "\t%ld/%ld tests passed successfully both the analyses.\n"
 						 "\t%ld/%ld tests did not pass successfully both the analyses.\n\n"
-						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
+						 "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 						 "- - - - - - - - - - - - - - -\n\n"
 						 "Here are the results of the single tests:\n",
-				 total_number_of_tests, NUMOFTESTS, state->tp.numOfBitStreams, state->tp.n,
-				 state->generator == GENERATOR_FROM_FILE ? state->randomDataPath :
-				 state->generatorDir[state->generator], state->successful_tests, total_number_of_tests,
+				 state->successful_tests, total_number_of_tests,
 				 total_number_of_tests - state->successful_tests, total_number_of_tests);
-
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}
@@ -767,33 +787,86 @@ metrics(struct state *state)
 		}
 
 		if (state->testVector[TEST_NON_OVERLAPPING] == true) {
-			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Non-overlapping Template Matching\" tests ",
-					 state->metric_results.non_overlapping[PASSED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(PASSED_BOTH, state);
+			is_first = true;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
-					 state->metric_results.non_overlapping[FAILED_PROPORTION]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_PROPORTION, state);
+			if (state->metric_results.non_overlapping[PASSED_BOTH] > 0) {
+				io_ret = fprintf(state->finalRept, "\n - ");
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
-					 state->metric_results.non_overlapping[FAILED_UNIFORMITY]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+				is_first = false;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Non-overlapping Template Matching\" tests ",
-					 state->metric_results.non_overlapping[FAILED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Non-overlapping Template Matching\" tests ",
+						 state->metric_results.non_overlapping[PASSED_BOTH],
+						 state->partitionCount[TEST_NON_OVERLAPPING]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(PASSED_BOTH, state);
 			}
-			finishMetricTestsSentence(FAILED_BOTH, state);
+
+			if (state->metric_results.non_overlapping[FAILED_PROPORTION] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Non-overlapping Template Matching\" tests ",
+						 state->metric_results.non_overlapping[FAILED_PROPORTION],
+						 state->partitionCount[TEST_NON_OVERLAPPING]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_PROPORTION, state);
+			}
+
+			if (state->metric_results.non_overlapping[FAILED_UNIFORMITY] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Non-overlapping Template Matching\" tests ",
+						 state->metric_results.non_overlapping[FAILED_UNIFORMITY],
+						 state->partitionCount[TEST_NON_OVERLAPPING]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+			}
+
+			if (state->metric_results.non_overlapping[FAILED_BOTH] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Non-overlapping Template Matching\" tests ",
+						 state->metric_results.non_overlapping[FAILED_BOTH],
+						 state->partitionCount[TEST_NON_OVERLAPPING]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_BOTH, state);
+			}
 		}
 
 		if (state->testVector[TEST_OVERLAPPING] == true) {
@@ -821,63 +894,169 @@ metrics(struct state *state)
 		}
 
 		if (state->testVector[TEST_RND_EXCURSION] == true) {
-			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Random Excursions\" tests ",
-					 state->metric_results.random_excursions[PASSED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(PASSED_BOTH, state);
+			is_first = true;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
-					 state->metric_results.random_excursions[FAILED_PROPORTION]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_PROPORTION, state);
+			if (state->metric_results.random_excursions[PASSED_BOTH] > 0) {
+				io_ret = fprintf(state->finalRept, "\n - ");
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
-					 state->metric_results.random_excursions[FAILED_UNIFORMITY]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+				is_first = false;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions\" tests ",
-					 state->metric_results.random_excursions[FAILED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions\" tests ",
+						 state->metric_results.random_excursions[PASSED_BOTH],
+						 state->partitionCount[TEST_RND_EXCURSION]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(PASSED_BOTH, state);
 			}
-			finishMetricTestsSentence(FAILED_BOTH, state);
+
+			if (state->metric_results.random_excursions[FAILED_PROPORTION] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions\" tests ",
+						 state->metric_results.random_excursions[FAILED_PROPORTION],
+						 state->partitionCount[TEST_RND_EXCURSION]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_PROPORTION, state);
+			}
+
+			if (state->metric_results.random_excursions[FAILED_UNIFORMITY] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions\" tests ",
+						 state->metric_results.random_excursions[FAILED_UNIFORMITY],
+						 state->partitionCount[TEST_RND_EXCURSION]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+			}
+
+			if (state->metric_results.random_excursions[FAILED_BOTH] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions\" tests ",
+						 state->metric_results.random_excursions[FAILED_BOTH],
+						 state->partitionCount[TEST_RND_EXCURSION]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_BOTH, state);
+			}
 		}
 
 		if (state->testVector[TEST_RND_EXCURSION_VAR] == true) {
-			io_ret = fprintf(state->finalRept, "\n - %ld of the \"Random Excursions Variant\" tests ",
-					 state->metric_results.random_excursions_var[PASSED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(PASSED_BOTH, state);
+			is_first = true;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
-					 state->metric_results.random_excursions_var[FAILED_PROPORTION]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_PROPORTION, state);
+			if (state->metric_results.random_excursions_var[PASSED_BOTH] > 0) {
+				io_ret = fprintf(state->finalRept, "\n - ");
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
-					 state->metric_results.random_excursions_var[FAILED_UNIFORMITY]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
-			}
-			finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+				is_first = false;
 
-			io_ret = fprintf(state->finalRept, "   %ld of the \"Random Excursions Variant\" tests ",
-					 state->metric_results.random_excursions_var[FAILED_BOTH]);
-			if (io_ret <= 0) {
-				errp(5, __func__, "error in writing to finalRept");
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions Variant\" tests ",
+						 state->metric_results.random_excursions_var[PASSED_BOTH],
+						 state->partitionCount[TEST_RND_EXCURSION_VAR]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(PASSED_BOTH, state);
 			}
-			finishMetricTestsSentence(FAILED_BOTH, state);
+
+			if (state->metric_results.random_excursions_var[FAILED_PROPORTION] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions Variant\" tests ",
+						 state->metric_results.random_excursions_var[FAILED_PROPORTION],
+						 state->partitionCount[TEST_RND_EXCURSION_VAR]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_PROPORTION, state);
+			}
+
+			if (state->metric_results.random_excursions_var[FAILED_UNIFORMITY] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+					is_first = false;
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions Variant\" tests ",
+						 state->metric_results.random_excursions_var[FAILED_UNIFORMITY],
+						 state->partitionCount[TEST_RND_EXCURSION_VAR]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_UNIFORMITY, state);
+			}
+
+			if (state->metric_results.random_excursions_var[FAILED_BOTH] > 0) {
+				if (is_first == true) {
+					io_ret = fprintf(state->finalRept, "\n - ");
+				} else {
+					io_ret = fprintf(state->finalRept, "   ");
+				}
+
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+
+				io_ret = fprintf(state->finalRept, "%ld/%d of the \"Random Excursions Variant\" tests ",
+						 state->metric_results.random_excursions_var[FAILED_BOTH],
+						 state->partitionCount[TEST_RND_EXCURSION_VAR]);
+				if (io_ret <= 0) {
+					errp(5, __func__, "error in writing to finalRept");
+				}
+				finishMetricTestsSentence(FAILED_BOTH, state);
+			}
 		}
 
 		if (state->testVector[TEST_SERIAL] == true) {
@@ -906,7 +1085,7 @@ metrics(struct state *state)
 		 * Print conclusion
 		 */
 		io_ret = fprintf(state->finalRept,
-				 "\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - "
+				 "\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 				 "- - - - - - - - - - - - - - -\n\n"
 				"The missing tests (if any) were whether disabled manually by the user or disabled\n"
 						 "at run time due to input size requirements not satisfied by this run.\n\n");
@@ -933,19 +1112,19 @@ static void finishMetricTestsSentence(test_metric_result result, struct state *s
 		}
 		break;
 	case FAILED_UNIFORMITY:
-		io_ret = fprintf(state->finalRept, "failed the uniformity analysis.\n");
+		io_ret = fprintf(state->finalRept, "FAILED the uniformity analysis.\n");
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	case FAILED_PROPORTION:
-		io_ret = fprintf(state->finalRept, "failed the proportion analysis.\n");
+		io_ret = fprintf(state->finalRept, "FAILED the proportion analysis.\n");
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}
 		break;
 	case FAILED_BOTH:
-		io_ret = fprintf(state->finalRept, "failed both the analyses.\n");
+		io_ret = fprintf(state->finalRept, "FAILED both the analyses.\n");
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}

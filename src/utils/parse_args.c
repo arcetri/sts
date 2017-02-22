@@ -35,6 +35,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <math.h>
 #include "../constants/externs.h"
 #include "utilities.h"
@@ -111,9 +112,9 @@ static struct state const defaultstate = {
 	0,				// Begin at start of randdata (-j 0)
 	0,				// Default seek to 0
 
-	// files_count & filenames
-	0,				// Number of files where to take the p-values from
-	NULL,				// Paths of the files where to take the p-values from
+	// pvalues_dir & filenames
+	NULL,				// Directory where to look for the .pvalues binary files
+	NULL,				// Names of the .pvalues files
 
 	// tp, promptFlag, uniformityBinsFlag
 	{DEFAULT_BLOCK_FREQUENCY,	// -P 1=M, Block Frequency Test - block length
@@ -313,9 +314,9 @@ static struct state const defaultstate = {
 /* *INDENT-OFF* */
 static const char * const usage =
 "[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
-"               [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
-"               [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
-"               [-m mode] [-T numOfThreads] [-d pvaluesfile1 [pvaluesfile2] ..] [-h] bitcount\n"
+"             [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
+"             [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
+"             [-m mode] [-T numOfThreads] [-d pvaluesdir] [-h] bitcount\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
 "    -b                 batch mode - no stdin (def: prompt when needed)\n"
@@ -341,7 +342,7 @@ static const char * const usage =
 "\n"
 "    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
 "\n"
-"       1: Block Frequency Test - block length(M):		128\n"
+"       1: Block Frequency Test - block length(M):		16384\n"
 "       2: NonOverlapping Template Test - block length(m):	9\n"
 "       3: Overlapping Template Test - block length(m):		9\n"
 "       4: Approximate Entropy Test - block length(m):		10\n"
@@ -349,7 +350,7 @@ static const char * const usage =
 "       6: Linear Complexity Test - block length(M):		500\n"
 "       7: Number of bitcount runs (same as -i iterations):	1\n"
 "       8: Uniformity bins:                         		sqrt(iterations) or 10 (if -O)\n"
-"       9: Length of a single bit stream (bitcount):		1000000\n"
+"       9: Length of a single bit stream (bitcount):		1048576\n"
 "      10: Uniformity Cutoff Level:				0.0001\n"
 "      11: Alpha Confidence Level:				0.01\n"
 "\n"
@@ -370,16 +371,16 @@ static const char * const usage =
 "\n"
 "    -m mode            w --> generate pseudorandom data from '-g generator' and write it to '-f randdata' in '-F format'\n"
 "                       b --> test pseudo-random data from from '-g generator' (default mode)\n"
-" 			i --> test the given data, but not assess it, and instead save the p-values in a binary file\n"
-" 			a --> collect the p-values from the binary files specified from '-d file...' and assess them\n"
+"                       i --> test the given data, but not assess it, and instead save the p-values in a binary file\n"
+"                       a --> collect the p-values from the binary files specified from '-d file...' and assess them\n"
 "\n"
 "    -T numOfThreads    custom number of threads for this run (default: takes the number of cores of the CPU)\n"
 "\n"
-"    -d pvaluesfile1 [pvaluesfile2] ..    binary files with p-values previously computed (requires mode -m a)\n"
+"    -d pvaluesdir      path to the folder with the binary files with previously computed p-values (requires mode -m a)\n"
 "\n"
 "    -h                 print this message and exit\n"
 "\n"
-"    bitcount           length of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
+"    bitcount           length in bits of a single bit stream, must be a multiple of 8 (same as -P 9=bitcount)\n";
 /* *INDENT-ON* */
 
 
@@ -699,15 +700,11 @@ parse_args(struct state *state, int argc, char **argv)
 			}
 			break;
 
-		case 'd':	// -d files with precomputed p-values
-			optind--;
-			state->filenames = malloc(sizeof(state->filenames[0]) * (argc - optind));
-
-			for (i = 0; optind < argc && *argv[optind] != '-'; optind++, i++) {
-				state->filenames[i] = strdup(argv[optind]);
-				state->files_count++;
+		case 'd':	// -d folder with precomputed .pvalues files
+			state->pvalues_dir = strdup(optarg);
+			if (state->pvalues_dir == NULL) {
+				errp(1, __func__, "strdup of %lu bytes for -w pvalues_dir failed", strlen(optarg));
 			}
-
 			break;
 
 		case 'h':	// -h (print out help)
@@ -724,23 +721,25 @@ parse_args(struct state *state, int argc, char **argv)
 			break;
 		}
 	}
-	if (optind >= argc) {
-		usage_err(usage, 1, __func__, "missing required bitcount argument");
-	}
-	if (optind != argc - 1) {
+
+	if (optind != argc - 1 && optind != argc) {
 		usage_err(usage, 1, __func__, "unexpected arguments");
 	}
-	state->tp.n = str2longint(&success, argv[optind]);
-	if (success == false) {
-		usage_errp(usage, 1, __func__, "bitcount(n) must be a number: %s", argv[optind]);
-	}
-	if ((state->tp.n % 8) != 0) {
-		usage_err(usage, 1, __func__, "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
-				"a sequence that starts or ends on a non-byte boundary outweighs the convenience of "
-				"permitting arbitrary bit lengths", state->tp.n);
-	}
-	if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
-		usage_err(usage, 1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
+
+	if (optind == argc - 1) {
+		state->tp.n = str2longint(&success, argv[optind]);
+		if (success == false) {
+			usage_errp(usage, 1, __func__, "bitcount(n) must be a number: %s", argv[optind]);
+		}
+		if ((state->tp.n % 8) != 0) {
+			usage_err(usage, 1, __func__,
+				  "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
+						  "a sequence that starts or ends on a non-byte boundary outweighs the convenience of "
+						  "permitting arbitrary bit lengths", state->tp.n);
+		}
+		if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
+			usage_err(usage, 1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
+		}
 	}
 
 	/*
@@ -760,7 +759,7 @@ parse_args(struct state *state, int argc, char **argv)
 	/*
 	 * Post processing: make sure complimentary/conflicting options are set/not set
 	 */
-	if (state->batchmode == true) {
+	if (state->batchmode == true && state->runMode != MODE_ASSESS_ONLY) {
 		if (state->generatorFlag == true) {
 			if (state->generator == 0 && state->randomDataFlag == false) {
 				usage_err(usage, 1, __func__, "-f randdata required when using -b and -g 0");
@@ -901,6 +900,83 @@ parse_args(struct state *state, int argc, char **argv)
 				     " you set to %d. Therefore only %d threads will be used.", state->numberOfThreads,
 		     state->tp.numOfBitStreams, state->tp.numOfBitStreams);
 		state->numberOfThreads = state->tp.numOfBitStreams;
+	}
+
+	/*
+	 * Look for the matching .pvalues files in the folder given with -d
+	 */
+	if (state->pvalues_dir != NULL) {
+		DIR *dir;
+		struct dirent *entry;
+
+		if ((dir = opendir(state->pvalues_dir)) != NULL) {
+
+			/*
+			 * Set the number of bitstreams to 0, since we will count the number of iterations
+			 * from the filenames (assuming they were not renamed).
+			 */
+			state->tp.numOfBitStreams = 0;
+
+			/*
+			 * Consider every entry within dir
+			 */
+			while ((entry = readdir (dir)) != NULL) {
+
+				/*
+				 * Check the entries that are regular files
+				 */
+				if (entry->d_type == DT_REG) {
+
+					int token_number = 0;
+					char **parsed_tokens = malloc(sizeof(*parsed_tokens) * 5);
+					char *entry_name, *to_free;	// entry_name will be modified by strsep
+					to_free = entry_name = strdup(entry->d_name);
+
+					/*
+					 * Take the first 5 (if present) tokens of the filename, where for token
+					 * we mean the sub-strings delimited by a '.' (dot).
+					 */
+					while (token_number < 5 &&
+							(*(parsed_tokens + token_number) = strsep(&entry_name, ".")) != NULL) {
+						token_number++;
+					}
+
+					/*
+					 * If we were able to count 5 tokens and the tokens match the naming pattern
+					 * of the sts p-values files (sts.*.*.$n.pvalues)
+					 */
+					if (token_number == 5 && strcmp(*parsed_tokens, "sts") == 0 &&
+							strcmp(*(parsed_tokens + token_number - 1), "pvalues") == 0 &&
+							atoi(*(parsed_tokens + token_number - 2)) == state->tp.n) {
+
+						/*
+						 * Count the number of iterations done in the run for this file.
+						 */
+						state->tp.numOfBitStreams += atoi(*(parsed_tokens + token_number - 3));
+
+						/*
+						 * Store the filename in the list of filenames for opening it later.
+						 */
+						append_string_to_linked_list(&state->filenames, entry->d_name);
+
+					}
+
+					/*
+					 * Free the pointer which we don't need anymore
+					 */
+					free(to_free);
+				}
+			}
+
+			/*
+			 * Close the directory
+			 */
+			closedir (dir);
+
+		} else {
+			/* could not open directory */
+			err(1, __func__, "Could not open the directory: %s", state->pvalues_dir);
+		}
 	}
 
 	/*
