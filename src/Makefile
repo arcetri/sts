@@ -54,9 +54,10 @@ LIBS= -lm -L/usr/local/lib -lfftw3 -pthread
 OPT= -O3
 #DEBUG=
 DEBUG= -g3
-#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${OPT} ${DEBUG}
-#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${OPT} ${DEBUG}
-CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${OPT} ${DEBUG}
+LOC_INC= -I /usr/global/include -I /usr/local/include
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${LOC_INC} ${OPT} ${DEBUG}
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${LOC_INC} ${OPT} ${DEBUG}
+CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${LOC_INC} ${OPT} ${DEBUG}
 
 # locations
 #
