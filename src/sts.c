@@ -242,7 +242,13 @@
  *          Thus the user can test different chunks of the input data with different machines and later collect all the
  *          p-values and assess them with one final run of sts in ASSESS_ONLY mode.
  *
- *      24) Other issues not listed
+ *      25) The SP800-22Rev1a document has been revised and renamed SP800-22Rev1a-improved
+ *
+ *          While much of the text in the SP800-22Rev1a document still applies, some text neeed changing.
+ *          Test constant precision that were improved in the code is reflected in SP800-22Rev1a-improved.
+ *          In some cases, bugs, typos or misleading were fixed. Language about the new command line was added.
+ *
+ *      26) Other issues not listed
  *
  *          The above list of goals is incomplete.  In the interest of not extending this long comment
  *          much further, we will just mention that other important goals were attempted to be reached.
@@ -255,13 +261,16 @@
  *          We plan to use gnu-plot to visualize the results of a run in a graphical way.
  *          This can be considered an follow-up on the change "(22) Improve the program output".
  *
- *      B) Update the SP800-22Rev1a document
+ *      B) Move the generators from the sts code into a separate tool
  *
- *          While much of the text in the SP800-22Rev1a document still applies, some text needs
- *          to be revised.  For example, language about the new command line needs to be added.
- *          Test constant precision that were improved in the code need to be reflected in that
- *          document.  And in a few cases, bugs, typos or misleading SP800-22Rev1a text needs
- *          to be fixed.
+ *          The generators -g 1 through -g 9 will be removed from the main sts code base and
+ *          into a tool that will perform the equivalent of -g [1-9] -m w where the output will
+ *          be written to standard output.  Only -g 0 will be supported and the use of -g 0
+ *          will be deprecated.  The -m w flag will go away.
+ *
+ *          We plan to place 1G of data from -g 7 and 8G from the other generators online
+ *          (location TBD).  You may either download and use that data, or use the tool
+ *          to generate your own.
  *
  *      C) Add entropy analysis
  *
@@ -386,7 +395,7 @@ main(int argc, char *argv[])
 	else if (run_state.runMode == MODE_ITERATE_ONLY) {
 		msg("A binary file (with extension .pvalues) containing the p-values of the tests has been generated.\n"
 				    "You can later assess the results of this and other runs by executing "
-				    "sts in '-m a' mode and passing that file(s) as an argument with the '-d' flag.");
+				    "sts in '-m a' mode and passing that file's directory as an argument with the '-d' flag.");
 	}
 
 	// All Done!!! -- Jessica Noll, Age 2

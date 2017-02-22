@@ -123,10 +123,10 @@
 				   fputc('\n', stderr), \
 				   perror(__FUNCTION__), \
 				   exit(exitcode))
-#      define usage_err(usage, exitcode, name, ...) (fprintf(stderr, "%s\n%s: ", (usage), (name)), \
+#      define usage_err(usage, usage2, exitcode, name, ...) (fprintf(stderr, "%s%s\n%s: ", (usage), (usage2), (name)), \
 					       fprintf(stderr, __VA_ARGS__), \
 					       exit(exitcode))
-#      define usage_errp(usage, exitcode, name, ...) (fprintf(stderr, "%s\n%s: ", (usage), (name)), \
+#      define usage_errp(usage, usage2, exitcode, name, ...) (fprintf(stderr, "%s%s\n%s: ", (usage), (usage2), (name)), \
 						fprintf(stderr, __VA_ARGS__), \
 						fputc('\n', stderr), perror(__FUNCTION__), \
 						exit(exitcode))
@@ -139,8 +139,8 @@ extern void warn(char const *name, char const *fmt, ...);
 extern void warnp(char const *name, char const *fmt, ...);
 extern void err(int exitcode, char const *name, char const *fmt, ...);
 extern void errp(int exitcode, char const *name, char const *fmt, ...);
-extern void usage_err(char const *usage, int exitcode, char const *name, char const *fmt, ...);
-extern void usage_errp(char const *usage, int exitcode, char const *name, char const *fmt, ...);
+extern void usage_err(char const *usage, char const *usage2, int exitcode, char const *name, char const *fmt, ...);
+extern void usage_errp(char const *usage, char const *usage2, int exitcode, char const *name, char const *fmt, ...);
 
 #   endif			// DEBUG_LINT && __STDC_VERSION__ >= 199901L
 
