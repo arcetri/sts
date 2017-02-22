@@ -337,7 +337,7 @@ DiscreteFourierTransform_iterate(struct thread_state *thread_state)
 	 * Step 2: apply discrete Fourier transform on X.
 	 *
 	 * Because the input array are purely real numbers (X is an array of +1 and -1),
-	 * the DFT output satisfies the “Hermitian” redundancy.
+	 * the DFT output satisfies the "Hermitian" redundancy.
 	 * As a consequence, both the options (legacy dfft and fttw) save only the first
 	 * (n / 2 + 1) non-redundant values of the DFT output.
 	 */

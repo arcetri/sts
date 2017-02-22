@@ -396,7 +396,8 @@ append_array(struct dyn_array *array, void *array_to_add_p, long int total_eleme
 	 * Expand dynamic array if needed
 	 */
 	available_empty_elements = array->allocated - array->count;
-	required_elements_to_allocate = array->chunk * ((total_elements_to_add - available_empty_elements + (array->chunk - 1)) / array->chunk);
+	required_elements_to_allocate = array->chunk *
+			((total_elements_to_add - available_empty_elements + (array->chunk - 1)) / array->chunk);
 	if (available_empty_elements <= total_elements_to_add) {
 		grow_dyn_array(array, required_elements_to_allocate);
 	}

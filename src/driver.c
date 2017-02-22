@@ -290,20 +290,20 @@ init(struct state *state)
 	 *       (i.e., before the initialize all active tests section below).
 	 */
 	state->cSetup = false;
-	
+
 	/*
 	 * Check preconditions (firewall)
 	 */
 	if (state->tp.n <= 0) { // guard against taking the square root of a negative value
 		err(50, __func__, "bogus n value: %ld should be > 0", state->tp.n);
 	}
-	
+
 	/*
 	 * Compute pure numerical constants
 	 */
 	state->c.sqrt2 = sqrt(2.0);
 	state->c.log2 = log(2.0);
-	
+
 	/*
 	 * Compute constants related to the value of n
 	 */
@@ -879,7 +879,7 @@ metrics(struct state *state)
 		}
 
 		if (state->testVector[TEST_UNIVERSAL] == true) {
-			io_ret = fprintf(state->finalRept, "\n - The \"Maurer’s Universal Statistical\" test ");
+			io_ret = fprintf(state->finalRept, "\n - The \"Maurer's Universal Statistical\" test ");
 			if (io_ret <= 0) {
 				errp(5, __func__, "error in writing to finalRept");
 			}

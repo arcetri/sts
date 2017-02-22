@@ -734,8 +734,8 @@ parse_args(struct state *state, int argc, char **argv)
 		if ((state->tp.n % 8) != 0) {
 			usage_err(usage, 1, __func__,
 				  "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
-						  "a sequence that starts or ends on a non-byte boundary outweighs the convenience of "
-						  "permitting arbitrary bit lengths", state->tp.n);
+						  "a sequence that starts or ends on a non-byte boundary outweighs the convenience "
+						  "of permitting arbitrary bit lengths", state->tp.n);
 		}
 		if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
 			usage_err(usage, 1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
