@@ -73,7 +73,7 @@ grow_dyn_array(struct dyn_array *array, long int elms_to_allocate)
 		err(61, __func__, "array arg is NULL");
 	}
 	if (elms_to_allocate <= 0) {
-		err(61, __func__, "elms_to_allocate arg must be > 0: %d", elms_to_allocate);
+		err(61, __func__, "elms_to_allocate arg must be > 0: %ld", elms_to_allocate);
 	}
 
 	/*

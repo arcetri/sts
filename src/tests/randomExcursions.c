@@ -133,7 +133,7 @@ RandomExcursions_init(struct state *state)
 		state->rnd_excursion_S[i] = malloc(n * sizeof(state->rnd_excursion_S[i][0]));
 		if (state->rnd_excursion_S[i] == NULL) {
 			errp(150, __func__, "cannot malloc of %ld elements of %ld bytes each for state->rnd_excursion_S[%ld]",
-			     state->rnd_excursion_S, sizeof(state->rnd_excursion_S[i][0]), i);
+			     n, sizeof(state->rnd_excursion_S[i][0]), i);
 		}
 		state->rnd_excursion_cycle[i] = create_dyn_array(sizeof(long int), DEFAULT_CHUNK, (long int) state->c.sqrtn, true);
 	}

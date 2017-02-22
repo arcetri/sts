@@ -21,9 +21,12 @@
  * Share and enjoy! :-)
  */
 
+#include <stdio.h>
 #include <math.h>
 #include "cephes.h"
 #include "debug.h"
+
+extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugging
 
 const double MACHEP = (double) 1.11022302462515654042363e-16;	// 2**-53
 const double MAXLOG = (double) 7.0978271289338399673222e2;	// ln(2**1024*(1-MACHEP))

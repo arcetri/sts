@@ -150,8 +150,8 @@ OverlappingTemplateMatchings_init(struct state *state)
 	 */
 	if (m != DEFAULT_OVERLAPPING) {
 		warn(__func__, "disabling test %s[%d]: the probabilities in the code of this test have been computed only"
-				     "for m = %ld so far, but m has been set to %ld for this execution."
-				     "If you want to run this test please choose set the template size to %ld",
+				     "for m = %d so far, but m has been set to %ld for this execution."
+				     "If you want to run this test please choose set the template size to %d",
 		     state->testNames[test_num], test_num, DEFAULT_OVERLAPPING, m, DEFAULT_OVERLAPPING);
 		state->testVector[test_num] = false;
 		return;

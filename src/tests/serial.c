@@ -109,9 +109,9 @@ Serial_init(struct state *state)
 	/*
 	 * Disable test if conditions do not permit this test from being run
 	 */
-	if (m >= (long int) state->c.logn / state->c.log2 - 2) {
-		warn(__func__, "disabling test %s[%d]: requires block length(m): %ld >= %d",
-		     state->testNames[test_num], test_num, m, (long int) state->c.logn / state->c.log2 - 2);
+	if (m >= lround(floor((state->c.logn / state->c.log2) - 2.0))) {
+		warn(__func__, "disabling test %s[%d]: requires block length(m): %ld >= %ld",
+		     state->testNames[test_num], test_num, m, lround(floor(state->c.logn / state->c.log2 - 2.0)));
 		state->testVector[test_num] = false;
 		return;
 	}

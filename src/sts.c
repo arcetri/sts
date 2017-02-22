@@ -292,7 +292,6 @@
 // NOTE: This code also does an exit(0) on normal completion
 // NOTE: 0-4 is used in parse_args.c
 
-#include <stdio.h>
 #include <stdlib.h>
 #include "constants/defs.h"
 #include "utils/utilities.h"

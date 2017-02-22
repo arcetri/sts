@@ -47,6 +47,7 @@
 #include "utils/debug.h"
 #include "utils/stat_fncs.h"
 
+extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugging
 
 /*
  * Driver interface - defines how each test is performed at each phase

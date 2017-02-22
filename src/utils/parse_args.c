@@ -887,7 +887,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	if (state->numberOfThreadsFlag == true && state->numberOfThreads > sysconf(_SC_NPROCESSORS_ONLN)) {
 		warn(__func__, "You selected a number of threads which is greater than the number of cores in this computer."
-				     " For better performance, you should choose a number of threads < %d.",
+				     " For better performance, you should choose a number of threads < %ld.",
 		     sysconf(_SC_NPROCESSORS_ONLN));
 	}
 
@@ -896,8 +896,8 @@ parse_args(struct state *state, int argc, char **argv)
 	 * (aka iterations) set, fire a warning to the user that only $numOfBitstreams threads will be used.
 	 */
 	if (state->numberOfThreadsFlag == true && state->numberOfThreads > state->tp.numOfBitStreams) {
-		warn(__func__, "You chose to use %d threads. However this number is greater than the number of bitstreams, which"
-				     " you set to %d. Therefore only %d threads will be used.", state->numberOfThreads,
+		warn(__func__, "You chose to use %ld threads. However this number is greater than the number of bitstreams, which"
+				     " you set to %ld. Therefore only %ld threads will be used.", state->numberOfThreads,
 		     state->tp.numOfBitStreams, state->tp.numOfBitStreams);
 		state->numberOfThreads = state->tp.numOfBitStreams;
 	}
@@ -1330,7 +1330,7 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\t  will start processing at the beginning of data");
 	}
 	if (state->numberOfThreadsFlag == true) {
-		dbg(DBG_MED, "\t-T numOfThreads was given", state->numberOfThreads);
+		dbg(DBG_MED, "\t-T numOfThreads was given");
 	} else {
 		dbg(DBG_MED, "\tno -T numOfThreads was given");
 	}

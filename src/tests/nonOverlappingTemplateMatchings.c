@@ -230,7 +230,7 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 		state->testVector[test_num] = false;
 		return;
 	} else if (m > M) {
-		warn(__func__, "disabling test %s[%d]: requires template length(m): %ld <= M: %d",
+		warn(__func__, "disabling test %s[%d]: requires template length(m): %ld <= M: %ld",
 		     state->testNames[test_num], test_num, m, M);
 		state->testVector[test_num] = false;
 		return;
@@ -255,8 +255,8 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	for (i = 0; i < state->numberOfThreads; i++) {
 		state->nonper_seq[i] = malloc(m * sizeof(state->nonper_seq[i][0]));
 		if (state->nonper_seq[i] == NULL) {
-			errp(130, __func__, "cannot malloc of %ld elements of %ld bytes each for state->nonper_seq[%ld]",
-			     state->nonper_seq, sizeof(state->nonper_seq[i][0]), i);
+			errp(130, __func__, "cannot malloc of %ld elements of %ld bytes each for state->nonper_seq[%ul]",
+			     m, sizeof(state->nonper_seq[i][0]), i);
 		}
 	}
 

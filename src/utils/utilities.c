@@ -569,7 +569,7 @@ data_filename_format(int partitionCount)
 	 */
 	buf = malloc((size_t) len + 1);	// + 1 for paranoia
 	if (buf == NULL) {
-		errp(215, __func__, "cannot malloc of %d elements of %ld bytes each for data%%0*d.txt", len + 1,
+		errp(215, __func__, "cannot malloc of %ld elements of %ld bytes each for data%%0*d.txt", len + 1,
 		     sizeof(buf[0]));
 	}
 
@@ -582,7 +582,7 @@ data_filename_format(int partitionCount)
 		errno = 0;	// paranoia
 		snprintf_ret = snprintf(buf, len, "data%%0%dd.txt", digits);
 		if (snprintf_ret <= 0 || snprintf_ret >= len || errno != 0) {
-			errp(215, __func__, "snprintf failed for %d bytes for data%%0%dd.txt, returned: %d", len, digits,
+			errp(215, __func__, "snprintf failed for %ld bytes for data%%0%dd.txt, returned: %d", len, digits,
 			     snprintf_ret);
 		}
 		buf[len] = '\0';	// paranoia
@@ -2427,7 +2427,7 @@ write_sequence(struct state *state)
 			if (state->epsilon[0][i] == 1) {
 				state->tmpepsilon[j] |= (1 << count);
 			} else if (state->epsilon[0][i] != 0) {
-				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[0][i]);
 			}
 			++count;
 
@@ -2470,7 +2470,7 @@ write_sequence(struct state *state)
 			} else if (state->epsilon[0][i] == 1) {
 				state->tmpepsilon[i] = '1';
 			} else {
-				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[i]);
+				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[0][i]);
 			}
 		}
 

@@ -148,8 +148,8 @@ Universal_init(struct state *state)
 		 * Make sure that L is less than the number of bits in a long, to prevent overflow
 		 */
 		if (L > (BITS_N_LONGINT - 1)) {
-			warn(__func__, "disabling test %s[%d]: L: %ld is too large and should be less than %ld bits long",
-			     state->testNames[test_num], test_num, L, L, BITS_N_LONGINT - 1);
+			warn(__func__, "disabling test %s[%d]: L: %ld is too large and should be less than %lu bits long",
+			     state->testNames[test_num], test_num, L, BITS_N_LONGINT - 1);
 			state->testVector[test_num] = false;
 			return;
 		}

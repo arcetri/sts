@@ -81,7 +81,7 @@ void
 RandomExcursionsVariant_init(struct state *state)
 {
 	long int n;		// Length of a single bit stream
-	int i;
+	long int i;
 
 	/*
 	 * Check preconditions (firewall)
