@@ -50,8 +50,8 @@ DIFF= diff
 #
 LEGACY_LIBS= -lm -pthread
 LIBS= -lm -L/usr/local/lib -lfftw3 -pthread
-OPT=
-#OPT= -O3
+#OPT=
+OPT= -O3
 #DEBUG=
 DEBUG= -g3
 #CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${OPT} ${DEBUG}
