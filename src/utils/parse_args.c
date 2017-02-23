@@ -57,7 +57,7 @@ static struct state const defaultstate = {
 /* *INDENT-OFF* */
 
 	// batchmode
-	false,				// Classic (interactive) mode
+	true,				// batch non-interactive mode
 
 	// testVectorFlag & testVector
 	false,				// No -t test1[,test2].. was given
@@ -129,7 +129,7 @@ static struct state const defaultstate = {
 	 DEFAULT_UNIFORMITY_LEVEL,	// -P 10=uni_level, uniformity errors have values below this
 	 DEFAULT_ALPHA,			// -P 11=alpha, p_value significance level
 	},
-	false,				// No -p, prompt for change of parameters if no -b
+	false,				// Do not prompt for change of parameters
 	false,				// No -P 8 was given with custom uniformity bins
 
 	// c, cSetup
@@ -313,13 +313,14 @@ static struct state const defaultstate = {
  */
 /* *INDENT-OFF* */
 static const char * const usage =
-"[-v level] [-b] [-t test1[,test2]..] [-g generator]\n"
-"             [-P num=value[,num=value]..] [-p] [-i iterations] [-I reportCycle] [-O]\n"
+"[-v level] [-A] [-t test1[,test2]..] [-g generator]\n"
+"             [-P num=value[,num=value]..] [-i iterations] [-I reportCycle] [-O]\n"
 "             [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
 "             [-m mode] [-T numOfThreads] [-d pvaluesdir] [-h] [bitcount]\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
-"    -b                 batch mode - no stdin (def: prompt when needed)\n"
+"    -A                 ask a human what to do, use obsolete interactive mode (def: batch mode)\n"
+"                       As batch mode is now default, the old -b flag was removed.\n"
 "    -t test1[,test2].. tests to invoke, 0-15 (def: 0 -> run all tests)\n"
 "\n"
 "        0: Run all tests (1-15)\n"
@@ -332,13 +333,15 @@ static const char * const usage =
 "       13: Random Excursions Variant       14: Serial\n"
 "       15: Linear Complexity\n"
 "\n"
-"    -g generator       generator to use, 0-9 (if -b, def: 0)\n"
+"    -g generator       generator to use, 0-9 (unless -A, def: 0)\n"
 "\n"
 "       0: Read from file               1: Linear Congruential\n"
 "       2: Quadratic Congruential I     3: Quadratic Congruential II\n"
 "       4: Cubic Congruential           5: XOR\n"
 "       6: Modular Exponentiation       7: Blum-Blum-Shub\n"
 "       8: Micali-Schnorr               9: G Using SHA-1\n"
+"       NOTE: Generators 1-9 will be replaced by an separate tool in a later version.\n"
+"             Do not depend on this code supporting the 1-9 generators!\n"
 "\n"
 "    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
 "\n"
@@ -352,13 +355,12 @@ static const char * const usage =
 "       8: Uniformity bins:                         		sqrt(iterations) or 10 (if -O)\n"
 "       9: Length of a single bit stream (bitcount):		1048576 (must be a mulitple of 8)\n"
 "      10: Uniformity Cutoff Level:				0.0001\n"
-"      11: Alpha Confidence Level:				0.01\n";
+"      11: Alpha Confidence Level:				0.01\n"
+"      Warning: Change the parameters above only if you really know what you are doing!\n";
 static const char * const usage2 =
 "\n"
-"    -p                 in interactive mode (no -b), do not prompt for parameters (def: prompt)\n"
-"\n"
-"    -i iterations      number of iterations to do, i.e. number of bitstreams to test (if -b, def: 1)\n"
-"                       this flag is the same as -P 7=iterations\n"
+"    -i iterations      number of iterations to do, i.e. number of bitstreams to test (if no -A, def: 1)\n"
+"                       this flag is the same as -P 7\n"
 "\n"
 "    -I reportCycle     report after completion of reportCycle iterations (def: 0: do not report)\n"
 "    -O                 try to mimic output format of legacy code (def: don't be output compatible)\n"
@@ -366,7 +368,7 @@ static const char * const usage2 =
 "    -w workDir         write experiment results under workDir (def: .)\n"
 "    -c                 don't create any directories needed for creating files (def: do create)\n"
 "    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
-"    -f randdata        when -g 0 is given, randdata is the path to the input file to test (required if -b and -g 0)\n"
+"    -f randdata        when -g 0 is given, randdata is the path to the input file to test (required if -g 0 and no -A)\n"
 "    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
 "\n"
@@ -451,7 +453,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:bt:g:P:pi:I:Ow:csf:F:j:m:T:d:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:Abt:g:P:i:I:Ow:csf:F:j:m:T:d:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -463,9 +465,13 @@ parse_args(struct state *state, int argc, char **argv)
 			}
 			break;
 
-		case 'b':	// -b (batch, non-interactive mode)
-			state->batchmode = true;
-			state->promptFlag = true;	// -b implies -p
+		case 'A':	// -A (ask a human obsolete interactive mode)
+			state->batchmode = false;
+			state->promptFlag = true;
+			break;
+
+		case 'b':	// -b is now obsolete because batch is the default
+			usage_err(usage, usage2, 1, __func__, "-b is no longer required as batch is now the default");
 			break;
 
 		case 't':	// -t test1[,test2]..
@@ -579,10 +585,6 @@ parse_args(struct state *state, int argc, char **argv)
 					change_params(state, num, 0, d_value);
 				}
 			}
-			break;
-
-		case 'p':	// -p (interactive mode (no -b), do not prompt for change of parameters)
-			state->promptFlag = true;
 			break;
 
 		case 'i':	// -i iterations
@@ -1141,7 +1143,7 @@ print_option_summary(struct state *state, char *where)
 				(long long) state->tp.n) + BITS_N_BYTE - 1) / BITS_N_BYTE);
 		dbg(DBG_MED, "\tPerforming %ld iterations each of %ld bits\n", state->tp.numOfBitStreams, state->tp.n);
 	} else {
-		dbg(DBG_MED, "\tclassic (interactive mode)\n");
+		dbg(DBG_MED, "\tobsolete interactive mode\n");
 	}
 
 	/*
@@ -1369,9 +1371,9 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\talpha = %f", state->tp.alpha);
 		if (state->promptFlag == true) {
-			dbg(DBG_LOW, "\t    -p was given: will NOT prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t    -A was given: will prompt for any changes to default parameters\n");
 		} else {
-			dbg(DBG_LOW, "\t    no -p was given: will prompt for any changes to default parameters\n");
+			dbg(DBG_LOW, "\t    -A was not given: will NOT prompt for any changes to default parameters\n");
 		}
 	}
 

@@ -377,7 +377,7 @@ struct Node
  * state - execution state, initialized and set up by the command line, augmented by test results
  */
 struct state {
-	bool batchmode;			// -b: true -> non-interactive execution, false -> classic mode
+	bool batchmode;			// true -> non-interactive execution, -A false -> obsolete interactive mode
 
 	bool testVectorFlag;		// true if and -t test1[,test2].. was given
 	bool testVector[NUMOFTESTS+1];	// -t test1[,test2]..: tests to invoke
@@ -423,7 +423,7 @@ struct state {
 	struct Node *filenames;		// Names of the .pvalues files
 
 	TP tp;				// Test parameters
-	bool promptFlag;		// -p: true -> in interactive mode (no -b), do not prompt for change of parameters
+	bool promptFlag;		// true --> prompt for change of parameters if -A
 	bool uniformityBinsFlag;	// -P 8 was given with custom uniformity bins
 
 	T_CONST c;			// Test constants

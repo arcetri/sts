@@ -234,7 +234,7 @@ init(struct state *state)
 	 */
 	if (state->batchmode == false) {
 		chooseTests(state);
-		if (state->promptFlag == false) {
+		if (state->promptFlag == true) {
 
 			/*
 			 * Check if the user wants to adjust the parameters
