@@ -35,3 +35,5 @@ CMakeLists.txt
 result.txt
 finalAnalysisReport.txt
 freq.txt
+# internal files that will be removed soon
+*RMME*
