@@ -54,7 +54,7 @@ LIBS= -lm -L/usr/local/lib -lfftw3 -pthread
 OPT= -O3
 #DEBUG=
 DEBUG= -g3
-LOC_INC= -I /usr/global/include -I /usr/local/include
+LOC_INC= -I /usr/include -I /usr/global/include -I /usr/local/include
 #CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${LOC_INC} ${OPT} ${DEBUG}
 #CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${LOC_INC} ${OPT} ${DEBUG}
 CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${LOC_INC} ${OPT} ${DEBUG}
@@ -447,7 +447,7 @@ install: all
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
 sts.o: utils/defs.h utils/config.h utils/dyn_alloc.h
-sts.o: /usr/local/include/fftw3.h utils/utilities.h utils/externs.h
+sts.o: utils/utilities.h utils/externs.h
 sts.o: utils/defs.h utils/debug.h
 tests/frequency.o: utils/externs.h utils/defs.h utils/utilities.h
 tests/frequency.o: utils/debug.h utils/cephes.h
@@ -463,10 +463,10 @@ tests/serial.o: utils/externs.h utils/defs.h utils/cephes.h utils/utilities.h
 tests/serial.o: utils/debug.h
 tests/rank.o: utils/externs.h utils/defs.h utils/cephes.h utils/matrix.h
 tests/rank.o: utils/defs.h utils/config.h utils/dyn_alloc.h
-tests/rank.o: /usr/local/include/fftw3.h utils/utilities.h utils/debug.h
+tests/rank.o: utils/utilities.h utils/debug.h
 tests/discreteFourierTransform.o: utils/externs.h utils/defs.h
 tests/discreteFourierTransform.o: utils/utilities.h utils/cephes.h
-tests/discreteFourierTransform.o: utils/debug.h /usr/local/include/fftw3.h
+tests/discreteFourierTransform.o: utils/debug.h
 tests/nonOverlappingTemplateMatchings.o: utils/externs.h utils/defs.h
 tests/nonOverlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h
 tests/nonOverlappingTemplateMatchings.o: utils/debug.h
@@ -485,7 +485,7 @@ tests/linearComplexity.o: utils/externs.h utils/defs.h utils/cephes.h
 tests/linearComplexity.o: utils/utilities.h utils/debug.h
 utils/cephes.o: utils/cephes.h utils/debug.h
 utils/matrix.o: utils/externs.h utils/defs.h utils/matrix.h utils/defs.h
-utils/matrix.o: utils/config.h utils/dyn_alloc.h /usr/local/include/fftw3.h
+utils/matrix.o: utils/config.h utils/dyn_alloc.h
 utils/matrix.o: utils/debug.h
 utils/utilities.o: utils/externs.h utils/defs.h utils/utilities.h
 utils/utilities.o: utils/generators.h utils/debug.h
