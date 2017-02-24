@@ -353,10 +353,10 @@ static const char * const usage =
 "       6: Linear Complexity Test - block length(M):		500\n"
 "       7: Number of bitcount runs (same as -i iterations):	1\n"
 "       8: Uniformity bins:                         		sqrt(iterations) or 10 (if -O)\n"
-"       9: Length of a single bit stream (bitcount):		1048576 (must be a mulitple of 8)\n"
+"       9: Length of a single bit stream (bitcount):		1048576 (must be a multiple of 8)\n"
 "      10: Uniformity Cutoff Level:				0.0001\n"
 "      11: Alpha Confidence Level:				0.01\n"
-"      Warning: Change the parameters above only if you really know what you are doing!\n";
+"      Warning: Change the above parameters only if you really know what you are doing!\n";
 static const char * const usage2 =
 "\n"
 "    -i iterations      number of iterations to do, i.e. number of bitstreams to test (if no -A, def: 1)\n"
@@ -453,15 +453,15 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:Abt:g:P:i:I:Ow:csf:F:j:m:T:d:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:Abt:g:pP:i:I:Ow:csf:F:j:m:T:d:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
 			debuglevel = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "error in parsing -v debuglevel: %s", optarg);
+				usage_errp(1, __func__, "error in parsing -v debuglevel: %s", optarg);
 			} else if (debuglevel < 0) {
-				usage_err(usage, usage2, 1, __func__, "error debuglevel: %lu must >= 0", debuglevel);
+				usage_err(1, __func__, "error debuglevel: %lu must >= 0", debuglevel);
 			}
 			break;
 
@@ -471,7 +471,7 @@ parse_args(struct state *state, int argc, char **argv)
 			break;
 
 		case 'b':	// -b is now obsolete because batch is the default
-			usage_err(usage, usage2, 1, __func__, "-b is no longer required as batch is now the default");
+			usage_err(1, __func__, "-b is no longer required as batch is now the default");
 			break;
 
 		case 't':	// -t test1[,test2]..
@@ -487,7 +487,7 @@ parse_args(struct state *state, int argc, char **argv)
 			 	 */
 				testnum = str2longint(&success, phrase);
 				if (success == false) {
-					usage_errp(usage, usage2, 1, __func__,
+					usage_errp(1, __func__,
 						   "-t test1[,test2].. must only have comma separated integers: %s", phrase);
 				}
 
@@ -499,7 +499,7 @@ parse_args(struct state *state, int argc, char **argv)
 						state->testVector[i] = true;
 					}
 				} else if (testnum < 0 || testnum > NUMOFTESTS) {
-					usage_err(usage, usage2, 1, __func__, "-t test: %lu must be in the range [0-%d]", testnum,
+					usage_err(1, __func__, "-t test: %lu must be in the range [0-%d]", testnum,
 						  NUMOFTESTS);
 				} else {
 					state->testVector[testnum] = true;
@@ -511,10 +511,10 @@ parse_args(struct state *state, int argc, char **argv)
 			state->generatorFlag = true;
 			i = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "-g generator must be numeric: %s", optarg);
+				usage_errp(1, __func__, "-g generator must be numeric: %s", optarg);
 			}
 			if (i < 0 || i > GENERATOR_COUNT) {
-				usage_err(usage, usage2, 1, __func__, "-g generator: %ld must be [0-%d]", i, GENERATOR_COUNT);
+				usage_err(1, __func__, "-g generator: %ld must be [0-%d]", i, GENERATOR_COUNT);
 			}
 			state->generator = (enum gen) i;
 			break;
@@ -531,15 +531,15 @@ parse_args(struct state *state, int argc, char **argv)
 				 */
 				scan_cnt = sscanf(phrase, "%ld=", &num);
 				if (scan_cnt == EOF) {
-					usage_errp(usage, usage2, 1, __func__,
+					usage_errp(1, __func__,
 						   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 				} else if (scan_cnt != 2) {
-					usage_err(usage, usage2, 1, __func__,
+					usage_err(1, __func__,
 						  "-P num=value[,num=value].. "
 						  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 				}
 				if (num < MIN_PARAM || num > MAX_PARAM) {
-					usage_err(usage, usage2, 1, __func__,
+					usage_err(1, __func__,
 						  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 						  MAX_PARAM);
 				}
@@ -552,15 +552,15 @@ parse_args(struct state *state, int argc, char **argv)
 					// Parse parameter number as an integer
 					scan_cnt = sscanf(phrase, "%ld=%ld", &num, &value);
 					if (scan_cnt == EOF) {
-						usage_errp(usage, usage2, 1, __func__,
+						usage_errp(1, __func__,
 							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
-						usage_err(usage, usage2, 1, __func__,
+						usage_err(1, __func__,
 							  "-P num=value[,num=value].. "
 							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
-						usage_err(usage, usage2, 1, __func__,
+						usage_err(1, __func__,
 							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 							  MAX_PARAM);
 					}
@@ -570,15 +570,15 @@ parse_args(struct state *state, int argc, char **argv)
 					// Parse parameter number as a floating point number
 					scan_cnt = sscanf(phrase, "%ld=%lf", &num, &d_value);
 					if (scan_cnt == EOF) {
-						usage_errp(usage, usage2, 1, __func__,
+						usage_errp(1, __func__,
 							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
 					} else if (scan_cnt != 2) {
-						usage_err(usage, usage2, 1, __func__,
+						usage_err(1, __func__,
 							  "-P num=value[,num=value].. "
 							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
-						usage_err(usage, usage2, 1, __func__,
+						usage_err(1, __func__,
 							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
 							  MAX_PARAM);
 					}
@@ -587,14 +587,18 @@ parse_args(struct state *state, int argc, char **argv)
 			}
 			break;
 
+		case 'p':	// -p is now obsolete because batch is the default
+			usage_err(1, __func__, "-p is no longer needed");
+			break;
+
 		case 'i':	// -i iterations
 			state->iterationFlag = true;
 			state->tp.numOfBitStreams = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "error in parsing -i iterations: %s", optarg);
+				usage_errp(1, __func__, "error in parsing -i iterations: %s", optarg);
 			}
 			if (state->tp.numOfBitStreams < 1) {
-				usage_err(usage, usage2, 1, __func__,
+				usage_err(1, __func__,
 					  "iterations (number of bit streams): %lu can't be less than 1",
 					  state->tp.numOfBitStreams);
 			}
@@ -604,10 +608,10 @@ parse_args(struct state *state, int argc, char **argv)
 			state->reportCycleFlag = true;
 			state->reportCycle = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "error in parsing -I reportCycle: %s", optarg);
+				usage_errp(1, __func__, "error in parsing -I reportCycle: %s", optarg);
 			}
 			if (state->reportCycle < 0) {
-				usage_err(usage, usage2, 1, __func__, "-I reportCycle: %lu must be >= 0", state->reportCycle);
+				usage_err(1, __func__, "-I reportCycle: %lu must be >= 0", state->reportCycle);
 			}
 			break;
 
@@ -669,17 +673,17 @@ parse_args(struct state *state, int argc, char **argv)
 			state->jobnumFlag = true;
 			state->jobnum = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "error in parsing -j jobnum: %s", optarg);
+				usage_errp(1, __func__, "error in parsing -j jobnum: %s", optarg);
 			}
 			if (state->jobnum < 0) {
-				usage_err(usage, usage2, 1, __func__, "-j jobnum: %lu must be greater than 0", state->jobnum);
+				usage_err(1, __func__, "-j jobnum: %lu must be greater than 0", state->jobnum);
 			}
 			break;
 
 		case 'm':	// -m mode (w-->write only. i-->iterate only, a-->assess only, b-->iterate & assess)
 			state->runModeFlag = true;
 			if (optarg[0] == '\0' || optarg[1] != '\0') {
-				usage_err(usage, usage2, 1, __func__, "-m mode must be a single character: %s", optarg);
+				usage_err(1, __func__, "-m mode must be a single character: %s", optarg);
 			}
 			switch (optarg[0]) {
 			case MODE_WRITE_ONLY:
@@ -696,7 +700,7 @@ parse_args(struct state *state, int argc, char **argv)
 				state->runMode = MODE_ASSESS_ONLY;
 				break;
 			default:
-				usage_err(usage, usage2, 1, __func__, "-m mode must be one of w, b, i or a: %c", optarg[0]);
+				usage_err(1, __func__, "-m mode must be one of w, b, i or a: %c", optarg[0]);
 				break;
 			}
 			break;
@@ -705,10 +709,10 @@ parse_args(struct state *state, int argc, char **argv)
 			state->numberOfThreadsFlag = true;
 			state->numberOfThreads = str2longint(&success, optarg);
 			if (success == false) {
-				usage_errp(usage, usage2, 1, __func__, "error in parsing -T numOfThreads: %s", optarg);
+				usage_errp(1, __func__, "error in parsing -T numOfThreads: %s", optarg);
 			}
 			if (state->numberOfThreads < 0) {
-				usage_err(usage, usage2, 1, __func__, "-T numOfThreads: %lu must be >= 0", state->numberOfThreads);
+				usage_err(1, __func__, "-T numOfThreads: %lu must be >= 0", state->numberOfThreads);
 			}
 			break;
 
@@ -720,37 +724,42 @@ parse_args(struct state *state, int argc, char **argv)
 			break;
 
 		case 'h':	// -h (print out help)
-			usage_err(usage, usage2, 0, __func__, "this arg ignored");
+			if (program == NULL) {
+				fprintf(stderr, "usage: sts %s%s", usage, usage2);
+			} else {
+				fprintf(stderr, "usage: %s %s%s", program, usage, usage2);
+			}
+			fprintf(stderr, "\nVersion: %s\n", version);
+			exit(0);
 			break;
 
 		case '?':
+			usage_err(1, __func__, "unknown option: -%c", (char) optopt);
+			break;
+
 		default:
-			if (option == '?') {
-				usage_errp(usage, usage2, 1, __func__, "getopt returned an error");
-			} else {
-				usage_err(usage, usage2, 1, __func__, "unknown option: -%c", (char) optopt);
-			}
+			usage_err(1, __func__, "getopt returned an unexpected error");
 			break;
 		}
 	}
 
 	if (optind != argc - 1 && optind != argc) {
-		usage_err(usage, usage2, 1, __func__, "unexpected arguments");
+		usage_err(1, __func__, "unexpected arguments");
 	}
 
 	if (optind == argc - 1) {
 		state->tp.n = str2longint(&success, argv[optind]);
 		if (success == false) {
-			usage_errp(usage, usage2, 1, __func__, "bitcount(n) must be a number: %s", argv[optind]);
+			usage_errp(1, __func__, "bitcount(n) must be a number: %s", argv[optind]);
 		}
 		if ((state->tp.n % 8) != 0) {
-			usage_err(usage, usage2, 1, __func__,
+			usage_err(1, __func__,
 				  "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
 						  "a sequence that starts or ends on a non-byte boundary outweighs the convenience "
 						  "of permitting arbitrary bit lengths", state->tp.n);
 		}
 		if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
-			usage_err(usage, usage2, 1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
+			usage_err(1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
 		}
 	}
 
@@ -774,25 +783,25 @@ parse_args(struct state *state, int argc, char **argv)
 	if (state->batchmode == true && state->runMode != MODE_ASSESS_ONLY) {
 		if (state->generatorFlag == true) {
 			if (state->generator == 0 && state->randomDataFlag == false) {
-				usage_err(usage, usage2, 1, __func__, "-f randdata required when using -b and -g 0");
+				usage_err(1, __func__, "-f randdata required when using -b and -g 0");
 			}
 		} else {
 			if (state->randomDataFlag == false) {
-				usage_err(usage, usage2, 1, __func__,
+				usage_err(1, __func__,
 					  "-f randdata required when using -b and no -g generator given");
 			}
 		}
 	}
 	if (state->generator == 0) {
 		if (state->runMode == MODE_WRITE_ONLY) {
-			usage_err(usage, usage2, 1, __func__, "when -m w the -g generator must be non-zero");
+			usage_err(1, __func__, "when -m w the -g generator must be non-zero");
 		}
 	} else {
 		if (state->randomDataFlag == true && state->runMode != MODE_WRITE_ONLY) {
-			usage_err(usage, usage2, 1, __func__, "-f randdata may only be used with -g 0 (read from file) or -m w");
+			usage_err(1, __func__, "-f randdata may only be used with -g 0 (read from file) or -m w");
 		}
 		if (state->jobnumFlag == true) {
-			usage_err(usage, usage2, 1, __func__, "-j jobnum may only be used with -g 0 (read from file)");
+			usage_err(1, __func__, "-j jobnum may only be used with -g 0 (read from file)");
 		}
 	}
 

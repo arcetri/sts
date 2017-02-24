@@ -393,13 +393,11 @@ errp(int exitcode, char const *name, char const *fmt, ...)
 
 
 /*
- * usage_err - issue a fatal error message, usage message, and exit
+ * usage_err - issue a fatal error message and exit
  *
  * given:
- *      usage           command line help
- *      usage2          2nd half of command line help
  *      exitcode        value to exit with (must be 0 <= exitcode < 256)
- *                      exitcode == 0 ==> just print usage and exit(0)
+ *                      exitcode == 0 ==> just how to use -h for usage help and exit(0)
  *      name            name of function issuing the warning
  *      fmt             format of the warning
  *      ...             optional format args
@@ -408,10 +406,10 @@ errp(int exitcode, char const *name, char const *fmt, ...)
  *
  * Example:
  *
- *      usage_err(usage, usage2, 99, __func__, "bad foobar: %s", message);
+ *      usage_err(99, __func__, "bad foobar: %s", message);
  */
 void
-usage_err(char const *usage, char const *usage2, int exitcode, char const *name, char const *fmt, ...)
+usage_err(int exitcode, char const *name, char const *fmt, ...)
 {
 	va_list ap;		/* argument pointer */
 	int ret;		/* return code holder */
@@ -424,14 +422,6 @@ usage_err(char const *usage, char const *usage2, int exitcode, char const *name,
 	/*
 	 * Check preconditions (firewall)
 	 */
-	if (usage == NULL) {
-		warn(__func__, "called with NULL usage");
-		usage = "((NULL usage))";
-	}
-	if (usage2 == NULL) {
-		warn(__func__, "called with NULL usage2");
-		usage2 = "((NULL usage2))";
-	}
 	if (exitcode < 0 || exitcode >= 256) {
 		warn(__func__, "exitcode must be >= 0 && < 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
@@ -459,14 +449,14 @@ usage_err(char const *usage, char const *usage2, int exitcode, char const *name,
 	}
 
 	/*
-	 * Issue the usage message
+	 * Issue the usage message help
 	 */
 	if (program == NULL) {
-		fprintf(stderr, "usage: sts %s%s\n", usage, usage2);
+		fprintf(stderr, "For command line usage help, try: sts -h\n");
 	} else {
-		fprintf(stderr, "usage: %s %s%s\n", program, usage, usage2);
+		fprintf(stderr, "For command line usage help, try: %s -h\n", program);
 	}
-	fprintf(stderr, "version: %s\n", version);
+	fprintf(stderr, "Version: %s\n", version);
 
 	/*
 	 * Clean up stdarg stuff
@@ -481,13 +471,11 @@ usage_err(char const *usage, char const *usage2, int exitcode, char const *name,
 
 
 /*
- * usage_errp - issue a fatal error message, errno string, usage message, and exit
+ * usage_errp - issue a fatal error message, errno string and exit
  *
  * given:
- *      usage           command line help
- *      usage2          2nd half of command line help
  *      exitcode        value to exit with (must be 0 <= exitcode < 256)
- *                      exitcode == 0 ==> just print usage and exit(0)
+ *                      exitcode == 0 ==> just how to use -h for usage help and exit(0)
  *      name            name of function issuing the warning
  *      fmt             format of the warning
  *      ...             optional format args
@@ -497,10 +485,10 @@ usage_err(char const *usage, char const *usage2, int exitcode, char const *name,
  *
  * Example:
  *
- *      usage_errp(usage, usage2, 99, __func__, "bad foobar: %s", message);
+ *      usage_errp(99, __func__, "bad foobar: %s", message);
  */
 void
-usage_errp(char const *usage, char const *usage2, int exitcode, char const *name, char const *fmt, ...)
+usage_errp(int exitcode, char const *name, char const *fmt, ...)
 {
 	va_list ap;		/* argument pointer */
 	int saved_errno;	/* errno at function start */
@@ -515,14 +503,6 @@ usage_errp(char const *usage, char const *usage2, int exitcode, char const *name
 	/*
 	 * Check preconditions (firewall)
 	 */
-	if (usage == NULL) {
-		warn(__func__, "called with NULL usage");
-		usage = "((NULL usage))";
-	}
-	if (usage2 == NULL) {
-		warn(__func__, "called with NULL usage2");
-		usage2 = "((NULL usage2))";
-	}
 	if (exitcode < 0 || exitcode >= 256) {
 		warn(__func__, "exitcode must be >= 0 && < 256: %d", exitcode);
 		exitcode = FORCED_EXIT;
@@ -554,11 +534,11 @@ usage_errp(char const *usage, char const *usage2, int exitcode, char const *name
 	 * Issue the usage message
 	 */
 	if (program == NULL) {
-		fprintf(stderr, "usage: sts %s%s\n", usage, usage2);
+		fprintf(stderr, "For command line usage help, try: sts -h\n");
 	} else {
-		fprintf(stderr, "usage: %s %s%s\n", program, usage, usage2);
+		fprintf(stderr, "For command line usage help, try: %s -h\n", program);
 	}
-	fprintf(stderr, "\nversion: %s\n", version);
+	fprintf(stderr, "Version: %s\n", version);
 
 	/*
 	 * Clean up stdarg stuff
