@@ -42,10 +42,10 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
-#include "constants/defs.h"
-#include "utils/utilities.h"
-#include "utils/debug.h"
-#include "utils/stat_fncs.h"
+#include "defs.h"
+#include "utilities.h"
+#include "debug.h"
+#include "stat_fncs.h"
 
 extern long int debuglevel;	// -v lvl: defines the level of verbosity for debugging
 

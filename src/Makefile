@@ -75,10 +75,10 @@ CSRC= sts.c tests/frequency.c tests/blockFrequency.c \
 	tests/randomExcursionsVariant.c tests/linearComplexity.c \
 	utils/dfft.c utils/cephes.c utils/matrix.c \
 	utils/utilities.c utils/generators.c utils/genutils.c \
-	utils/parse_args.c utils/debug.c utils/dyn_alloc.c driver.c
+	utils/parse_args.c utils/debug.c utils/dyn_alloc.c utils/driver.c
 
-HSRC= utils/cephes.h utils/config.h constants/defs.h \
-	utils/dfft.h constants/externs.h utils/generators.h utils/genutils.h \
+HSRC= utils/cephes.h utils/config.h utils/defs.h \
+	utils/dfft.h utils/externs.h utils/generators.h utils/genutils.h \
 	utils/matrix.h utils/stat_fncs.h utils/utilities.h utils/debug.h \
 	utils/dyn_alloc.h
 
@@ -95,7 +95,7 @@ LEGACY_ONLY_OBJ= utils/genutils_legacy.o utils/dyn_alloc_legacy.o \
       tests/randomExcursionsVariant_legacy.o tests/linearComplexity_legacy.o \
       utils/cephes_legacy.o utils/matrix_legacy.o \
       utils/utilities_legacy.o utils/generators_legacy.o \
-      utils/parse_args_legacy.o utils/debug_legacy.o driver_legacy.o
+      utils/parse_args_legacy.o utils/debug_legacy.o utils/driver_legacy.o
 
 MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
       sts.o tests/frequency.o tests/blockFrequency.o \
@@ -107,7 +107,7 @@ MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
       tests/randomExcursionsVariant.o tests/linearComplexity.o \
       utils/cephes.o utils/matrix.o \
       utils/utilities.o utils/generators.o \
-      utils/parse_args.o utils/debug.o driver.o
+      utils/parse_args.o utils/debug.o utils/driver.o
 
 OBJ_LEGACY= ${LEGACY_ONLY_OBJ}
 
@@ -298,11 +298,11 @@ utils/dyn_alloc.o: utils/dyn_alloc.c
 utils/dyn_alloc_legacy.o: utils/dyn_alloc.c
 	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/dyn_alloc.c
 
-driver.o: driver.c
-	${CC} -c -o $@ ${CFLAGS} driver.c
+utils/driver.o: utils/driver.c
+	${CC} -c -o $@ ${CFLAGS} utils/driver.c
 
-driver_legacy.o: driver.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT driver.c
+utils/driver_legacy.o: utils/driver.c
+	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/driver.c
 
 mkapertemplate: ../tools/mkapertemplate.c utils/debug.o
 	${CC} -o $@ ${CFLAGS} -I . ../tools/mkapertemplate.c utils/debug.o
@@ -446,45 +446,57 @@ install: all
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-sts.o: constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/stat_fncs.h
-sts.o: constants/externs.h utils/debug.h
-tests/frequency.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
-tests/frequency.o: utils/cephes.h
-tests/blockFrequency.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h
-tests/blockFrequency.o: utils/debug.h
-tests/cusum.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
-tests/runs.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
-tests/longestRunOfOnes.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+sts.o: utils/defs.h utils/config.h utils/dyn_alloc.h
+sts.o: /usr/local/include/fftw3.h utils/utilities.h utils/externs.h
+sts.o: utils/defs.h utils/debug.h
+tests/frequency.o: utils/externs.h utils/defs.h utils/utilities.h
+tests/frequency.o: utils/debug.h utils/cephes.h
+tests/blockFrequency.o: utils/externs.h utils/defs.h utils/cephes.h
+tests/blockFrequency.o: utils/utilities.h utils/debug.h
+tests/cusum.o: utils/externs.h utils/defs.h utils/cephes.h utils/utilities.h
+tests/cusum.o: utils/debug.h
+tests/runs.o: utils/externs.h utils/defs.h utils/cephes.h utils/utilities.h
+tests/runs.o: utils/debug.h
+tests/longestRunOfOnes.o: utils/externs.h utils/defs.h utils/cephes.h
 tests/longestRunOfOnes.o: utils/utilities.h utils/debug.h
-tests/serial.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/utilities.h utils/debug.h
-tests/rank.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h utils/matrix.h utils/utilities.h
-tests/rank.o: utils/debug.h
-tests/discreteFourierTransform.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h
-tests/discreteFourierTransform.o: utils/cephes.h utils/dfft.h utils/debug.h
-tests/nonOverlappingTemplateMatchings.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
-tests/nonOverlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h utils/debug.h
-tests/overlappingTemplateMatchings.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
-tests/overlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h utils/debug.h
-tests/universal.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/cephes.h
-tests/universal.o: utils/debug.h
-tests/approximateEntropy.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h
+tests/serial.o: utils/externs.h utils/defs.h utils/cephes.h utils/utilities.h
+tests/serial.o: utils/debug.h
+tests/rank.o: utils/externs.h utils/defs.h utils/cephes.h utils/matrix.h
+tests/rank.o: utils/defs.h utils/config.h utils/dyn_alloc.h
+tests/rank.o: /usr/local/include/fftw3.h utils/utilities.h utils/debug.h
+tests/discreteFourierTransform.o: utils/externs.h utils/defs.h
+tests/discreteFourierTransform.o: utils/utilities.h utils/cephes.h
+tests/discreteFourierTransform.o: utils/debug.h /usr/local/include/fftw3.h
+tests/nonOverlappingTemplateMatchings.o: utils/externs.h utils/defs.h
+tests/nonOverlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h
+tests/nonOverlappingTemplateMatchings.o: utils/debug.h
+tests/overlappingTemplateMatchings.o: utils/externs.h utils/defs.h
+tests/overlappingTemplateMatchings.o: utils/utilities.h utils/cephes.h
+tests/overlappingTemplateMatchings.o: utils/debug.h
+tests/universal.o: utils/externs.h utils/defs.h utils/utilities.h
+tests/universal.o: utils/cephes.h utils/debug.h
+tests/approximateEntropy.o: utils/externs.h utils/defs.h utils/utilities.h
 tests/approximateEntropy.o: utils/cephes.h utils/debug.h
-tests/randomExcursions.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/randomExcursions.o: utils/externs.h utils/defs.h utils/cephes.h
 tests/randomExcursions.o: utils/utilities.h utils/debug.h
-tests/randomExcursionsVariant.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/randomExcursionsVariant.o: utils/externs.h utils/defs.h utils/cephes.h
 tests/randomExcursionsVariant.o: utils/utilities.h utils/debug.h
-tests/linearComplexity.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/cephes.h
+tests/linearComplexity.o: utils/externs.h utils/defs.h utils/cephes.h
 tests/linearComplexity.o: utils/utilities.h utils/debug.h
-utils/dfft.o: utils/dfft.h
-utils/cephes.o: utils/cephes.h constants/defs.h utils/config.h utils/dyn_alloc.h constants/externs.h utils/debug.h
-utils/matrix.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/matrix.h utils/debug.h
-utils/utilities.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/generators.h
-utils/utilities.o: utils/stat_fncs.h utils/debug.h
-utils/generators.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/generators.h
-utils/generators.o: utils/genutils.h utils/debug.h
+utils/cephes.o: utils/cephes.h utils/debug.h
+utils/matrix.o: utils/externs.h utils/defs.h utils/matrix.h utils/defs.h
+utils/matrix.o: utils/config.h utils/dyn_alloc.h /usr/local/include/fftw3.h
+utils/matrix.o: utils/debug.h
+utils/utilities.o: utils/externs.h utils/defs.h utils/utilities.h
+utils/utilities.o: utils/generators.h utils/debug.h
+utils/generators.o: utils/externs.h utils/defs.h utils/utilities.h
+utils/generators.o: utils/generators.h utils/genutils.h utils/config.h
+utils/generators.o: utils/debug.h
 utils/genutils.o: utils/genutils.h utils/config.h utils/debug.h
-utils/parse_args.o: constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h
-utils/debug.o: utils/debug.h constants/externs.h constants/defs.h utils/config.h utils/dyn_alloc.h
-utils/dyn_alloc.o: utils/dyn_alloc.h utils/debug.h
-driver.o: constants/defs.h utils/config.h utils/dyn_alloc.h utils/utilities.h utils/debug.h utils/stat_fncs.h
-driver.o: constants/externs.h
+utils/parse_args.o: utils/externs.h utils/defs.h utils/utilities.h
+utils/parse_args.o: utils/debug.h
+utils/debug.o: utils/debug.h utils/externs.h utils/defs.h
+utils/dyn_alloc.o: utils/externs.h utils/defs.h utils/debug.h
+utils/dyn_alloc.o: utils/utilities.h
+utils/driver.o: utils/defs.h utils/utilities.h utils/debug.h
+utils/driver.o: utils/stat_fncs.h

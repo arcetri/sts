@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "../utils/cephes.h"
 #include "../utils/utilities.h"
 #include "../utils/debug.h"

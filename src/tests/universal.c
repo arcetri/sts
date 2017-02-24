@@ -34,7 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "../utils/utilities.h"
 #include "../utils/cephes.h"
 #include "../utils/debug.h"

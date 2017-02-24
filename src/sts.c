@@ -302,9 +302,9 @@
 // NOTE: 0-4 is used in parse_args.c
 
 #include <stdlib.h>
-#include "constants/defs.h"
+#include "utils/defs.h"
 #include "utils/utilities.h"
-#include "constants/externs.h"
+#include "utils/externs.h"
 #include "utils/debug.h"
 
 

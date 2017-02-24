@@ -29,7 +29,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "utilities.h"
 #include "generators.h"
 #include "genutils.h"

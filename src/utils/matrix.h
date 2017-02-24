@@ -28,7 +28,7 @@
 #ifndef MATRIX_H
 #   define MATRIX_H
 
-#include "../constants/defs.h"
+#include "../utils/defs.h"
 
 extern int computeRank(int M, int Q, BitSequence ** matrix);
 extern void perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** A);

@@ -29,6 +29,8 @@
 #   include <pthread.h>
 #if !defined(LEGACY_FFT)
 #   include <fftw3.h>
+#else /* LEGACY_FFT */
+#   include <stdio.h>
 #endif /* LEGACY_FFT */
 
 /*****************************************************************************

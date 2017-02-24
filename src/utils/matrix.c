@@ -30,7 +30,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "matrix.h"
 #include "debug.h"
 

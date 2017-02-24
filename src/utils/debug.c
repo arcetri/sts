@@ -33,7 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include "debug.h"
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 
 
 #ifndef DEBUG_LINT

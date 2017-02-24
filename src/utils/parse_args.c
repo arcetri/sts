@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <math.h>
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "utilities.h"
 #include "debug.h"
 

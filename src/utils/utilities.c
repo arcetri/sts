@@ -50,7 +50,7 @@
 #include <stdio.h>
 
 // sts includes
-#include "../constants/externs.h"
+#include "../utils/externs.h"
 #include "utilities.h"
 #include "generators.h"
 #include "debug.h"
