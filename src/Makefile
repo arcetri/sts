@@ -73,18 +73,17 @@ CSRC= sts.c tests/frequency.c tests/blockFrequency.c \
 	tests/overlappingTemplateMatchings.c tests/universal.c \
 	tests/approximateEntropy.c tests/randomExcursions.c \
 	tests/randomExcursionsVariant.c tests/linearComplexity.c \
-	utils/dfft.c utils/cephes.c utils/matrix.c \
-	utils/utilities.c utils/generators.c utils/genutils.c \
+	utils/dfft.c utils/cephes.c utils/matrix.c utils/utilities.c \
 	utils/parse_args.c utils/debug.c utils/dyn_alloc.c utils/driver.c
 
 HSRC= utils/cephes.h utils/config.h utils/defs.h \
-	utils/dfft.h utils/externs.h utils/generators.h utils/genutils.h \
+	utils/dfft.h utils/externs.h \
 	utils/matrix.h utils/stat_fncs.h utils/utilities.h utils/debug.h \
 	utils/dyn_alloc.h
 
 SRCS= ${CSRC} ${HSRC}
 
-LEGACY_ONLY_OBJ= utils/genutils_legacy.o utils/dyn_alloc_legacy.o \
+LEGACY_ONLY_OBJ= utils/dyn_alloc_legacy.o \
       utils/dfft.o tests/discreteFourierTransform_legacy.o \
       sts_legacy.o tests/frequency_legacy.o tests/blockFrequency_legacy.o \
       tests/cusum_legacy.o tests/runs_legacy.o tests/longestRunOfOnes_legacy.o \
@@ -94,10 +93,10 @@ LEGACY_ONLY_OBJ= utils/genutils_legacy.o utils/dyn_alloc_legacy.o \
       tests/approximateEntropy_legacy.o tests/randomExcursions_legacy.o \
       tests/randomExcursionsVariant_legacy.o tests/linearComplexity_legacy.o \
       utils/cephes_legacy.o utils/matrix_legacy.o \
-      utils/utilities_legacy.o utils/generators_legacy.o \
+      utils/utilities_legacy.o \
       utils/parse_args_legacy.o utils/debug_legacy.o utils/driver_legacy.o
 
-MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
+MODERN_ONLY_OBJ= utils/dyn_alloc.o \
       sts.o tests/frequency.o tests/blockFrequency.o \
       tests/cusum.o tests/runs.o tests/longestRunOfOnes.o \
       tests/serial.o tests/rank.o tests/discreteFourierTransform.o \
@@ -106,7 +105,7 @@ MODERN_ONLY_OBJ= utils/genutils.o utils/dyn_alloc.o \
       tests/approximateEntropy.o tests/randomExcursions.o \
       tests/randomExcursionsVariant.o tests/linearComplexity.o \
       utils/cephes.o utils/matrix.o \
-      utils/utilities.o utils/generators.o \
+      utils/utilities.o \
       utils/parse_args.o utils/debug.o utils/driver.o
 
 OBJ_LEGACY= ${LEGACY_ONLY_OBJ}
@@ -268,12 +267,6 @@ utils/matrix.o: utils/matrix.c
 utils/matrix_legacy.o: utils/matrix.c
 	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/matrix.c
 
-utils/genutils.o: utils/genutils.c
-	${CC} -c -o $@ ${CFLAGS} utils/genutils.c
-
-utils/genutils_legacy.o: utils/genutils.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/genutils.c
-
 utils/cephes.o: utils/cephes.c
 	${CC} -c -o $@ ${CFLAGS} utils/cephes.c
 
@@ -285,12 +278,6 @@ utils/utilities.o: utils/utilities.c
 
 utils/utilities_legacy.o: utils/utilities.c
 	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/utilities.c
-
-utils/generators.o: utils/generators.c
-	${CC} -c -o $@ ${CFLAGS} utils/generators.c
-
-utils/generators_legacy.o: utils/generators.c
-	${CC} -c -o $@ ${CFLAGS} -DLEGACY_FFT utils/generators.c
 
 utils/dyn_alloc.o: utils/dyn_alloc.c
 	${CC} -c -o $@ ${CFLAGS} utils/dyn_alloc.c
@@ -488,11 +475,7 @@ utils/matrix.o: utils/externs.h utils/defs.h utils/matrix.h utils/defs.h
 utils/matrix.o: utils/config.h utils/dyn_alloc.h
 utils/matrix.o: utils/debug.h
 utils/utilities.o: utils/externs.h utils/defs.h utils/utilities.h
-utils/utilities.o: utils/generators.h utils/debug.h
-utils/generators.o: utils/externs.h utils/defs.h utils/utilities.h
-utils/generators.o: utils/generators.h utils/genutils.h utils/config.h
-utils/generators.o: utils/debug.h
-utils/genutils.o: utils/genutils.h utils/config.h utils/debug.h
+utils/utilities.o: utils/debug.h
 utils/parse_args.o: utils/externs.h utils/defs.h utils/utilities.h
 utils/parse_args.o: utils/debug.h
 utils/debug.o: utils/debug.h utils/externs.h utils/defs.h

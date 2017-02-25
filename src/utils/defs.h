@@ -213,20 +213,6 @@ typedef unsigned char BitSequence;
 
 /* *INDENT-OFF* */
 
-// Random data generators
-enum gen {
-	GENERATOR_FROM_FILE = 0,	// -g 0, To read data from a file
-	GENERATOR_LCG = 1,		// -g 1, Linear Congruential
-	GENERATOR_QCG1 = 2,		// -g 2, Quadratic Congruential I
-	GENERATOR_QCG2 = 3,		// -g 3, Quadratic Congruential II
-	GENERATOR_CCG = 4,		// -g 4, Cubic Congruential
-	GENERATOR_XOR = 5,		// -g 5, XOR
-	GENERATOR_MODEXP = 6,		// -g 6, Modular Exponentiation
-	GENERATOR_BBS = 7,		// -g 7, Blum-Blum-Shub
-	GENERATOR_MS = 8,		// -g 8, Micali-Schnorr
-	GENERATOR_SHA1 = 9,		// -g 9, G Using SHA-1
-};
-
 // Test(s) to perform
 enum test {
 	TEST_ALL = 0,			// Convention for indicating run all tests
@@ -258,7 +244,6 @@ enum format {
 
 // Run modes
 enum run_mode {
-	MODE_WRITE_ONLY = 'w',		// Generate data from '-g generator' and write it to '-f randdata' in '-F format'
 	MODE_ITERATE_AND_ASSESS = 'b',	// Test the data specified from '-g generator' (default mode)
 	MODE_ITERATE_ONLY = 'i',	// Test the given data, but not assess it, and instead save the p-values in a binary file
 	MODE_ASSESS_ONLY = 'a',		// Collect the p-values from the binary files specified from '-d file...' and assess them
@@ -385,9 +370,6 @@ struct state {
 	bool testVector[NUMOFTESTS+1];	// -t test1[,test2]..: tests to invoke
 					// -t 0 is a historical alias for all tests
 
-	bool generatorFlag;		// true if -g num was given
-	enum gen generator;		// -g num: RNG to test
-
 	bool iterationFlag;		// true if -i iterations was given
 					// iterations is the same as numOfBitStreams, so this value is in tp.numOfBitStreams
 
@@ -407,8 +389,8 @@ struct state {
 	bool resultstxtFlag;		// -s: true -> create result.txt, data*.txt, and stats.txt
 					//		(def: don't create)
 
-	bool randomDataFlag;		// true if -f randdata was given
-	char *randomDataPath;		// -f randdata: path to a random data file
+	bool randomDataArg;		// true randdata arg was given
+	char *randomDataPath;		// randdata: path to a random data file, or "/dev/null", or NULL (no file)
 
 	bool dataFormatFlag;		// true if -F format was given
 	enum format dataFormat;		// -F format: 'r': raw binary, 'a': ASCII '0'/'1' chars
@@ -436,8 +418,6 @@ struct state {
 	FILE *finalRept;		// true if non-NULL, open stream for the final results file
 	char *freqFilePath;		// true if non-NULL, path of freq.txt
 	FILE *freqFile;			// true if non-NULL, open stream for freq.txt
-
-	char *generatorDir[NUMOFGENERATORS + 1];	// Generator names (or -g 0: AlgorithmTesting == read from file)
 
 	char *testNames[NUMOFTESTS + 1];		// Name of each test
 	char *subDir[NUMOFTESTS + 1];			// NULL or name of working subdirectory (under workDir)

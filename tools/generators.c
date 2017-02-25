@@ -36,54 +36,6 @@
 #include "debug.h"
 
 
-static void
-generator_iterate(struct state *state)
-{
-	long int iteration_being_done = state->tp.numOfBitStreams - state->iterationsMissing;
-	state->iterationsMissing -= 1;
-
-	if (iteration_being_done == 0) {
-		dbg(DBG_LOW, "Start of iterate phase");
-	}
-
-	/*
-	 * Create a fake thread for the iteration.
-	 * This is done because when the STS generators are used STS currently
-	 * supports only 1 thread.
-	 */
-	struct thread_state fake_thread_state;
-	fake_thread_state.global_state = state;
-	fake_thread_state.thread_id = 0;
-	fake_thread_state.iteration_being_done = iteration_being_done;
-	fake_thread_state.mutex = NULL;
-	iterate(&fake_thread_state);
-}
-
-
-static void
-generator_report_iteration(struct state *state)
-{
-	char buf[BUFSIZ + 1];	// time string buffer
-	long int iteration_being_done;
-
-	/*
-	 * Count the iteration and report process if requested
-	 */
-	iteration_being_done = state->tp.numOfBitStreams - state->iterationsMissing;
-
-	if (state->reportCycle > 0 && (((iteration_being_done % state->reportCycle) == 0) ||
-				       (iteration_being_done == state->tp.numOfBitStreams))) {
-		getTimestamp(buf, BUFSIZ);
-		msg("Completed iteration %ld of %ld at %s", iteration_being_done,
-		    state->tp.numOfBitStreams, buf);
-	}
-
-	if (iteration_being_done == state->tp.numOfBitStreams) {
-		dbg(DBG_LOW, "End of iterate phase\n");
-	}
-}
-
-
 static double
 lcg_rand(long int N, double SEED, double *DUNIF, long int NDIM)
 {

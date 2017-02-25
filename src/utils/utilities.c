@@ -52,7 +52,6 @@
 // sts includes
 #include "../utils/externs.h"
 #include "utilities.h"
-#include "generators.h"
 #include "debug.h"
 
 
@@ -954,8 +953,8 @@ str2longint_or_die(char *string)
 void
 generatorOptions(struct state *state)
 {
-	long int generator;	// Generator number
-	bool success;		// If we read a valid file format
+	bool format_success;	// If we read a valid file format
+	bool filename_success;	// If we obtains a valid readable file
 	char *src;		// Potential src of random file data
 	char *line;		// Random file data line
 
@@ -967,32 +966,17 @@ generatorOptions(struct state *state)
 	}
 
 	/*
-	 * Case: write to file (-m w)
-	 */
-	if (state->runMode == MODE_WRITE_ONLY) {
-
-		// Open the input file for writing
-		state->streamFile = fopen(state->randomDataPath, "w");
-		if (state->streamFile == NULL) {
-			errp(221, __func__, "unable to open data file to writing: %s", state->randomDataPath);
-		}
-	}
-
-	/*
 	 * Case: read from file
 	 */
-	else if (state->generator == GENERATOR_FROM_FILE) {
+	// Verify the input file is readable
+	if (checkReadPermissions(state->randomDataPath) == false) {
+		err(221, __func__, "input data file not readable: %s", state->randomDataPath);
+	}
 
-		// Verify the input file is readable
-		if (checkReadPermissions(state->randomDataPath) == false) {
-			err(221, __func__, "input data file not readable: %s", state->randomDataPath);
-		}
-
-		// Open the input file for reading
-		state->streamFile = fopen(state->randomDataPath, "r");
-		if (state->streamFile == NULL) {
-			errp(221, __func__, "unable to open data file to reading: %s", state->randomDataPath);
-		}
+	// Open the input file for reading
+	state->streamFile = fopen(state->randomDataPath, "r");
+	if (state->streamFile == NULL) {
+		errp(221, __func__, "unable to open data file to reading: %s", state->randomDataPath);
 	}
 
 	/*
@@ -1005,91 +989,10 @@ generatorOptions(struct state *state)
 	/*
 	 * Non-batch mode, ask for generator selection
 	 */
+	filename_success = false;
 	do {
-		// If -g was used, do not ask for generator selection
-		if (state->generatorFlag == true) {
-
-			// Use the generator number passed in on the command line
-			generator = state->generator;
-		}
-
-		// -g was not used, ask for generator selection
-		else {
-
-			// Ask for a selection
-			printf("           G E N E R A T O R    S E L E C T I O N \n");
-			printf("           ______________________________________\n\n");
-			if (state->runMode == MODE_WRITE_ONLY) {
-				printf("                                   [1] Linear Congruential\n");
-			} else {
-				printf("    [0] Input File                 [1] Linear Congruential\n");
-			}
-			printf("    [2] Quadratic Congruential I   [3] Quadratic Congruential II\n");
-			printf("    [4] Cubic Congruential         [5] XOR\n");
-			printf("    [6] Modular Exponentiation     [7] Blum-Blum-Shub\n");
-			printf("    [8] Micali-Schnorr             [9] G Using SHA-1\n\n");
-			printf("   Enter Choice: ");
-			fflush(stdout);
-
-			// Read answer
-			generator = getNumber(stdin, stdout);
-			putchar('\n');
-
-			// Help if they gave us a wrong number
-			if (generator < 0 || generator > NUMOFGENERATORS) {
-				printf("\ngenerator number must be from 0 to %d inclusive, try again\n\n", NUMOFGENERATORS);
-				fflush(stdout);
-				continue;
-			}
-		}
-
-		// Cannot use read from file when in -m w runMode
-		if (state->runMode == MODE_WRITE_ONLY && generator == GENERATOR_FROM_FILE) {
-			printf("\nbecause -m w (write-only) was given, generator 0 (read from file) cannot be used, try again\n\n");
-			fflush(stdout);
-			continue;
-		}
-
-		// For non-zero generator and -m w runMode, ask for the filename
-		if (state->runMode == MODE_WRITE_ONLY && generator != GENERATOR_FROM_FILE) {
-
-			// If no -f randdata, ask for the filename
-			if (state->randomDataFlag == false) {
-
-				printf("\t\tOutput generator file: ");
-				fflush(stdout);
-
-				// Read filename
-				src = getString(stdin);
-				putchar('\n');
-
-				// Open the file for writing/truncation
-				state->streamFile = openTruncate(src);
-				if (state->streamFile == NULL) {
-					printf("\ncould not create/open for writing/truncation: %s, try again\n\n", src);
-					fflush(stdout);
-					free(src);
-					continue;
-				}
-
-				// Set the randomData filename
-				state->randomDataPath = src;
-			}
-
-			// We have -f randdata, open randdata for writing/truncation
-			else {
-				state->streamFile = openTruncate(state->randomDataPath);
-				if (state->streamFile == NULL) {
-					printf("\ncould not create/open for writing/truncation: %s, try again\n\n",
-					       state->randomDataPath);
-					fflush(stdout);
-					continue;
-				}
-			}
-		}
-
 		// For generator 0 (read from a file) and no -f randdata, ask for the filename
-		if (generator == GENERATOR_FROM_FILE && state->randomDataFlag == false) {
+		if (state->randomDataArg == false) {
 
 			// Ask for the filename
 			printf("\t\tUser Prescribed Input File: ");
@@ -1111,69 +1014,63 @@ generatorOptions(struct state *state)
 			state->randomDataPath = src;
 		}
 
-		// For generator 0 (read from a file), open the file
-		if (generator == GENERATOR_FROM_FILE) {
+		// Open the input file for reading
+		state->streamFile = fopen(state->randomDataPath, "r");
+		if (state->streamFile == NULL) {
+			printf("\nunable to open %s of reading, try again\n\n", state->randomDataPath);
+			fflush(stdout);
+			if (state->randomDataArg == false) {
+				free(state->randomDataPath);
+				state->randomDataPath = NULL;
+				filename_success = false;
+			}
+			continue;
+		}
+		filename_success = true;
 
-			// Open the input file for reading
-			state->streamFile = fopen(state->randomDataPath, "r");
-			if (state->streamFile == NULL) {
-				printf("\nunable to open %s of reading, try again\n\n", state->randomDataPath);
+		// Ask for input format if -F was NOT used
+		if (state->dataFormatFlag == false) {
+
+			// Determine generator 0 (read from a file), open the file format
+			format_success = false;
+			do {
+				// Ask for input file format
+				printf("   Input File Format:\n");
+				printf("    [0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
+				printf("    [1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
+				printf("   Select input mode:  ");
 				fflush(stdout);
-				if (state->randomDataFlag == false) {
-					free(state->randomDataPath);
-					state->randomDataPath = NULL;
-				}
-				continue;
-			}
 
-			// Ask for input format if -F was NOT used
-			if (state->dataFormatFlag == false) {
+				// Read answer
+				line = getString(stdin);
+				putchar('\n');
 
-				// Determine generator 0 (read from a file), open the file format
-				success = false;
-				do {
-					// Ask for input file format
-					printf("   Input File Format:\n");
-					printf("    [0] or [a] ASCII - A sequence of ASCII 0's and 1's\n");
-					printf("    [1] or [r] Raw binary - Each byte in data file contains 8 bits of data\n\n");
-					printf("   Select input mode:  ");
+				// Parse answer
+				switch (line[0]) {
+				case '0':
+					format_success = true;
+					state->dataFormat = FORMAT_ASCII_01;
+					break;
+				case '1':
+					format_success = true;
+					state->dataFormat = FORMAT_RAW_BINARY;
+					break;
+				case FORMAT_RAW_BINARY:
+				case FORMAT_ASCII_01:
+					format_success = true;
+					state->dataFormat = (enum format) line[0];
+					break;
+				default:
+					printf("\ninput must be %d of %c, %d or %c\n\n", 0, (char) FORMAT_ASCII_01, 1,
+					       (char) FORMAT_RAW_BINARY);
 					fflush(stdout);
-
-					// Read answer
-					line = getString(stdin);
-					putchar('\n');
-
-					// Parse answer
-					switch (line[0]) {
-					case '0':
-						success = true;
-						state->dataFormat = FORMAT_ASCII_01;
-						break;
-					case '1':
-						success = true;
-						state->dataFormat = FORMAT_RAW_BINARY;
-						break;
-					case FORMAT_RAW_BINARY:
-					case FORMAT_ASCII_01:
-						success = true;
-						state->dataFormat = (enum format) line[0];
-						break;
-					default:
-						printf("\ninput must be %d of %c, %d or %c\n\n", 0, (char) FORMAT_ASCII_01, 1,
-						       (char) FORMAT_RAW_BINARY);
-						fflush(stdout);
-						break;
-					}
-				} while (success != true);
-				free(line);
-			}
+					break;
+				}
+			} while (format_success != true);
+			free(line);
 		}
 
-	} while (generator < 0 || generator > NUMOFGENERATORS);
-
-	// Set the generator option
-	dbg(DBG_HIGH, "will use generator %s[%ld]", state->generatorDir[generator], generator);
-	state->generator = (enum gen) generator;
+	} while (filename_success == false);
 	return;
 }
 
@@ -1614,40 +1511,6 @@ invokeTestSuite(struct state *state)
 	}
 
 	/*
-	 * Case: prep for writing to the datafile
-	 */
-	if (state->runMode == MODE_WRITE_ONLY) {
-
-		/*
-		 * Allocate the write buffer
-		 */
-		switch (state->dataFormat) {
-			case FORMAT_RAW_BINARY:
-				// Compression BITS_N_BYTE:1
-				state->tmpepsilon = malloc(((state->tp.n / BITS_N_BYTE) + 1) * sizeof(state->tmpepsilon[0]));
-				if (state->tmpepsilon == NULL) {
-					errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
-						 (state->tp.n / BITS_N_BYTE) + 1, sizeof(state->tmpepsilon[0]));
-				}
-				state->tmpepsilon[(state->tp.n / BITS_N_BYTE) + 1] = '\0';	// paranoia
-				break;
-
-			case FORMAT_ASCII_01:
-				state->tmpepsilon = malloc((state->tp.n + 1) * sizeof(state->tmpepsilon[0]));
-				if (state->tmpepsilon == NULL) {
-					errp(228, __func__, "cannot allocate %ld elements of %ld bytes each",
-						 state->tp.n + 1, sizeof(state->tmpepsilon[0]));
-				}
-				state->tmpepsilon[state->tp.n + 1] = '\0';	// paranoia
-				break;
-
-			default:
-				err(228, __func__, "Invalid format");
-				break;
-		}
-	}
-
-	/*
 	 * Announce test if in legacy output mode
 	 */
 	if (state->legacy_output == true) {
@@ -1657,18 +1520,10 @@ invokeTestSuite(struct state *state)
 			errp(228, __func__, "error in writing to %s", state->freqFilePath);
 		}
 
-		if (state->generator == 0) {
-			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-							 state->randomDataPath, state->tp.alpha);
-			if (io_ret <= 0) {
-				errp(228, __func__, "error in writing to %s", state->freqFilePath);
-			}
-		} else {
-			io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
-							 state->generatorDir[state->generator], state->tp.alpha);
-			if (io_ret <= 0) {
-				errp(228, __func__, "error in writing to %s", state->freqFilePath);
-			}
+		io_ret = fprintf(state->freqFile, "\t\tFILE = %s\t\tALPHA = %6.4f\n",
+						 state->randomDataPath, state->tp.alpha);
+		if (io_ret <= 0) {
+			errp(228, __func__, "error in writing to %s", state->freqFilePath);
 		}
 		io_ret = fprintf(state->freqFile,
 				 "________________________________________________________________________________\n\n");
@@ -1685,63 +1540,7 @@ invokeTestSuite(struct state *state)
 	 * Test data from a file or from an internal generator
 	 * NOTE: Introduce new pseudo random number generators in this switch
 	 */
-	switch (state->generator) {
-
-		case GENERATOR_FROM_FILE:
-			handleFileBasedBitStreams(state);
-			break;
-		case GENERATOR_LCG:
-			lcg(state);
-			break;
-		case GENERATOR_QCG1:
-			quadRes1(state);
-			break;
-		case GENERATOR_QCG2:
-			quadRes2(state);
-			break;
-		case GENERATOR_CCG:
-			cubicRes(state);
-			break;
-		case GENERATOR_XOR:
-			exclusiveOR(state);
-			break;
-		case GENERATOR_MODEXP:
-			modExp(state);
-			break;
-		case GENERATOR_BBS:
-			bbs(state);
-			break;
-		case GENERATOR_MS:
-			micali_schnorr(state);
-			break;
-		case GENERATOR_SHA1:
-			SHA1(state);
-			break;
-
-		default:
-			err(228, __func__, "Error in invokeTestSuite!");
-			break;
-	}
-
-	/*
-	 * -m w: only write generated data to -f randata
-	 *
-	 * Data already written, nothing else do to.
-	 */
-	if (state->runMode == MODE_WRITE_ONLY) {
-
-		/*
-		 * Announce end of write only run
-		 */
-		if (state->batchmode == true) {
-			dbg(DBG_LOW, "Exiting, completed writes to %s", state->randomDataPath);
-		} else {
-			printf("Exiting completed writes to %s\n", state->randomDataPath);
-			fflush(stdout);
-		}
-		destroy(state);
-		exit(0);
-	}
+	handleFileBasedBitStreams(state);
 }
 
 
@@ -2382,119 +2181,6 @@ append_string_to_linked_list(struct Node **head, char* string)
 
 		current->next = new_node;
 	}
-}
-
-
-/*
- * write_sequence - write the epsilon stream to a randomDataPath
- *
- * given:
- *      state           // run state to write epsilon to randomDataPath
- */
-void
-write_sequence(struct state *state)
-{
-	int io_ret;		// I/O return status
-	int count;
-	long int i;
-	int j;
-
-	/*
-	 * Check preconditions (firewall)
-	 */
-	if (state == NULL) {
-		err(231, __func__, "state arg was NULL");
-	}
-	if (state->tmpepsilon == NULL) {
-		err(231, __func__, "state->tmpepsilon is NULL");
-	}
-	if (state->streamFile == NULL) {
-		err(231, __func__, "state->streamFile is NULL");
-	}
-
-	/*
-	 * Write contents of epsilon
-	 */
-	switch (state->dataFormat) {
-	case FORMAT_RAW_BINARY:
-
-		/*
-		 * Store output as binary bits
-		 */
-		for (i = 0, j = 0, count = 0, state->tmpepsilon[0] = 0; i < state->tp.n; i++) {
-
-			// Store bit in current output byte
-			if (state->epsilon[0][i] == 1) {
-				state->tmpepsilon[j] |= (1 << count);
-			} else if (state->epsilon[0][i] != 0) {
-				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[0][i]);
-			}
-			++count;
-
-			// When an output byte is complete
-			if (count >= BITS_N_BYTE) {
-				// Prep for next byte
-				count = 0;
-				if (j >= (state->tp.n / BITS_N_BYTE)) {
-					break;
-				}
-				++j;
-				state->tmpepsilon[j] = 0;
-			}
-		}
-
-		/*
-		 * Write output buffer
-		 */
-		errno = 0;	// paranoia
-		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) j, state->streamFile);
-		if (io_ret < j) {
-			errp(231, __func__, "write of %d elements of %ld bytes to %s failed",
-			     j, sizeof(BitSequence), state->randomDataPath);
-		}
-		errno = 0;	// paranoia
-		io_ret = fflush(state->streamFile);
-		if (io_ret == EOF) {
-			errp(231, __func__, "flush of %s failed", state->randomDataPath);
-		}
-		break;
-
-	case FORMAT_ASCII_01:
-
-		/*
-		 * Store output as ASCII string of numbers
-		 */
-		for (i = 0; i < state->tp.n; i++) {
-			if (state->epsilon[0][i] == 0) {
-				state->tmpepsilon[i] = '0';
-			} else if (state->epsilon[0][i] == 1) {
-				state->tmpepsilon[i] = '1';
-			} else {
-				err(231, __func__, "epsilon[%ld]: %d is neither 0 nor 1", i, state->epsilon[0][i]);
-			}
-		}
-
-		/*
-		 * Write file as ASCII string of numbers
-		 */
-		errno = 0;	// paranoia
-		io_ret = (int) fwrite(state->tmpepsilon, sizeof(BitSequence), (size_t) state->tp.n, state->streamFile);
-		if (io_ret < state->tp.n) {
-			errp(231, __func__, "write of %ld elements of %ld bytes to %s failed",
-			     state->tp.n, sizeof(BitSequence), state->randomDataPath);
-		}
-		io_ret = fflush(state->streamFile);
-		if (io_ret == EOF) {
-			errp(231, __func__, "flush of %s failed", state->randomDataPath);
-		}
-		break;
-
-	default:
-		err(231, __func__, "Invalid format");
-		break;
-	}
-
-	return;
 }
 
 

@@ -41,8 +41,6 @@
 #include "utilities.h"
 #include "debug.h"
 
-#define GENERATOR_COUNT NUMOFGENERATORS
-
 /*
  * Forward static function declarations
  */
@@ -67,10 +65,6 @@ static struct state const defaultstate = {
 	 false, false, false, false,
 	},				// Do not invoke any test
 
-	// generatorFlag & generator
-	false,				// No -g generator was given
-	GENERATOR_FROM_FILE,		// Read data from a file (-g 0)
-
 	// iterationFlag
 	false,				// No -i iterations was given
 
@@ -84,8 +78,7 @@ static struct state const defaultstate = {
 
 	// workDirFlag & workDir
 	false,				// No -w workDir was given
-	"experiments",			// Write results under experiments
-					// Depending on -b and -g gen, this may become ./experiments/generator
+	".",				// Write results under experiments
 
 	// subDirsFlag & subDirs
 	false,				// No -c was given
@@ -94,9 +87,9 @@ static struct state const defaultstate = {
 	// resultstxtFlag
 	false,				// No -s, don't create results.txt, data*.txt and stats.txt files
 
-	// randomDataFlag & randomDataPath
-	false,				// No -f randdata was given
-	"/dev/null",			// Input file is /dev/null
+	// randomDataArg & randomDataPath
+	false,				// no randdata arg was given
+	"/dev/null",			// default input file is /dev/null
 
 	// dataFormatFlag & dataFormat
 	false,				// -F format was not given
@@ -147,19 +140,6 @@ static struct state const defaultstate = {
 	NULL,				// Initially the final results file is not open
 	NULL,				// Path of freq.txt
 	NULL,				// Initially freq.txt is not open
-
-	// generatorDir
-	{"AlgorithmTesting",		// -g 0, Read from file
-	 "LCG",				// -g 1, Linear Congruential
-	 "QCG1",			// -g 2, Quadratic Congruential I
-	 "QCG2",			// -g 3, Quadratic Congruential II
-	 "CCG",				// -g 4, Cubic Congruential
-	 "XOR",				// -g 5, XOR
-	 "MODEXP",			// -g 6, Modular Exponentiation
-	 "BBS",				// -g 7, Blum-Blum-Shub
-	 "MS",				// -g 8, Micali-Schnorr
-	 "G-SHA1",			// -g 9, G Using SHA-1
-	},
 
 	// testNames, subDir, driver_state
 	{"((all_tests))",		// TEST_ALL = 0, convention for indicating run all tests
@@ -313,10 +293,10 @@ static struct state const defaultstate = {
  */
 /* *INDENT-OFF* */
 static const char * const usage =
-"[-v level] [-A] [-t test1[,test2]..] [-g generator]\n"
+"[-v level] [-A] [-t test1[,test2]..]\n"
 "             [-P num=value[,num=value]..] [-i iterations] [-I reportCycle] [-O]\n"
-"             [-w workDir] [-c] [-s] [-f randdata] [-F format] [-j jobnum]\n"
-"             [-m mode] [-T numOfThreads] [-d pvaluesdir] [-h] [bitcount]\n"
+"             [-w workDir] [-c] [-s] [-F format] [-j jobnum]\n"
+"             [-m mode] [-T numOfThreads] [-d pvaluesdir] [-h] [randdata]\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
 "    -A                 ask a human what to do, use obsolete interactive mode (def: batch mode)\n"
@@ -332,16 +312,6 @@ static const char * const usage =
 "       11: Approximate Entropy             12: Random Excursions\n"
 "       13: Random Excursions Variant       14: Serial\n"
 "       15: Linear Complexity\n"
-"\n"
-"    -g generator       generator to use, 0-9 (unless -A, def: 0)\n"
-"\n"
-"       0: Read from file               1: Linear Congruential\n"
-"       2: Quadratic Congruential I     3: Quadratic Congruential II\n"
-"       4: Cubic Congruential           5: XOR\n"
-"       6: Modular Exponentiation       7: Blum-Blum-Shub\n"
-"       8: Micali-Schnorr               9: G Using SHA-1\n"
-"       NOTE: Generators 1-9 will be replaced by an separate tool in a later version.\n"
-"             Do not depend on this code supporting the 1-9 generators!\n"
 "\n"
 "    -P num=value[,num=value]..     change parameter num to value (def: keep defaults)\n"
 "\n"
@@ -368,12 +338,10 @@ static const char * const usage2 =
 "    -w workDir         write experiment results under workDir (def: .)\n"
 "    -c                 don't create any directories needed for creating files (def: do create)\n"
 "    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
-"    -f randdata        when -g 0 is given, randdata is the path to the input file to test (required if -g 0 and no -A)\n"
 "    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
 "\n"
-"    -m mode            w --> generate pseudorandom data from '-g generator' and write it to '-f randdata' in '-F format'\n"
-"                       b --> test pseudo-random data from from '-g generator' (default mode)\n"
+"    -m mode            b --> test pseudo-random data from from randdata (default mode)\n"
 "                       i --> test the given data, but not assess it, and instead save the p-values in a binary filename\n"
 "                             of the form: workDir/sts.__jobnum__.__iterations__.__bitcount__.pvalue\n"
 "                       a --> collect the p-values from the binary files specified from '-d pvaluesdir' and assess them\n"
@@ -391,7 +359,7 @@ static const char * const usage2 =
 "\n"
 "    -h                 print this message and exit\n"
 "\n"
-"    bitcount           length in bits of a single bit stream, must be a multiple of 8 (def: 1048576) (same as -P 9)\n";
+"    randdata           path to the input file to test (required for -m b and -m i, optional for -A and -m a)\n";
 /* *INDENT-ON* */
 
 
@@ -421,10 +389,8 @@ parse_args(struct state *state, int argc, char **argv)
 	long int value;		// Parsed parameter integer value
 	double d_value;		// Parsed parameter floating point
 	bool success = false;	// true if str2longtint was successful
-	int snprintf_ret;	// snprintf return value
 	int test_cnt = 0;
 	long int i;
-	size_t j;
 
 	/*
 	 * Record the program name
@@ -508,15 +474,8 @@ parse_args(struct state *state, int argc, char **argv)
 			break;
 
 		case 'g':	// -g generator
-			state->generatorFlag = true;
-			i = str2longint(&success, optarg);
-			if (success == false) {
-				usage_errp(1, __func__, "-g generator must be numeric: %s", optarg);
-			}
-			if (i < 0 || i > GENERATOR_COUNT) {
-				usage_err(1, __func__, "-g generator: %ld must be [0-%d]", i, GENERATOR_COUNT);
-			}
-			state->generator = (enum gen) i;
+			usage_err(1, __func__, "-g no longer supported, -g 0 (read from file) is the only generator\n"
+				  "For all other generators use the generator tool, or online data files");
 			break;
 
 		case 'P':	// -P num=value[,num=value]..
@@ -661,12 +620,8 @@ parse_args(struct state *state, int argc, char **argv)
 			}
 			break;
 
-		case 'f':	// -f randdata (path to input data)
-			state->randomDataFlag = true;
-			state->randomDataPath = strdup(optarg);
-			if (state->randomDataPath == NULL) {
-				errp(1, __func__, "strdup of %lu bytes for -f randdata failed", strlen(optarg));
-			}
+		case 'f':
+			usage_err(1, __func__, "-f is no longer needed, instead put randdata as last argument");
 			break;
 
 		case 'j':	// -j jobnum (seek into randomData)
@@ -686,10 +641,6 @@ parse_args(struct state *state, int argc, char **argv)
 				usage_err(1, __func__, "-m mode must be a single character: %s", optarg);
 			}
 			switch (optarg[0]) {
-			case MODE_WRITE_ONLY:
-				state->runMode = MODE_WRITE_ONLY;
-				state->resultstxtFlag = false;	// -m w implies that result.txt and stats.txt are not written
-				break;
 			case MODE_ITERATE_AND_ASSESS:
 				state->runMode = MODE_ITERATE_AND_ASSESS;
 				break;
@@ -743,24 +694,29 @@ parse_args(struct state *state, int argc, char **argv)
 		}
 	}
 
-	if (optind != argc - 1 && optind != argc) {
+	// parse last argument mased on mode
+	if (optind == argc - 1) {
+		state->randomDataPath = strdup(argv[argc-1]);
+		if (state->randomDataPath == NULL) {
+			errp(1, __func__, "strdup of %lu bytes for randdata arg", strlen(optarg));
+		}
+		state->randomDataArg = true;
+	} else if (optind < argc - 1) {
 		usage_err(1, __func__, "unexpected arguments");
 	}
-
-	if (optind == argc - 1) {
-		state->tp.n = str2longint(&success, argv[optind]);
-		if (success == false) {
-			usage_errp(1, __func__, "bitcount(n) must be a number: %s", argv[optind]);
+	switch (state->runMode) {
+	case MODE_ITERATE_AND_ASSESS:
+		/*FALLTHRU*/
+	case MODE_ITERATE_ONLY:
+		if (state->randomDataArg == false) {
+			usage_err(1, __func__, "missing randdata argument");
 		}
-		if ((state->tp.n % 8) != 0) {
-			usage_err(1, __func__,
-				  "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
-						  "a sequence that starts or ends on a non-byte boundary outweighs the convenience "
-						  "of permitting arbitrary bit lengths", state->tp.n);
-		}
-		if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
-			usage_err(1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
-		}
+		break;
+	case MODE_ASSESS_ONLY:
+		break;
+	default:
+		err(1, __func__, "unknown run mode: %u", state->runMode);
+		break;
 	}
 
 	/*
@@ -778,35 +734,7 @@ parse_args(struct state *state, int argc, char **argv)
 	}
 
 	/*
-	 * Post processing: make sure complimentary/conflicting options are set/not set
-	 */
-	if (state->batchmode == true && state->runMode != MODE_ASSESS_ONLY) {
-		if (state->generatorFlag == true) {
-			if (state->generator == 0 && state->randomDataFlag == false) {
-				usage_err(1, __func__, "-f randdata required when using -b and -g 0");
-			}
-		} else {
-			if (state->randomDataFlag == false) {
-				usage_err(1, __func__,
-					  "-f randdata required when using -b and no -g generator given");
-			}
-		}
-	}
-	if (state->generator == 0) {
-		if (state->runMode == MODE_WRITE_ONLY) {
-			usage_err(1, __func__, "when -m w the -g generator must be non-zero");
-		}
-	} else {
-		if (state->randomDataFlag == true && state->runMode != MODE_WRITE_ONLY) {
-			usage_err(1, __func__, "-f randdata may only be used with -g 0 (read from file) or -m w");
-		}
-		if (state->jobnumFlag == true) {
-			usage_err(1, __func__, "-j jobnum may only be used with -g 0 (read from file)");
-		}
-	}
-
-	/*
-	 * If -b and no -t test given, enable all tests
+	 * If no -B and no -t test given, enable all tests
 	 *
 	 * Test 0 is an historical alias for all tests enabled.
 	 */
@@ -834,42 +762,6 @@ parse_args(struct state *state, int argc, char **argv)
 	}
 
 	/*
-	 * Set the workDir if no -w workdir was given
-	 */
-	if (state->workDirFlag != true) {
-
-		/*
-		 * -b batch mode: default workdir is the name of the generator
-		 */
-		if (state->batchmode == true) {
-			state->workDir = strdup(state->generatorDir[state->generator]);
-			if (state->workDir == NULL) {
-				errp(1, __func__, "strdup of %s failed", state->generatorDir[state->generator]);
-			}
-		}
-
-		/*
-		 * Classic mode (no -b): default workdir is experiments/__generator_name__
-		 */
-		else {
-			j = strlen("experiments/") + strlen(state->generatorDir[state->generator]) + 1;	// string + NUL
-			state->workDir = malloc(j + 1);	// +1 for later paranoia
-			if (state->workDir == NULL) {
-				errp(1, __func__, "cannot malloc of %ld elements of %ld bytes each for experiments/%s",
-				     j + 1, sizeof(state->workDir[0]), state->generatorDir[state->generator]);
-			}
-			errno = 0;	// paranoia
-			snprintf_ret = snprintf(state->workDir, j, "experiments/%s", state->generatorDir[state->generator]);
-			state->workDir[j] = '\0';	// paranoia
-			if (snprintf_ret <= 0 || snprintf_ret > j || errno != 0) {
-				errp(1, __func__,
-				     "snprintf failed for %ld bytes for experiments/%s, returned: %d",
-				     j, state->generatorDir[state->generator], snprintf_ret);
-			}
-		}
-	}
-
-	/*
 	 * Set the number of uniformity bins to sqrt(iterations) if running in non-legacy mode and
 	 * no custom number was provided
 	 */
@@ -885,14 +777,6 @@ parse_args(struct state *state, int argc, char **argv)
 		warn(__func__, "The number of uniformity bins was set back to %d due to '-O' legacy mode flag",
 		    DEFAULT_UNIFORMITY_BINS);
 		state->tp.uniformity_bins = DEFAULT_UNIFORMITY_BINS;
-	}
-
-	/*
-	 * When not reading from a file, sts currently supports only one thread
-	 */
-	if (state->generator != GENERATOR_FROM_FILE) {
-		dbg(DBG_LOW, "You chose to use one of the STS built in generators. Only one thread will be used for testing it.");
-		state->numberOfThreads = 1;
 	}
 
 	/*
@@ -1014,6 +898,19 @@ parse_args(struct state *state, int argc, char **argv)
 	}
 
 	/*
+	 * verify that bitcount is OK
+	 */
+	if ((state->tp.n % 8) != 0) {
+		usage_err(1, __func__,
+			  "bitcount(n): %ld must be a multiple of 8. The added complexity of supporting "
+					  "a sequence that starts or ends on a non-byte boundary outweighs the "
+					  "convenience of permitting arbitrary bit lengths", state->tp.n);
+	}
+	if (state->tp.n < GLOBAL_MIN_BITCOUNT) {
+		usage_err(1, __func__, "bitcount(n): %ld must >= %d", state->tp.n, GLOBAL_MIN_BITCOUNT);
+	}
+
+	/*
 	 * Report on how we will run, if debugging
 	 */
 	if (debuglevel > 0) {
@@ -1063,7 +960,7 @@ change_params(struct state *state, long int parameter, long int value, double d_
 	case PARAM_uniformity_bins:
 		state->tp.uniformity_bins = value;
 		break;
-	case PARAM_n:		// see also final argument: argv[argc-1]
+	case PARAM_n:
 		state->tp.n = value;
 		break;
 	case PARAM_uniformity_level:
@@ -1107,27 +1004,8 @@ print_option_summary(struct state *state, char *where)
 		if (state->runModeFlag == true) {
 			switch (state->runMode) {
 
-			case MODE_WRITE_ONLY:
-				switch (state->dataFormat) {
-				case FORMAT_ASCII_01:
-				case FORMAT_0:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
-					    state->randomDataPath, "ASCII '0' and '1' character bits");
-					break;
-				case FORMAT_RAW_BINARY:
-				case FORMAT_1:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s in -F format: %s",
-					    state->randomDataPath, "raw 8 binary bits per byte");
-					break;
-				default:
-					dbg(DBG_MED, "\t    -m w: only write generated data to -f file: %s"
-					    "in -F format: unknown: %c", state->randomDataPath, (char) state->dataFormat);
-					break;
-				}
-				break;
-
 			case MODE_ITERATE_AND_ASSESS:
-				dbg(DBG_MED, "\tWill test pseudo-random data from from the chosen '-g generator'");
+				dbg(DBG_MED, "\tWill test pseudo-random data from from a file");
 				break;
 
 			case MODE_ITERATE_ONLY:
@@ -1144,8 +1022,6 @@ print_option_summary(struct state *state, char *where)
 				dbg(DBG_MED, "\tUnknown assessment mode: %c", state->runMode);
 				break;
 			}
-		} else {
-			dbg(DBG_MED, "\tWill test pseudo-random data from from the chosen '-g generator");
 		}
 		dbg(DBG_MED, "\tTesting %lld bits of data (%lld bytes)", (long long) state->tp.numOfBitStreams *
 				(long long) state->tp.n, (((long long) state->tp.numOfBitStreams *
@@ -1178,59 +1054,7 @@ print_option_summary(struct state *state, char *where)
 	/*
 	 * Report on generator (or file) to be used
 	 */
-	if (state->generatorFlag == true) {
-		switch (state->generator) {
-
-		case GENERATOR_FROM_FILE:
-			if (state->batchmode == true) {
-				dbg(DBG_LOW, "Testing data from file:\n\t%s\n", state->randomDataPath);
-			} else {
-				dbg(DBG_LOW, "Will use data from a file");
-				dbg(DBG_LOW, "\tWill prompt for filename\n");
-			}
-			break;
-
-		case GENERATOR_LCG:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Linear Congruential\n", state->generator);
-			break;
-
-		case GENERATOR_QCG1:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Quadratic Congruential I\n", state->generator);
-			break;
-
-		case GENERATOR_QCG2:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Quadratic Congruential II\n", state->generator);
-			break;
-
-		case GENERATOR_CCG:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Cubic Congruential\n", state->generator);
-			break;
-
-		case GENERATOR_XOR:
-			dbg(DBG_LOW, "Using builtin generator [%d]: XOR\n", state->generator);
-			break;
-
-		case GENERATOR_MODEXP:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Modular Exponentiation\n", state->generator);
-			break;
-
-		case GENERATOR_BBS:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Blum-Blum-Shub\n", state->generator);
-			break;
-
-		case GENERATOR_MS:
-			dbg(DBG_LOW, "Using builtin generator [%d]: Micali-Schnorr\n", state->generator);
-			break;
-
-		case GENERATOR_SHA1:
-			dbg(DBG_LOW, "Using builtin generator [%d]: G Using SHA-1\n", state->generator);
-			break;
-
-		default:
-			dbg(DBG_LOW, "Unknown generator [%d]\n", state->generator);
-			break;
-		}
-	} else if (state->batchmode == true) {
+	if (state->batchmode == true) {
 		dbg(DBG_LOW, "Testing data from file: %s", state->randomDataPath);
 	} else {
 		dbg(DBG_LOW, "Will prompt user for generator to use");
@@ -1240,7 +1064,6 @@ print_option_summary(struct state *state, char *where)
 	 * Report detailed state summary
 	 */
 	dbg(DBG_MED, "Details of run state:");
-	dbg(DBG_MED, "\tgenerator: -g %d", state->generator);
 	if (state->iterationFlag == true) {
 		dbg(DBG_MED, "\t-i iterations was given");
 	} else {
@@ -1268,26 +1091,8 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\tno -m mode was given");
 	}
 	switch (state->runMode) {
-	case MODE_WRITE_ONLY:
-		switch (state->dataFormat) {
-		case FORMAT_ASCII_01:
-		case FORMAT_0:
-			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
-					    "in -F format: %s", state->randomDataPath, "ASCII '0' and '1' character bits");
-			break;
-		case FORMAT_RAW_BINARY:
-		case FORMAT_1:
-			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
-					    "in -F format: %s", state->randomDataPath, "raw 8 binary bits per byte");
-			break;
-		default:
-			dbg(DBG_MED, "\t  -m w: generate pseudorandom data from '-g generator' and just write it to -f file: %s "
-					    "in -F format: unknown: %c", state->randomDataPath, (char) state->dataFormat);
-			break;
-		}
-		break;
 	case MODE_ITERATE_AND_ASSESS:
-		dbg(DBG_MED, "\t  -m b: test pseudo-random data from from '-g generator'");
+		dbg(DBG_MED, "\t  -m b: test pseudo-random data from a file");
 		break;
 	case MODE_ITERATE_ONLY:
 		dbg(DBG_MED, "\t  -m i: test the given data, but not assess it, and instead save the p-values in a binary file");
@@ -1317,12 +1122,6 @@ print_option_summary(struct state *state, char *where)
 		dbg(DBG_MED, "\tno -s was given");
 		dbg(DBG_MED, "\t  do not create result.txt, data*.txt and stats.txt");
 	}
-	if (state->randomDataFlag == true) {
-		dbg(DBG_MED, "\t-f was given");
-	} else {
-		dbg(DBG_MED, "\tno -f was given");
-	}
-	dbg(DBG_MED, "\t  randomDataPath: -f %s", state->randomDataPath);
 	if (state->dataFormatFlag == true) {
 		dbg(DBG_MED, "\t-F format was given");
 	} else {
@@ -1385,6 +1184,16 @@ print_option_summary(struct state *state, char *where)
 			dbg(DBG_LOW, "\t    -A was not given: will NOT prompt for any changes to default parameters\n");
 		}
 	}
+
+	/*
+	 * report on the randdata filename
+	 */
+	if (state->randomDataArg == true) {
+		dbg(DBG_MED, "\tranddata arg was given");
+	} else {
+		dbg(DBG_MED, "\tno randdata arg given");
+	}
+	dbg(DBG_MED, "\t  randomDataPath: %s\n", state->randomDataPath);
 
 	return;
 }

@@ -509,7 +509,7 @@ metrics(struct state *state)
 		if (io_ret <= 0) {
 			errp(53, __func__, "error in writing to finalRept");
 		}
-		io_ret = fprintf(state->finalRept, "   generator is: %s\n", state->generatorDir[state->generator]);
+		io_ret = fprintf(state->finalRept, "   generator is: AlgorithmTesting\n");
 		if (io_ret <= 0) {
 			errp(53, __func__, "error in writing to finalRept");
 		}
@@ -684,9 +684,10 @@ metrics(struct state *state)
 						 "sub-tests)\nwere conducted to evaluate the randomness of %ld bitstreams of "
 						 "%ld bits from:\n\n\t%s\n\n",
 				 total_number_of_tests, NUMOFTESTS, state->tp.numOfBitStreams, state->tp.n,
-				 state->generator == GENERATOR_FROM_FILE ?
-				 (strcmp(state->randomDataPath, "/dev/null") != 0 ? state->randomDataPath : "-UNKNOWN-") :
-				 state->generatorDir[state->generator]);
+				 state->randomDataArg == true ?
+				     ((state->randomDataPath != NULL && strcmp(state->randomDataPath, "/dev/null") != 0) ?
+					 state->randomDataPath : "--UNKNOWN--") :
+				     "--SOME_FILE--");
 		if (io_ret <= 0) {
 			errp(5, __func__, "error in writing to finalRept");
 		}
