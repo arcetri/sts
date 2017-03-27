@@ -35,6 +35,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <string.h>
 
 #if __STDC_VERSION__ >= 199901L
 #   include <stdint.h>
@@ -73,7 +75,8 @@ main(int argc, char *argv[])
 	 */
 	program = argv[0];
 	if (argc != 4) {
-		usage_err(usage, 1, __func__, "expected 4 argumentsi, found only %d", argc);
+		fprintf(stderr, "%s: expected 4 arguments, found only %d\n", program,argc);
+		fprintf(stderr, "%s: %s\n", program, usage);
 	}
 	errno = 0;
 	M = strtol(argv[1], NULL, 0);
@@ -190,4 +193,148 @@ displayBits(FILE * fp, unsigned int *A, unsigned long long value, long int count
 		(*nonPeriodic)++;
 	}
 	return;
+}
+
+
+/*
+ * err - issue a fatal error message and exit
+ *
+ * given:
+ *      exitcode        value to exit with
+ *      name            name of function issuing the warning
+ *      fmt             format of the warning
+ *      ...             optional format args
+ *
+ * This function does not return.
+ *
+ * Example:
+ *
+ *      err(99, __func__, "bad foobar: %s", message);
+ */
+void
+err(int exitcode, char const *name, char const *fmt, ...)
+{
+	va_list ap;		/* argument pointer */
+	int ret;		/* return code holder */
+
+	/*
+	 * Start the var arg setup and fetch our first arg
+	 */
+	va_start(ap, fmt);
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (exitcode >= 256) {
+		warn(__func__, "called with exitcode >= 256: %d", exitcode);
+		exitcode = FORCED_EXIT;
+		warn(__func__, "forcing exit code: %d", exitcode);
+	}
+	if (exitcode < 0) {
+		warn(__func__, "called with exitcode < 0: %d", exitcode);
+		exitcode = FORCED_EXIT;
+		warn(__func__, "forcing exit code: %d", exitcode);
+	}
+	if (name == NULL) {
+		warn(__func__, "called with NULL name");
+		name = "((NULL name))";
+	}
+	if (fmt == NULL) {
+		warn(__func__, "called with NULL fmt");
+		fmt = "((NULL fmt))";
+	}
+
+	/*
+	 * Issue the fatal error
+	 */
+	fprintf(stderr, "FATAL: %s: ", name);
+	ret = vfprintf(stderr, fmt, ap);
+	if (ret <= 0) {
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
+	}
+	fputc('\n', stderr);
+
+	/*
+	 * Clean up stdarg stuff
+	 */
+	va_end(ap);
+
+	/*
+	 * Terminate
+	 */
+	exit(exitcode);
+}
+
+
+/*
+ * errp - issue a fatal error message, errno string and exit
+ *
+ * given:
+ *      exitcode        value to exit with
+ *      name            name of function issuing the warning
+ *      fmt             format of the warning
+ *      ...             optional format args
+ *
+ * This function does not return.  Unlike err() this function
+ * also prints an errno message.
+ *
+ * Example:
+ *
+ *      errp(99, __func__, "I/O failure: %s", message);
+ */
+void
+errp(int exitcode, char const *name, char const *fmt, ...)
+{
+	va_list ap;		/* argument pointer */
+	int ret;		/* return code holder */
+	int saved_errno;	/* errno at function start */
+
+	/*
+	 * Start the var arg setup and fetch our first arg
+	 */
+	saved_errno = errno;
+	va_start(ap, fmt);
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (exitcode >= 256) {
+		warn(__func__, "called with exitcode >= 256: %d", exitcode);
+		exitcode = FORCED_EXIT;
+		warn(__func__, "forcing exit code: %d", exitcode);
+	}
+	if (exitcode < 0) {
+		warn(__func__, "called with exitcode < 0: %d", exitcode);
+		exitcode = FORCED_EXIT;
+		warn(__func__, "forcing exit code: %d", exitcode);
+	}
+	if (name == NULL) {
+		warn(__func__, "called with NULL name");
+		name = "((NULL name))";
+	}
+	if (fmt == NULL) {
+		warn(__func__, "called with NULL fmt");
+		fmt = "((NULL fmt))";
+	}
+
+	/*
+	 * Issue the fatal error
+	 */
+	fprintf(stderr, "FATAL: %s: ", name);
+	ret = vfprintf(stderr, fmt, ap);
+	if (ret <= 0) {
+		fprintf(stderr, "[%s vfprintf returned error: %d]", __func__, ret);
+	}
+	fputc('\n', stderr);
+	fprintf(stderr, "errno[%d]: %s\n", saved_errno, strerror(saved_errno));
+
+	/*
+	 * Clean up stdarg stuff
+	 */
+	va_end(ap);
+
+	/*
+	 * Terminate
+	 */
+	exit(exitcode);
 }

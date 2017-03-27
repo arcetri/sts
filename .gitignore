@@ -7,6 +7,8 @@ sts
 sts_legacy_fft
 # ignore mkapertemplate compiled binary
 mkapertemplate
+# ignore generators compiled binary
+generators
 dataInfo
 # vi ctags are not source
 tags
