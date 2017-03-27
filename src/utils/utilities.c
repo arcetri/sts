@@ -966,14 +966,15 @@ generatorOptions(struct state *state)
 	}
 
 	/*
-	 * Case: read from file
+	 * Verify the input file is readable
 	 */
-	// Verify the input file is readable
 	if (checkReadPermissions(state->randomDataPath) == false) {
 		err(221, __func__, "input data file not readable: %s", state->randomDataPath);
 	}
 
-	// Open the input file for reading
+	/*
+	 * Open the input file for reading
+	 */
 	state->streamFile = fopen(state->randomDataPath, "r");
 	if (state->streamFile == NULL) {
 		errp(221, __func__, "unable to open data file to reading: %s", state->randomDataPath);
