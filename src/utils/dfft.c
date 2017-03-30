@@ -1,5 +1,12 @@
 #if defined(LEGACY_FFT)
 /*
+ * NOTE: This is slow legacy FFT code.  We recommend that you not compile with -DLEGACY_FFT but instead compile
+ *	 with version 3.3.3 or later of the fftw3 library (see http://www.fftw.org).
+ *
+ * Other than adding these leading comments, applying the indent tool to re-format this file, and
+ * fixing variable declarations, this code is equivalent the NIST v2.1.2 source code.
+ */
+/*
  * Notes from RFB:
  *
  * Looks like the user-level routines are:
@@ -18,29 +25,6 @@
  *
  * void __ogg_fdcosqi(int n, double *wsave, int *ifac) void __ogg_fdcosqf(int n, double *x, double *wsave, int *ifac) void
  * __ogg_fdcosqb(int n, double *x, double *wsave, int *ifac)
- */
-
-/*
- * This code has been heavily modified by the following people:
- *
- *      Landon Curt Noll
- *      Tom Gilgan
- *      Riccardo Paccagnella
- *
- * See the README.md and the initial comment in sts.c for more information.
- *
- * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
- * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
- * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- *
- * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
- *
- * Share and enjoy! :-)
  */
 
 /********************************************************************

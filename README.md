@@ -16,6 +16,7 @@ STS can be useful in:
 
 STS version 3 requires the external library [fftw3][fftw] to be installed in your system.
 This library is also available to install in most of the package managers with the name _fftw3_.
+We recommend that you compile STS version 3 with version 3.3.3 or later of fftw.
 
 If you are not able to install fftw3 in your system, but you still want to use STS, you can compile
 the program with the command `make legacy` instead of `make`. This command will make STS use another 

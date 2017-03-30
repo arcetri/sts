@@ -227,8 +227,9 @@ cephes_lgam(double x)
 		w = cephes_lgam(q);	/* note this modifies sgngam! */
 		p = floor(q);
 		if (p == q) {
-			lgsing:
-			goto loverf;
+			dbg(DBG_VHIGH, "lgam: #1 OVERFLOW\n");
+
+			return sgngam * MAXNUM;
 		}
 		i = (int) p;
 		if ((i & 1) == 0) {
@@ -243,7 +244,9 @@ cephes_lgam(double x)
 		}
 		z = q * sin(PI * z);
 		if (z == 0.0) {
-			goto lgsing;
+			dbg(DBG_VHIGH, "lgam: #2 OVERFLOW\n");
+
+			return sgngam * MAXNUM;
 		}
 		/*
 		 * z = log(PI) - log( z ) - w;
@@ -263,7 +266,9 @@ cephes_lgam(double x)
 		}
 		while (u < 2.0) {
 			if (u == 0.0) {
-				goto lgsing;
+				dbg(DBG_VHIGH, "lgam: #3 OVERFLOW\n");
+
+				return sgngam * MAXNUM;
 			}
 			z /= u;
 			p += 1.0;
@@ -286,8 +291,7 @@ cephes_lgam(double x)
 	}
 
 	if (x > MAXLGM) {
-		loverf:
-		dbg(DBG_VHIGH, "lgam: OVERFLOW\n");
+		dbg(DBG_VHIGH, "lgam: #2 OVERFLOW\n");
 
 		return sgngam * MAXNUM;
 	}
