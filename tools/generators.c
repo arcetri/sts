@@ -36,6 +36,7 @@
 // forward declarations
 
 static void write_sequence(void);
+extern struct tm *localtime_r(const time_t *timep, struct tm *result);
 
 // defs.h
 
@@ -88,6 +89,7 @@ enum gen {
 static const char *const version = "3.2.0";	// our version
 static char *program = NULL;			// Program name (argv[0])
 static long int debuglevel = 0;			// -v lvl: defines the level of verbosity for debugging
+static const char * const usage = "XXX - TBD usage\n";
 
 // utilities.h
 
@@ -103,7 +105,6 @@ extern char *filePathName(char *head, char *tail);
 extern char *data_filename_format(int partitionCount);
 extern void precheckPath(struct state *state, char *dir);
 extern char *precheckSubdir(struct state *state, char *subdir);
-extern long int str2longint(bool * success_p, char *string);
 extern void generatorOptions(struct state *state);
 extern void chooseTests(struct state *state);
 extern void fixParameters(struct state *state);
@@ -119,6 +120,7 @@ extern int multiplication_will_overflow_long(long int si_a, long int si_b);
 extern void append_string_to_linked_list(struct Node **head, char* string);
 #endif
 static void getTimestamp(char *buf, size_t len);
+static long int str2longint(bool * success_p, char *string);
 
 // generators.h
 
@@ -326,12 +328,18 @@ static void Square(BYTE * A, BYTE * B, int L);
 static void ModExp(BYTE * A, BYTE * B, int LB, BYTE * C, int LC, BYTE * M, int LM);
 static int DivMod(BYTE * x, int lenx, BYTE * n, int lenn, BYTE * quot, BYTE * rem);
 static void Mod(BYTE * x, int lenx, BYTE * n, int lenn);
+#if 0 // XXX - dead code
 static void Div(BYTE * x, int lenx, BYTE * n, int lenn);
+#endif // XXX - dead code
 static void sub(BYTE * A, int LA, BYTE * B, int LB);
 static int negate(BYTE * A, int L);
 static BYTE add(BYTE * A, int LA, BYTE * B, int LB);
+#if 0 // XXX - dead code
 static void prettyprintBstr(char *S, BYTE * A, int L);
+#endif // XXX - dead code
+#ifdef LITTLE_ENDIAN
 static void byteReverse(ULONG * buffer, int byteCount);
+#endif
 static void ahtopb(char *ascii_hex, BYTE * p_binary, int bin_len);
 
 // debug.h
@@ -423,10 +431,12 @@ static void ahtopb(char *ascii_hex, BYTE * p_binary, int bin_len);
 #      define dbg(level, ...) ((debuglevel >= (level)) ? printf(__VA_ARGS__) : true)
 #      define warn(name, ...) (fprintf(stderr, "%s: ", (name)), \
 			 fprintf(stderr, __VA_ARGS__))
+#if 0 // XXX - dead code
 #      define warnp(name, ...) (fprintf(stderr, "%s: ", (name)), \
 			  fprintf(stderr, __VA_ARGS__), \
 			  fputc('\n', stderr), \
 			  perror(__FUNCTION__))
+#endif // XXX - dead code
 #      define err(exitcode, name, ...) (fprintf(stderr, "%s: ", (name)), \
 				  fprintf(stderr, __VA_ARGS__), \
 				  exit(exitcode))
@@ -448,7 +458,9 @@ static void ahtopb(char *ascii_hex, BYTE * p_binary, int bin_len);
 static void msg(char const *fmt, ...);
 static void dbg(int level, char const *fmt, ...);
 static void warn(char const *name, char const *fmt, ...);
+#if 0 // XXX - dead code
 static void warnp(char const *name, char const *fmt, ...);
+#endif // XXX - dead code
 static void err(int exitcode, char const *name, char const *fmt, ...);
 static void errp(int exitcode, char const *name, char const *fmt, ...);
 static void usage_err(int exitcode, char const *name, char const *fmt, ...);
@@ -561,6 +573,57 @@ getTimestamp(char *buf, size_t len)
 	}
 	buf[len] = '\0';	// paranoia
 	return;
+}
+
+
+/*
+ * str2longint - convert a string into a long int
+ *
+ * given:
+ *      success_p       pointer to bool indicating parse success or failure
+ *      string          string to parse
+ *
+ * returns:
+ *      If *success_p == true, returns a parsed long int form string.
+ *      If *success_p != true, then it returns errno.
+ *
+ * This function does not return when given NULL args or on a parse error.
+ */
+long int
+str2longint(bool * success_p, char *string)
+{
+	long int number;	// value to return
+	int saved_errno;	// saved errno from strtol()
+
+	/*
+	 * Check preconditions (firewall)
+	 */
+	if (success_p == NULL) {
+		err(219, __func__, "success_p arg is NULL");
+	}
+	if (string == NULL) {
+		err(219, __func__, "string arg is NULL");
+	}
+
+	/*
+	 * Attempt to convert to a number
+	 */
+	errno = 0;
+	number = strtol(string, NULL, 0);
+	saved_errno = errno;
+	if (saved_errno != 0) {
+
+		// Cleanup and report failure
+		dbg(DBG_LOW, "error in parsing string to integer: '%s'", string);
+		*success_p = false;
+		return saved_errno;
+	}
+
+	/*
+	 * Cleanup and report success
+	 */
+	*success_p = true;
+	return number;
 }
 
 
@@ -2059,6 +2122,7 @@ Mod(BYTE * x, int lenx, BYTE * n, int lenn)
 	}
 }
 
+#if 0 // XXX - dead code
 /*
  * Div - Computes the integer division of two numbers
  *
@@ -2079,6 +2143,7 @@ Div(BYTE * x, int lenx, BYTE * n, int lenn)
 		memcpy(x + lenx - lenq, quot, lenq);
 	}
 }
+#endif // XXX - dead code
 
 
 /*****************************************
@@ -2195,6 +2260,7 @@ add(BYTE * A, int LA, BYTE * B, int LB)
 }
 
 
+#if 0 // XXX - dead code
 static void
 prettyprintBstr(char *S, BYTE * A, int L)
 {
@@ -2246,8 +2312,10 @@ prettyprintBstr(char *S, BYTE * A, int L)
 	printf("\n\n");
 	fflush(stdout);
 }
+#endif // XXX - dead code
 
 
+#ifdef LITTLE_ENDIAN
 /**********************************************************************/
 /*
  * Performs byte reverse for PC based implementation (little endian)
@@ -2265,6 +2333,7 @@ byteReverse(ULONG * buffer, int byteCount)
 		buffer[count] = ((value & 0xFF00FF00L) >> 8) | ((value & 0x00FF00FFL) << 8);
 	}
 }
+#endif
 
 static void
 ahtopb(char *ascii_hex, BYTE * p_binary, int bin_len)
@@ -2451,6 +2520,7 @@ warn(char const *name, char const *fmt, ...)
 }
 
 
+#if 0 // XXX - dead code
 /*
  * warn - issue a warning message
  *
@@ -2507,6 +2577,7 @@ warnp(char const *name, char const *fmt, ...)
 	va_end(ap);
 	return;
 }
+#endif // XXX - dead code
 
 
 /*
@@ -2814,7 +2885,7 @@ usage_errp(int exitcode, char const *name, char const *fmt, ...)
 
 #endif				// DEBUG_LINT
 
-// XXX - write this code
+// XXX - finish writng this code main code
 
 int
 main(int argc, char *argv[])
@@ -2824,6 +2895,7 @@ main(int argc, char *argv[])
 	extern int optind;	// index to the next argv element to parse
 	extern int opterr;	// 0 ==> disable internal getopt() error messages
 	extern int optopt;	// last known option character returned by getopt
+	bool success;		// function success or failure
 	int i;
 
 	/*
@@ -2836,43 +2908,63 @@ main(int argc, char *argv[])
 		case 'v':	// -v debuglevel
 			debuglevel = str2longint(&success, optarg);
                         if (success == false) {
-                                usage_errp(usage, 1, __FUNCTION__, "error in parsing -v debuglevel: %s", optarg);
+                                usage_errp(1, __FUNCTION__, "error in parsing -v debuglevel: %s", optarg);
                         } else if (debuglevel < 0) {
-                                usage_err(usage, 1, __FUNCTION__, "error debuglevel: %lu must >= 0", debuglevel);
+                                usage_err(1, __FUNCTION__, "error debuglevel: %lu must >= 0", debuglevel);
                         }
 			break;
 
 		case 'g':       // -g generator
 			i = str2longint(&success, optarg);
 			if (success == false) {
-                               usage_errp(usage, 1, __FUNCTION__, "-g generator must be numeric: %s", optarg);
+                               usage_errp(1, __FUNCTION__, "-g generator must be numeric: %s", optarg);
                         }
                         if (i < 1 || i > NUMOFGENERATORS) {
-                                usage_err(usage, 1, __FUNCTION__, "-g generator: %ld must be [1-%d]", i, NUMOFGENERATORS);
+                                usage_err(1, __FUNCTION__, "-g generator: %ld must be [1-%d]", i, NUMOFGENERATORS);
                         }
                         generator = (enum gen) i;
                         break;
 
 		case 'h':	// -h (print out help)
-			usage_err(usage, 0, __FUNCTION__, "this arg ignored");
+			if (program == NULL) {
+				fprintf(stderr, "usage: sts %s", usage);
+			} else {
+				fprintf(stderr, "usage: %s %s", program, usage);
+			}
+			fprintf(stderr, "\nVersion: %s\n", version);
+			exit(0);
 			break;
 
 		case '?':
 		default:
 			if (option == '?') {
-                                usage_errp(usage, 1, __FUNCTION__, "getopt returned an error");
+                                usage_errp(1, __FUNCTION__, "getopt returned an error");
                         } else {
-                                usage_err(usage, 1, __FUNCTION__, "unknown option: -%c", (char) optopt);
+                                usage_err(1, __FUNCTION__, "unknown option: -%c", (char) optopt);
                         }
                         break;
                 }
 		if (optind >= argc) {
-			usage_err(usage, 1, __FUNCTION__, "missing required bitcount argumnt");
+			usage_err(1, __FUNCTION__, "missing required bitcount argumnt");
 		}
 		if (optind != argc - 1) {
-			usage_err(usage, 1, __FUNCTION__, "unexpected arguments");
+			usage_err(1, __FUNCTION__, "unexpected arguments");
 		}
 	}
+
+	/*
+	 * XXX - fake calling the generators so they look the they are in use
+	 * XXX - replace this code with code that selects a generator and calls it
+	 */
+	lcg();			// XXX - fake call - remove this line
+	quadRes1();		// XXX - fake call - remove this line
+	quadRes2();		// XXX - fake call - remove this line
+	cubicRes();		// XXX - fake call - remove this line
+	exclusiveOR();		// XXX - fake call - remove this line
+	modExp();		// XXX - fake call - remove this line
+	bbs();			// XXX - fake call - remove this line
+	micali_schnorr();	// XXX - fake call - remove this line
+	SHA1();			// XXX - fake call - remove this line
 
 	/*
 	 * All Done!!! -- Jessica Noll, Age 2

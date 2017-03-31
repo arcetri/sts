@@ -155,7 +155,7 @@ static void
 displayBits(FILE * fp, unsigned int *A, unsigned long long value, long int count, long int *nonPeriodic)
 {
 	unsigned long long displayMask;
-	int match;
+	int match = 0;
 	int c;
 	int i;
 
