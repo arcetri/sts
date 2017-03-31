@@ -38,6 +38,13 @@
 #define	MATRIX_FORWARD_ELIMINATION	0
 #define	MATRIX_BACKWARD_ELIMINATION	1
 
+// static declaratione
+static void perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** A);
+static int find_unit_element_and_swap(int flag, int i, int M, int Q, BitSequence ** A);
+static int swap_rows(int index_first_row, int index_second_row, int Q, BitSequence ** A);
+static int determine_rank(int m, int M, int Q, BitSequence ** A);
+
+
 int
 computeRank(int M, int Q, BitSequence **matrix)
 {
@@ -80,7 +87,7 @@ computeRank(int M, int Q, BitSequence **matrix)
 	return rank;
 }
 
-void
+static void
 perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** A)
 {
 	int j;
@@ -105,7 +112,7 @@ perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** 
 	}
 }
 
-int
+static int
 find_unit_element_and_swap(int flag, int i, int M, int Q, BitSequence ** A)
 {
 	int index;
@@ -132,7 +139,7 @@ find_unit_element_and_swap(int flag, int i, int M, int Q, BitSequence ** A)
 	return row_op;
 }
 
-int
+static int
 swap_rows(int index_first_row, int index_second_row, int Q, BitSequence ** A)
 {
 	int p;
@@ -147,7 +154,7 @@ swap_rows(int index_first_row, int index_second_row, int Q, BitSequence ** A)
 	return 1;
 }
 
-int
+static int
 determine_rank(int m, int M, int Q, BitSequence ** A)
 {
 	int i;
@@ -231,6 +238,7 @@ create_matrix(int M, int Q)
 	return matrix;
 }
 
+
 /*
  * def_matrix - fills the given matrix m with consecutive bits from the sequence.
  *              MUST be called after create_matrix function has allocated memory for m.
@@ -278,15 +286,4 @@ def_matrix(struct thread_state *thread_state, int M, int Q, BitSequence ** m, lo
 			m[i][j] = state->epsilon[thread_state->thread_id][k * (M * Q) + j + i * M];
 		}
 	}
-}
-
-void
-delete_matrix(int M, BitSequence ** matrix)
-{
-	int i;
-
-	for (i = 0; i < M; i++)
-		free(matrix[i]);
-
-	free(matrix);
 }

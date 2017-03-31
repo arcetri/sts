@@ -58,6 +58,9 @@
 /*
  * Forward static function declarations
  */
+static double getDouble(FILE * input, FILE * output);
+static char * getString(FILE * stream);
+static bool checkReadPermissions(char *path);
 static void handleFileBasedBitStreams(struct state *state);
 static void *testBits(void *thread_args);
 static void parseBitsASCIIInput(struct thread_state *thread_state);
@@ -146,7 +149,7 @@ getNumber(FILE * input, FILE * output)
  * This function does not return on read errors.  Entering a non-numeric line
  * results an error message on output and another read from input.
  */
-double
+static double
 getDouble(FILE * input, FILE * output)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
@@ -203,64 +206,6 @@ getDouble(FILE * input, FILE * output)
 	return number;
 }
 
-
-/*
- * getNumberOrDie - get a number from a stream or die
- *
- * given:
- *      stream          FILE stream to read
- *
- * returns:
- *      Parsed long int form a line read from the stream.
- *
- * This function does not return on error.
- */
-long int
-getNumberOrDie(FILE * stream)
-{
-	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
-	size_t buflen = 0;	// Ignored when line == NULL
-	ssize_t linelen;	// Length of line read from stream
-	long int number;	// value to return
-
-	/*
-	 * Check preconditions (firewall)
-	 */
-	if (stream == NULL) {
-		err(212, __func__, "stream arg is NULL");
-	}
-
-	/*
-	 * read the line
-	 */
-	linelen = getline(&line, &buflen, stream);
-	if (line == NULL) {
-		errp(212, __func__, "line is still NULL after getline call");
-	}
-	if (linelen <= 0) {
-		errp(212, __func__, "getline returned: %ld", linelen);
-	}
-	if (line[linelen] != '\0') {
-		err(212, __func__, "getline did not return a NUL terminated string");
-	}
-
-	/*
-	 * attempt to convert to a number
-	 */
-	errno = 0;
-	number = strtol(line, NULL, 0);
-	if (errno != 0) {
-		errp(212, __func__, "error in parsing string to integer: '%s'", line);
-	}
-
-	/*
-	 * cleanup and report success
-	 */
-	free(line);
-	return number;
-}
-
-
 /*
  * getString - get a line from a stream
  *
@@ -272,7 +217,7 @@ getNumberOrDie(FILE * stream)
  *
  * This function does not return on error.
  */
-char *
+static char *
 getString(FILE * stream)
 {
 	char *line = NULL;	// != NULL --> malloced / realloced stream buffer
@@ -387,7 +332,7 @@ checkWritePermissions(char *path)
  * Check the write permissions of a path for the current user group and return
  * whether the path readable or not.
  */
-bool
+static bool
 checkReadPermissions(char *path)
 {
 	bool permissions = false;
@@ -892,45 +837,6 @@ str2longint(bool * success_p, char *string)
 	 * Cleanup and report success
 	 */
 	*success_p = true;
-	return number;
-}
-
-/*
- * str2longint_or_die - get a number from a string or die
- *
- * given:
- *      string          string to parse
- *
- * returns:
- *      Parsed long int form a line read from the string.
- *
- * This function does not return on error.
- */
-
-long int
-str2longint_or_die(char *string)
-{
-	long int number;	// value to return
-
-	/*
-	 * Check preconditions (firewall)
-	 */
-	if (string == NULL) {
-		err(220, __func__, "string arg is NULL");
-	}
-
-	/*
-	 * Attempt to convert to a number
-	 */
-	errno = 0;
-	number = strtol(string, NULL, 0);
-	if (errno != 0) {
-		errp(220, __func__, "error in parsing string to integer: '%s'", string);
-	}
-
-	/*
-	 * Cleanup and report success
-	 */
 	return number;
 }
 

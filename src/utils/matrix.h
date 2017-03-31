@@ -31,12 +31,7 @@
 #include "../utils/defs.h"
 
 extern int computeRank(int M, int Q, BitSequence ** matrix);
-extern void perform_elementary_row_operations(int flag, int i, int M, int Q, BitSequence ** A);
-extern int find_unit_element_and_swap(int flag, int i, int M, int Q, BitSequence ** A);
-extern int swap_rows(int index_first_row, int index_second_row, int Q, BitSequence ** A);
-extern int determine_rank(int m, int M, int Q, BitSequence ** A);
 extern BitSequence **create_matrix(int M, int Q);
 extern void def_matrix(struct thread_state *thread_state, int M, int Q, BitSequence ** m, long int k);
-extern void delete_matrix(int M, BitSequence ** matrix);
 
 #endif				/* MATRIX_H */

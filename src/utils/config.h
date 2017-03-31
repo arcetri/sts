@@ -21,10 +21,6 @@
  * Share and enjoy! :-)
  */
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifndef _CONFIG_H_
 #   define	_CONFIG_H_
 
@@ -113,7 +109,3 @@ typedef uint64_t WORD64;	// 64 bit unsigned value
 #   endif
 
 #endif				/* _CONFIG_H_ */
-
-#if defined(__cplusplus)
-}
-#endif

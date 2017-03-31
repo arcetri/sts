@@ -94,7 +94,6 @@ static long int debuglevel = 0;			// -v lvl: defines the level of verbosity for 
 #if 0
 extern long int getNumber(FILE * input, FILE * output);
 extern double getDouble(FILE * input, FILE * output);
-extern long int getNumberOrDie(FILE * stream);
 extern char *getString(FILE * stream);
 extern void makePath(char *dir);
 extern bool checkWritePermissions(char *dir);
@@ -105,7 +104,6 @@ extern char *data_filename_format(int partitionCount);
 extern void precheckPath(struct state *state, char *dir);
 extern char *precheckSubdir(struct state *state, char *subdir);
 extern long int str2longint(bool * success_p, char *string);
-extern long int str2longint_or_die(char *string);
 extern void generatorOptions(struct state *state);
 extern void chooseTests(struct state *state);
 extern void fixParameters(struct state *state);
