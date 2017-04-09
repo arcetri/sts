@@ -1,28 +1,73 @@
 /*
- * This code has been heavily modified by the following people:
+ * generators - generate data from the 9 sts v2.1.2 generators
  *
- *      Landon Curt Noll
- *      Tom Gilgan
- *      Riccardo Paccagnella
+ * This code was originally found in the NIST Statistical Test (sts) v2.1.2.
  *
- * See the README.md and the initial comment in sts.c for more information.
+ *	(See comment below for the copyright of that code)
+ *	(See usage below for how to use this code or run with -h)
  *
- * WE (THOSE LISTED ABOVE WHO HEAVILY MODIFIED THIS CODE) DISCLAIM ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL WE (THOSE LISTED ABOVE
- * WHO HEAVILY MODIFIED THIS CODE) BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
- * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This code was used by 9 internally supported generators that sts could use
+ * as "reference sources".
  *
- * chongo (Landon Curt Noll, http://www.isthe.com/chongo/index.html) /\oo/\
+ * The quality of code used in the 9 generators, in some cases, has deemed
+ * too poor be left as is in the sts code.  Moreover the utility of this code
+ * was too limited to justfiy a rewrite.  So the generator code was removed from
+ * sts and jammed into this "standalone" source file.
  *
- * Share and enjoy! :-)
+ * Landon Curt Noll did the "jam into one file", fixed a few obvious bugs, and
+ * built a minimal driver for this code.  Landon does NOT maintain this code.
+ *
+ * The generator algorithms should be considered "as is".  Their value is that
+ * they output servers as test data, even when that test data is not very
+ * random or even when the generator output conflicts with a well known algorithm
+ * for which a generator is named.  Any algorthm bugs are "features". :-)
+ *
+ * See Appendix D of the ../docs/SP800-22rev1a-improved.pdf file for additional info.
  */
+/* --------------------------------------------------------------------------
+   Title       :  The NIST Statistical Test Suite
 
+   Date        :  December 1999
 
-// Exit codes: 80 thru 89
+   Programmer  :  Juan Soto
+
+   Summary     :  For use in the evaluation of the randomness of bitstreams
+                  produced by cryptographic random number generators.
+
+   Package     :  Version 1.0
+
+   Copyright   :  (c) 1999 by the National Institute Of Standards & Technology
+
+   History     :  Version 1.0 by J. Soto, October 1999
+                  Revised by J. Soto, November 1999
+                  Revised by Larry Bassham, March 2008
+
+   Keywords    :  Pseudorandom Number Generator (PRNG), Randomness, Statistical
+                  Tests, Complementary Error functions, Incomplete Gamma
+                  Function, Random Walks, Rank, Fast Fourier Transform,
+                  Template, Cryptographically Secure PRNG (CSPRNG),
+                  Approximate Entropy (ApEn), Secure Hash Algorithm (SHA-1),
+                  Blum-Blum-Shub (BBS) CSPRNG, Micali-Schnorr (MS) CSPRNG,
+
+   Source      :  David Banks, Elaine Barker, James Dray, Allen Heckert,
+                  Stefan Leigh, Mark Levenson, James Nechvatal, Andrew Rukhin,
+                  Miles Smid, Juan Soto, Mark Vangel, and San Vo.
+
+   Technical
+   Assistance  :  Larry Bassham, Ron Boisvert, James Filliben, Daniel Lozier,
+                  and Bert Rust.
+
+   Warning     :  Portability Issues.
+
+   Limitation  :  Amount of memory allocated for workspace.
+
+   Restrictions:  Permission to use, copy, and modify this software without
+                  fee is hereby granted, provided that this entire notice is
+                  included in all copies of any software which is or includes
+                  a copy or modification of this software and in all copies
+                  of the supporting documentation for such software.
+   -------------------------------------------------------------------------- */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +77,41 @@
 #include <stdarg.h>
 #include <time.h>
 #include <getopt.h>
+#include <unistd.h>
+
+// externs.h
+
+/*****************************************************************************
+		   G L O B A L  D A T A  S T R U C T U R E S
+ *****************************************************************************/
+
+static const char * const usage =
+	"[-v level] [-i rept] [-o] [-a] [-h] generator count > random_output 2> debug_and_errors\n"
+	"\n"
+	"\t-v level	set debug to stderr level (def: 0 ==> no debug to stderr)\n"
+	"\t-i rept	report to stderr after every rept interations (def: no reports)\n"
+	"\t-o		legacy output to stderr (def: don't)\n"
+	"\t-a		output in ASCII 1 and 0 characters (def: output in raw binary)\n"
+	"\n"
+	"\t-h		print this message to stderr and exit\n"
+	"\n"
+	"\tgenerator	generator number (must be a number 1 thru 9 inclusive)\n"
+	    "\t\t1   Linear Congruential\n"
+	    "\t\t2   Quadratic Congruential I\n"
+	    "\t\t3   Quadratic Congruential II\n"
+	    "\t\t4   Cubic Congruential\n"
+	    "\t\t5   XOR based generator\n"
+	    "\t\t6   Modular Exponentiation\n"
+	    "\t\t7   Blum-Blum-Shub\n"
+	    "\t\t8   Micali-Schnorr\n"
+	    "\t\t9   SHA-1 based generator\n"
+	"\tcount		number of 1 megabit (1048576) to write to stdout\n"
+	"\n"
+	"\tSee Appendix D of SP800-22rev1a-improved.pdf for descriptions of the generators.\n";
+
+static const char *const version = "3.2.0";	// our version
+static char *program = NULL;			// Program name (argv[0])
+static long int debuglevel = 0;			// -v lvl: defines the level of verbosity for debugging
 
 // forward declarations
 
@@ -42,6 +122,8 @@ extern struct tm *localtime_r(const time_t *timep, struct tm *result);
 
 #   define NUMOFGENERATORS		(10)		// MAX PRNGs
 #   define BITS_N_BYTE			(8)					// Number of bits in a byte
+
+# define ITERATION_SIZE (1024*1024)	// value of n
 
 /*
  * Compiler independent Bool definitions
@@ -80,16 +162,86 @@ enum gen {
 	GENERATOR_SHA1 = 9,             // -g 9, G Using SHA-1
 };
 
-// externs.h
+// config.h
 
-/*****************************************************************************
-		   G L O B A L  D A T A  S T R U C T U R E S
- *****************************************************************************/
+/*
+ * AUTO DEFINES (DON'T TOUCH!)
+ */
 
-static const char *const version = "3.2.0";	// our version
-static char *program = NULL;			// Program name (argv[0])
-static long int debuglevel = 0;			// -v lvl: defines the level of verbosity for debugging
-static const char * const usage = "XXX - TBD usage\n";
+#   if __STDC_VERSION__ >= 199901L
+
+#      include <stdint.h>
+
+typedef uint8_t *CSTRTD;	// C strings are usually unsigned bytes
+typedef uint8_t *BSTRTD;	// so called sts bit strings are 1 bit per octet
+typedef uint8_t BYTE;		// byte as in unsigned 8 bit (octet)
+typedef uint32_t UINT;		// force int to be 32 bit unsigned values
+typedef uint16_t USHORT;	// force shorts to be 16 bit unsigned values
+typedef uint32_t ULONG;		// sts assumes long is a 32 bit unsigned value
+typedef uint16_t DIGIT;		// sts prefers to store digits in 16 bit unsigned values
+typedef uint32_t DBLWORD;	// sts assumes this is a 32 bit unsigned value
+typedef uint64_t WORD64;	// 64 bit unsigned value
+
+#   else			// old compiler
+
+#      ifndef	CSTRTD
+	typedef char *CSTRTD;
+#      endif
+#      ifndef	BSTRTD
+	typedef unsigned char *BSTRTD;
+#      endif
+
+#      ifndef	BYTE
+	typedef unsigned char BYTE;
+#      endif
+#      ifndef	UINT
+	typedef unsigned int UINT;
+#      endif
+#      ifndef	USHORT
+	typedef unsigned short USHORT;
+#      endif
+#      ifndef	ULONG
+	typedef unsigned long ULONG;
+#      endif
+#      ifndef	DIGIT
+	typedef USHORT DIGIT;	/* 16-bit word */
+#      endif
+#      ifndef	DBLWORD
+	typedef ULONG DBLWORD;	/* 32-bit word */
+#      endif
+
+#      ifndef	WORD64
+	typedef unsigned long long WORD64;	/* 64-bit unsigned word */
+#      endif
+
+#      ifndef int64_t
+	typedef long long int64_t;	/* 64-bit signed word */
+#      endif
+
+#   endif			// __STDC_VERSION__ >= 199901L
+
+/*
+ * Compiler independent Bool definitions
+ */
+#   if !defined(__bool_true_false_are_defined) || __bool_true_false_are_defined==0
+#      undef bool
+#      undef true
+#      undef false
+#      if defined(__cplusplus)
+#         define bool bool
+#         define true true
+#         define false false
+#      else
+#         if __STDC_VERSION__ >= 199901L
+#            define bool _Bool
+#         else
+#            define bool unsigned char
+#         endif
+#         define true 1
+#         define false 0
+#      endif
+#      define __bool_true_false_are_defined 1
+#   endif
 
 // utilities.h
 
@@ -108,8 +260,6 @@ extern char *precheckSubdir(struct state *state, char *subdir);
 extern void generatorOptions(struct state *state);
 extern void chooseTests(struct state *state);
 extern void fixParameters(struct state *state);
-extern bool copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBitLength, long int *num_0s,
-			      long int *num_1s, long int *bitsRead);
 extern void invokeTestSuite(struct state *state);
 extern void read_from_p_val_file(struct state *state);
 extern void write_p_val_to_file(struct state *state);
@@ -119,6 +269,7 @@ extern int sum_will_overflow_long(long int si_a, long int si_b);
 extern int multiplication_will_overflow_long(long int si_a, long int si_b);
 extern void append_string_to_linked_list(struct Node **head, char* string);
 #endif
+static bool copyBitsToEpsilon(BYTE *x, long int xBitLength, long int *num_0s, long int *num_1s);
 static void getTimestamp(char *buf, size_t len);
 static long int str2longint(bool * success_p, char *string);
 
@@ -211,87 +362,6 @@ static void SHA1(void);
 	 B = A; \
 	 A = temp; \
 	 }
-
-// config.h
-
-/*
- * AUTO DEFINES (DON'T TOUCH!)
- */
-
-#   if __STDC_VERSION__ >= 199901L
-
-#      include <stdint.h>
-
-typedef uint8_t *CSTRTD;	// C strings are usually unsigned bytes
-typedef uint8_t *BSTRTD;	// so called sts bit strings are 1 bit per octet
-typedef uint8_t BYTE;		// byte as in unsigned 8 bit (octet)
-typedef uint32_t UINT;		// force int to be 32 bit unsigned values
-typedef uint16_t USHORT;	// force shorts to be 16 bit unsigned values
-typedef uint32_t ULONG;		// sts assumes long is a 32 bit unsigned value
-typedef uint16_t DIGIT;		// sts prefers to store digits in 16 bit unsigned values
-typedef uint32_t DBLWORD;	// sts assumes this is a 32 bit unsigned value
-typedef uint64_t WORD64;	// 64 bit unsigned value
-
-#   else			// old compiler
-
-#      ifndef	CSTRTD
-	typedef char *CSTRTD;
-#      endif
-#      ifndef	BSTRTD
-	typedef unsigned char *BSTRTD;
-#      endif
-
-#      ifndef	BYTE
-	typedef unsigned char BYTE;
-#      endif
-#      ifndef	UINT
-	typedef unsigned int UINT;
-#      endif
-#      ifndef	USHORT
-	typedef unsigned short USHORT;
-#      endif
-#      ifndef	ULONG
-	typedef unsigned long ULONG;
-#      endif
-#      ifndef	DIGIT
-	typedef USHORT DIGIT;	/* 16-bit word */
-#      endif
-#      ifndef	DBLWORD
-	typedef ULONG DBLWORD;	/* 32-bit word */
-#      endif
-
-#      ifndef	WORD64
-	typedef unsigned long long WORD64;	/* 64-bit unsigned word */
-#      endif
-
-#      ifndef int64_t
-	typedef long long int64_t;	/* 64-bit signed word */
-#      endif
-
-#   endif			// __STDC_VERSION__ >= 199901L
-
-/*
- * Compiler independent Bool definitions
- */
-#   if !defined(__bool_true_false_are_defined) || __bool_true_false_are_defined==0
-#      undef bool
-#      undef true
-#      undef false
-#      if defined(__cplusplus)
-#         define bool bool
-#         define true true
-#         define false false
-#      else
-#         if __STDC_VERSION__ >= 199901L
-#            define bool _Bool
-#         else
-#            define bool unsigned char
-#         endif
-#         define true 1
-#         define false 0
-#      endif
-#      define __bool_true_false_are_defined 1
-#   endif
 
 // genutils.h
 
@@ -479,16 +549,16 @@ static void usage_errp(int exitcode, char const *name, char const *fmt, ...);
 
 // Generator names (or -g 0: AlgorithmTesting == read from file)
 char *generatorDir[NUMOFGENERATORS + 1] = {
-	 "AlgorithmTesting",		// -g 0, Read from file -- XXX invalid?
-	 "LCG",				// -g 1, Linear Congruential
-	 "QCG1",			// -g 2, Quadratic Congruential I
-	 "QCG2",			// -g 3, Quadratic Congruential II
-	 "CCG",				// -g 4, Cubic Congruential
-	 "XOR",				// -g 5, XOR
-	 "MODEXP",			// -g 6, Modular Exponentiation
-	 "BBS",				// -g 7, Blum-Blum-Shub
-	 "MS",				// -g 8, Micali-Schnorr
-	 "G-SHA1",			// -g 9, G Using SHA-1
+	 "__UNUSED__",			// 0, Read from file (not used)
+	 "LCG",				// 1, Linear Congruential
+	 "QCG1",			// 2, Quadratic Congruential I
+	 "QCG2",			// 3, Quadratic Congruential II
+	 "CCG",				// 4, Cubic Congruential
+	 "XOR",				// 5, XOR
+	 "MODEXP",			// 6, Modular Exponentiation
+	 "BBS",				// 7, Blum-Blum-Shub
+	 "MS",				// 8, Micali-Schnorr
+	 "G-SHA1",			// 9, G Using SHA-1
 };
 
 
@@ -504,24 +574,37 @@ enum format {
 /*
  * globals - see also extern.h
  */
-long int n;			// Length of a single bit stream
-enum gen generator;		// generator to use
+static long int const n = ITERATION_SIZE;	// Length of a single bit stream
+static enum gen generator;			// generator to use
 
 
 /*
  * static variables
  */
-static BitSequence *epsilon = NULL;		// Bit stream
+static BitSequence epsilon[ITERATION_SIZE+1];	// Bit stream + fence post
 static bool legacy_output = false;		// true ==> try to mimic output format of legacy code
+# if 0	// write legacy frequency data to stderr
 static char *freqFilePath = NULL;		// true if non-NULL, path of freq.txt
 static FILE *freqFile = NULL;			// true if non-NULL, open stream for freq.txt
-static FILE *streamFile = NULL;			// true if non-NULL, open stream for randomDataPath
-static BitSequence *tmpepsilon = NULL;		// Buffer to write to file in dataFormat
+#else
+#define freqFilePath "stderr"			// we write legacy frequency data to stderr
+#define freqFile stderr				// we write legacy frequency data to stderr
+#endif
+#if 0	// we write random data to stdout
+static FILE *streamFile = NULL;			// true if non-NULL, open stream for stdout
+#else
+#define streamFile stdout			// we write random data to stdout
+#endif
+static BitSequence tmpepsilon[ITERATION_SIZE+1];	// Buffer to write to file in dataFormat + fence post
 static enum format dataFormat = FORMAT_RAW_BINARY;	// -F format: 'r': raw binary, 'a': ASCII '0'/'1' chars
 static long int numOfBitStreams = 0;		// -P 7=iterations (-i iterations)
-static long int iterationsMissing = 0;		// Number of iterations that need to be completed
 static long int reportCycle = 0;		// -I reportCycle: Report after completion of reportCycle iterations
+static long int iteration = 0;			// current iteration number
+#if 0	// we write random data to stdout
 static char *randomDataPath = NULL;		// randdata: path to a random data file, NULL (no file)
+#else
+#define randomDataPath "stdout"			// we write random data to stdout
+#endif
 static long int bitsRead = 0;			// bits read so far
 
 
@@ -631,22 +714,14 @@ static void
 generator_report_iteration(void)
 {
 	char buf[BUFSIZ + 1];	// time string buffer
-	long int iteration_being_done;
 
 	/*
 	 * Count the iteration and report process if requested
 	 */
-	iteration_being_done = numOfBitStreams - iterationsMissing;
-
-	if (reportCycle > 0 && (((iteration_being_done % reportCycle) == 0) ||
-				       (iteration_being_done == numOfBitStreams))) {
+	if (reportCycle > 0 && ((iteration % reportCycle) == 0)) {
 		getTimestamp(buf, BUFSIZ);
-		msg("Completed iteration %ld of %ld at %s", iteration_being_done,
+		msg("Completed iteration %ld of %ld at %s", iteration,
 		    numOfBitStreams, buf);
-	}
-
-	if (iteration_being_done == numOfBitStreams) {
-		dbg(DBG_LOW, "End of iterate phase\n");
 	}
 }
 
@@ -680,9 +755,11 @@ copyBitsToEpsilon(BYTE *x, long int xBitLength, long int *num_0s, long int *num_
 	/*
 	 * Check preconditions (firewall)
 	 */
+#if 0	// now a static fixed array
 	if (epsilon == NULL) {
 		err(227, __func__, "epsilon is NULL");
 	}
+#endif
 
 	bitsNeeded = n;
 
@@ -774,9 +851,12 @@ lcg(void)
 	/*
 	 * Check preconditions (firewall)
 	 */
+#if 0	// now a static fixed array
 	if (epsilon == NULL) {
 		err(80, __func__, "epsilon is NULL");
 	}
+#endif
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -785,6 +865,7 @@ lcg(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	SEED = 23482349.0;
 	DUNIF = calloc((size_t) n, sizeof(double));
@@ -838,13 +919,14 @@ quadRes1(void)
 	long int num_0s;
 	long int num_1s;
 	bool done;		// true ==> enoungh data has been converted
-	BYTE p[64];		// XXX - array size uses magic number
-	BYTE g[64];		// XXX - array size uses magic number
-	BYTE x[128];		// XXX - array size uses magic number
+	BYTE p[64];		// Warning: array size uses magic number
+	BYTE g[64];		// Warning: array size uses magic number
+	BYTE x[128];		// Warning: array size uses magic number
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -853,6 +935,7 @@ quadRes1(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb
 	    ("987b6a6bf2c56a97291c445409920032499f9ee7ad128301b5d0254aa1a9633f"
@@ -895,12 +978,12 @@ static void
 quadRes2(void)
 {
 	int io_ret;		// I/O return status
-	BYTE g[64];		// XXX - array size uses magic number
-	BYTE x[129];		// XXX - array size uses magic number
-	BYTE t1[65];		// XXX - array size uses magic number
-	BYTE One[1];		// XXX - array size uses magic number
+	BYTE g[64];		// Warning: array size uses magic number
+	BYTE x[129];		// Warning: array size uses magic number
+	BYTE t1[65];		// Warning: array size uses magic number
+	BYTE One[1];		// Warning: array size uses magic number
 	BYTE Two;
-	BYTE Three[1];		// XXX - array size uses magic number
+	BYTE Three[1];		// Warning: array size uses magic number
 	bool done;		// true ==> enoungh data has been converted
 	long int k;
 	long int num_0s;
@@ -909,6 +992,7 @@ quadRes2(void)
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -917,6 +1001,7 @@ quadRes2(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	One[0] = 0x01;
 	Two = 0x02;
@@ -964,9 +1049,9 @@ static void
 cubicRes(void)
 {
 	int io_ret;		// I/O return status
-	BYTE g[64];		// XXX - array size uses magic number
-	BYTE tmp[128];		// XXX - array size uses magic number
-	BYTE x[192];		// XXX - array size uses magic number
+	BYTE g[64];		// Warning: array size uses magic number
+	BYTE tmp[128];		// Warning: array size uses magic number
+	BYTE x[192];		// Warning: array size uses magic number
 	bool done;		// true ==> enoungh data has been converted
 	long int k;
 	long int num_0s;
@@ -975,6 +1060,7 @@ cubicRes(void)
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -983,6 +1069,7 @@ cubicRes(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb
 	    ("7844506a9456c564b8b8538e0cc15aff46c95e69600f084f0657c2401b3c2447"
@@ -1027,14 +1114,17 @@ exclusiveOR(void)
 	long int i;
 	long int num_0s;
 	long int num_1s;
-	BYTE bit_sequence[127];	// XXX - array size uses magic number
+	BYTE bit_sequence[127];	// Warning: array size uses magic number
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+#if 0	// now a static fixed array
 	if (epsilon == NULL) {
 		err(80, __func__, "epsilon is NULL");
 	}
+#endif
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -1043,6 +1133,7 @@ exclusiveOR(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	memcpy(bit_sequence,
 	       "0001011011011001000101111001001010011011101101000100000010101111"
@@ -1105,14 +1196,15 @@ modExp(void)
 	long int num_0s;
 	long int num_1s;
 	bool done;		// true ==> enoungh data has been converted
-	BYTE p[64];		// XXX - array size uses magic number
-	BYTE g[64];		// XXX - array size uses magic number
-	BYTE x[192];		// XXX - array size uses magic number
-	BYTE y[20];		// XXX - array size uses magic number
+	BYTE p[64];		// Warning: array size uses magic number
+	BYTE g[64];		// Warning: array size uses magic number
+	BYTE x[192];		// Warning: array size uses magic number
+	BYTE y[20];		// Warning: array size uses magic number
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -1121,6 +1213,7 @@ modExp(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb("7AB36982CE1ADF832019CDFEB2393CABDF0214EC", y, 20);
 	ahtopb
@@ -1165,20 +1258,23 @@ bbs(void)
 	int io_ret;		// I/O return status
 	long int i;
 	long int v;
-	BYTE p[64];		// XXX - array size uses magic number
-	BYTE q[64];		// XXX - array size uses magic number
-	BYTE n_128[128];		// XXX - array size uses magic number
-	BYTE s[64];		// XXX - array size uses magic number
-	BYTE x[256];		// XXX - array size uses magic number
+	BYTE p[64];		// Warning: array size uses magic number
+	BYTE q[64];		// Warning: array size uses magic number
+	BYTE n_128[128];		// Warning: array size uses magic number
+	BYTE s[64];		// Warning: array size uses magic number
+	BYTE x[256];		// Warning: array size uses magic number
 	long int num_0s;
 	long int num_1s;
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+#if 0	// now a static fixed array
 	if (epsilon == NULL) {
 		err(80, __func__, "epsilon is NULL");
 	}
+#endif
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -1187,6 +1283,7 @@ bbs(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb
 	    ("E65097BAEC92E70478CAF4ED0ED94E1C94B154466BFB9EC9BE37B2B0FF8526C2"
@@ -1255,17 +1352,18 @@ micali_schnorr(void)
 	long int num_0s;
 	long int num_1s;
 	bool done;		// true ==> enoungh data has been converted
-	BYTE p[64];		// XXX - array size uses magic number
-	BYTE q[64];		// XXX - array size uses magic number
-	BYTE n_128[128];		// XXX - array size uses magic number
-	BYTE e[1];		// XXX - array size uses magic number
-	BYTE X[128];		// XXX - array size uses magic number
-	BYTE Y[384];		// XXX - array size uses magic number
-	BYTE Tail[105];		// XXX - array size uses magic number
+	BYTE p[64];		// Warning: array size uses magic number
+	BYTE q[64];		// Warning: array size uses magic number
+	BYTE n_128[128];		// Warning: array size uses magic number
+	BYTE e[1];		// Warning: array size uses magic number
+	BYTE X[128];		// Warning: array size uses magic number
+	BYTE Y[384];		// Warning: array size uses magic number
+	BYTE Tail[105];		// Warning: array size uses magic number
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -1274,6 +1372,7 @@ micali_schnorr(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb
 	    ("E65097BAEC92E70478CAF4ED0ED94E1C94B154466BFB9EC9BE37B2B0FF8526C2"
@@ -1335,20 +1434,21 @@ SHA1(void)
 	ULONG D;
 	ULONG E;
 	ULONG temp;
-	ULONG Wbuff[16];	// XXX - array size uses magic number
-	BYTE Xkey[20];		// XXX - array size uses magic number
-	BYTE G[20];		// XXX - array size uses magic number
-	BYTE M[64];		// XXX - array size uses magic number
+	ULONG Wbuff[16];	// Warning: array size uses magic number
+	BYTE Xkey[20];		// Warning: array size uses magic number
+	BYTE G[20];		// Warning: array size uses magic number
+	BYTE M[64];		// Warning: array size uses magic number
 	BYTE One[1] = { 0x01 };
 	long int i;
 	long int num_0s;
 	long int num_1s;
 	bool done;		// true ==> enough data has been converted
-	ULONG tx[5] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };	// XXX - array size uses magic number
+	ULONG tx[5] = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };	// Warning: array size uses magic number
 
 	/*
 	 * Check preconditions (firewall)
 	 */
+# if 0	// write legacy frequency data to stderr
 	if (legacy_output) {
 		if (freqFilePath == NULL) {
 			err(80, __func__, "freqFilePath is NULL");
@@ -1357,6 +1457,7 @@ SHA1(void)
 			err(80, __func__, "freqFile is NULL");
 		}
 	}
+#endif
 
 	ahtopb("ec822a619d6ed5d9492218a7a4c5b15d57c61601", Xkey, 20);
 	// ahtopb("E65097BAEC92E70478CAF4ED0ED94E1C94B15446", Xkey, 20);
@@ -1505,7 +1606,7 @@ SHA1(void)
 
 
 /*
- * write_sequence - write the epsilon stream to a randomDataPath
+ * write_sequence - write the epsilon stream to a randomDataPath (now just to stdout)
  */
 static void
 write_sequence(void)
@@ -1518,15 +1619,19 @@ write_sequence(void)
 	/*
 	 * Check preconditions (firewall)
 	 */
+#if 0	// now a static fixed array
 	if (tmpepsilon == NULL) {
 		err(231, __func__, "tmpepsilon is NULL");
 	}
+#endif
+#if 0	// we write random data to stdout
 	if (streamFile == NULL) {
 		err(231, __func__, "streamFile is NULL");
 	}
 	if (randomDataPath == NULL) {
 		err(231, __func__, "randomDataPath is NULL");
 	}
+#endif
 
 	/*
 	 * Write contents of epsilon
@@ -1609,6 +1714,9 @@ write_sequence(void)
 		err(231, __func__, "Invalid format");
 		break;
 	}
+
+	// count this iteration
+	++iteration;
 
 	return;
 }
@@ -2902,7 +3010,7 @@ main(int argc, char *argv[])
 	 * parse args
 	 */
         program = argv[0];
-	while ((option = getopt(argc, argv, "vg:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:i:oah")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -2914,16 +3022,22 @@ main(int argc, char *argv[])
                         }
 			break;
 
-		case 'g':       // -g generator
-			i = str2longint(&success, optarg);
-			if (success == false) {
-                               usage_errp(1, __FUNCTION__, "-g generator must be numeric: %s", optarg);
+		case 'i':	// -i rept
+			reportCycle = str2longint(&success, optarg);
+                        if (success == false) {
+                                usage_errp(1, __FUNCTION__, "error in parsing -i rept: %s", optarg);
+                        } else if (reportCycle < 0) {
+                                usage_err(1, __FUNCTION__, "error report coint: %lu must >= 0", reportCycle);
                         }
-                        if (i < 1 || i > NUMOFGENERATORS) {
-                                usage_err(1, __FUNCTION__, "-g generator: %ld must be [1-%d]", i, NUMOFGENERATORS);
-                        }
-                        generator = (enum gen) i;
-                        break;
+			break;
+
+		case 'o':	// -o	(legacy output to stderr)
+			legacy_output = true;
+			break;
+
+		case 'a':	// -a	(output in ASCII)
+			dataFormat = FORMAT_ASCII_01;
+			break;
 
 		case 'h':	// -h (print out help)
 			if (program == NULL) {
@@ -2944,27 +3058,71 @@ main(int argc, char *argv[])
                         }
                         break;
                 }
-		if (optind >= argc) {
-			usage_err(1, __FUNCTION__, "missing required bitcount argumnt");
-		}
-		if (optind != argc - 1) {
-			usage_err(1, __FUNCTION__, "unexpected arguments");
-		}
 	}
 
+	// verify we have the correct number of arguments
+	if (optind > argc - 2) {
+		usage_err(1, __FUNCTION__, "missing required bitcount argumnt");
+	}
+	if (optind < argc - 2) {
+		usage_err(1, __FUNCTION__, "unexpected arguments");
+	}
+
+	// parse generator argument
+	i = str2longint(&success, argv[optind]);
+	if (success == false) {
+	       usage_errp(1, __FUNCTION__, "generator must be numeric: %s", argv[optind]);
+	}
+	if (i < 1 || i > NUMOFGENERATORS) {
+		usage_err(1, __FUNCTION__, "generator: %ld must be [1-%d]", i, NUMOFGENERATORS);
+	}
+	generator = (enum gen) i;
+
+	// parse iteration count
+	i = str2longint(&success, argv[optind+1]);
+	if (success == false) {
+	       usage_errp(1, __FUNCTION__, "iteration count must be numeric: %s", argv[optind+1]);
+	}
+	if (i < 1) {
+		usage_err(1, __FUNCTION__, "iteration count: %ld must > 0", i);
+	}
+	numOfBitStreams = i;
+
 	/*
-	 * XXX - fake calling the generators so they look the they are in use
-	 * XXX - replace this code with code that selects a generator and calls it
+	 * call the generator
 	 */
-	lcg();			// XXX - fake call - remove this line
-	quadRes1();		// XXX - fake call - remove this line
-	quadRes2();		// XXX - fake call - remove this line
-	cubicRes();		// XXX - fake call - remove this line
-	exclusiveOR();		// XXX - fake call - remove this line
-	modExp();		// XXX - fake call - remove this line
-	bbs();			// XXX - fake call - remove this line
-	micali_schnorr();	// XXX - fake call - remove this line
-	SHA1();			// XXX - fake call - remove this line
+	switch (generator) {
+	case GENERATOR_LCG:	// 1, Linear Congruential
+	    lcg();
+	    break;
+	case GENERATOR_QCG1:	// 2, Quadratic Congruential I
+	    quadRes1();
+	    break;
+	case GENERATOR_QCG2:	// 3, Quadratic Congruential II
+	    quadRes2();
+	    break;
+	case GENERATOR_CCG:	// 4, Cubic Congruential
+	    cubicRes();
+	    break;
+	case GENERATOR_XOR:	// 5, XOR
+	    exclusiveOR();
+	    break;
+	case GENERATOR_MODEXP:	// 6, Modular Exponentiation
+	    modExp();
+	    break;
+	case GENERATOR_BBS:	// 7, Blum-Blum-Shub
+	    bbs();
+	    break;
+	case GENERATOR_MS:	// 8, Micali-Schnorr
+	    micali_schnorr();
+	    break;
+	case GENERATOR_SHA1:	// 9, G Using SHA-1
+	    SHA1();
+	    break;
+	default:
+	    err(227, __FUNCTION__, "unknown generator: %ld", generator);
+	    break;
+	}
 
 	/*
 	 * All Done!!! -- Jessica Noll, Age 2

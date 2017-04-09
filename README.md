@@ -103,7 +103,7 @@ The STS version 3 comes with three folders:
 
 - *src*: contains the source code of the suite
 - *docs*: contains the papers explaining the underlying mathematical theory of the suite
-- *tools*: contains some tools we used during the improvement of the suite
+- *tools*: contains some tools we used during the improvement of the suite and the legacy generators' code
 
 ## Improvements
 
@@ -138,10 +138,56 @@ Our major improvement starts from source code of the [original source code of ve
 - Fixed the warnings reported by compilers and lint
 - Fixed memory leaks
 
-## Coming soon
+## Features to add in the future
 
 - Graphical visualization of the final p-values in a gnu-plot
 - New (non-approximate) entropy test
+
+## Legacy generators usage
+
+In the original NIST code up through 3.1.2 of sts, 9 generators were built into the code.
+ These generators were moved into a standalone tool called generators that is located in the tools directory.
+
+The first numeric argument to generators tool is the generator number:
+
+1. Linear Congruential
+2. Quadratic Congruential I
+3. Quadratic Congruential II
+4. Cubic Congruential
+5. XOR based generator
+6. Modular Exponentiation
+7. Blum-Blum-Shub
+8. Micali-Schnorr
+9. SHA-1 based generator
+
+The second numeric argument to generators tool is the number of 1 megabit (1048576 bits) chunks to write to output.
+
+To build the generators tool:
+
+```sh
+$ cd tools
+$ make generators
+```
+
+For more details, see the command line usage:
+
+```sh
+$ ./generators -h
+```
+
+For example, to test the first gigabit of the Quadratic Congruential II generator:
+
+```
+$ cd tools
+$ make generators
+
+$ ./generators -i 64 3 1024 > /tmp/qc2.u8
+
+$ cd ../src
+$ make
+
+$ ./sts -v 1 -i 1024 -I 32 /tmp/qc2.u8
+```
 
 ## Contributors
 

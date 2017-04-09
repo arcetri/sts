@@ -55,8 +55,8 @@ OPT= -O3
 DEBUG= -g3
 LOC_INC=
 #CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic -DDEBUG_LINT ${LOC_INC} ${OPT} ${DEBUG}
-CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${LOC_INC} ${OPT} ${DEBUG}
-#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${LOC_INC} ${OPT} ${DEBUG}
+#CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -Werror -pedantic ${LOC_INC} ${OPT} ${DEBUG}
+CFLAGS= -std=c99 -D_ISOC99_SOURCE -Wall -pedantic ${LOC_INC} ${OPT} ${DEBUG}
 
 # locations
 #
