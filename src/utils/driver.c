@@ -353,7 +353,7 @@ init(struct state *state)
 	}
 
 	/*
-	 * Set the number of iterations not done yet to be equal to the total $numOfBitstreams
+	 * Set the number of iterations not done yet to be equal to the total numOfBitstreams
 	 */
 	state->iterationsMissing = state->tp.numOfBitStreams;
 

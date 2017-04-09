@@ -84,6 +84,12 @@ TARGETS= mkapertemplate generators
 #
 all: ${TARGETS} ${TOOLS_SRC}
 
+mkapertemplate: mkapertemplate.o
+	${CC} -o $@ ${CFLAGS} mkapertemplate.o
+
+generators: generators.o
+	${CC} -o $@ ${CFLAGS} -lm generators.o
+
 # object dependencies and rules
 #
 mkapertemplate.o: mkapertemplate.c

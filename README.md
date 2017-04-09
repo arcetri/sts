@@ -1,6 +1,6 @@
 # NIST Statistical Test Suite
 
-This project is a considerably improved version of the NIST Statistical Test Suite (**STS**), a collection of tests used in the 
+This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the 
  evaluation of the randomness of bitstreams of data.
 
 ## Purpose

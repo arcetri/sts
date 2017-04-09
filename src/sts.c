@@ -248,7 +248,14 @@
  *          Test constant precision that were improved in the code is reflected in SP800-22Rev1a-improved.
  *          In some cases, bugs, typos or misleading were fixed. Language about the new command line was added.
  *
- *      26) Other issues not listed
+  *     26) Move the generators from the sts code into a separate tool
+ *
+ *          The generators -g 1 through -g 9 have been removed from the main sts code base and moved
+ *          into a tool that performs the equivalent of -g [1-9] -m w where the output is
+ *          be written to standard output.  Only -g 0 is now supported by sts and the use of -g 0
+ *          is deprecated.  The -m w flag went away.
+ *
+ *      27) Other issues not listed
  *
  *          The above list of goals is incomplete.  In the interest of not extending this long comment
  *          much further, we will just mention that other important goals were attempted to be reached.
@@ -261,18 +268,7 @@
  *          We plan to use gnu-plot to visualize the results of a run in a graphical way.
  *          This can be considered an follow-up on the change "(22) Improve the program output".
  *
- *      B) Move the generators from the sts code into a separate tool
- *
- *          The generators -g 1 through -g 9 will be removed from the main sts code base and
- *          into a tool that will perform the equivalent of -g [1-9] -m w where the output will
- *          be written to standard output.  Only -g 0 will be supported and the use of -g 0
- *          will be deprecated.  The -m w flag will go away.
- *
- *          We plan to place 1G of data from -g 7 and 8G from the other generators online
- *          (location TBD).  You may either download and use that data, or use the tool
- *          to generate your own.
- *
- *      C) Add entropy analysis
+ *      B) Add entropy analysis
  *
  *          The approximate entropy test is of limited value.  Improved entropy tests need to
  *          be added to the existing test suite such as some of those outlined in FIPS 800-90B.
