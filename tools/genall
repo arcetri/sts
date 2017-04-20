@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# genall - write data for all 9 generators under $TOPDIR/__name__/__name__.u8
+#
+# WARNING: Some generators such as Blum-Blum-Shub are very very slow
+#	   and will take a very very long time to run!  For this reason
+#	   we launch the 8 generators in the background.  You may tail
+#	   the $TOPDIR/*/*.out files to determine their progress.
+
+# setup
+#
+export TOPDIR=/var/tmp/sts-data
+export GENERATORS=/usr/local/src/bin/sts/tools/generators
+if [[ ! -d $TOPDIR ]]; then
+    echo "$0: FATAL: TOPDIR is not a directory: $TOPDIR" 1>&2
+    exit 1
+fi
+if [[ ! -x $GENERATORS ]]; then
+    echo "$0: FATAL: cannot find GENERATORS executable: $GENERATORS" 1>&2
+    exit 2
+fi
+for i in BBS CCG LCG MODEXP MS QCG1 QCG2 SHA1 XOR; do
+    mkdir -v -p "$TOPDIR/$i"
+done
+
+# launch the generators in the background
+#
+nohup time $GENERATORS -i 1 1 65536 > $TOPDIR/LCG/LCG-8G.u8 2> $TOPDIR/LCG/LCG.out < /dev/null &
+nohup time $GENERATORS -i 1 2 65536 > $TOPDIR/QCG1/QCG1-8G.u8 2> $TOPDIR/QCG1/QCG1.out < /dev/null &
+nohup time $GENERATORS -i 1 3 65536 > $TOPDIR/QCG2/QCG2-8G.u8 2> $TOPDIR/QCG2/QCG2.out < /dev/null &
+nohup time $GENERATORS -i 1 4 65536 > $TOPDIR/CCG/CCG-8G.u8 2> $TOPDIR/CCG/CCG.out < /dev/null &
+nohup time $GENERATORS -i 1 5 65536 > $TOPDIR/XOR/XOR-8G.u8 2> $TOPDIR/XOR/XOR.out < /dev/null &
+nohup time $GENERATORS -i 1 6 65536 > $TOPDIR/MODEXP/MODEXP-8G.u8 2> $TOPDIR/MODEXP/MODEXP.out < /dev/null &
+nohup time $GENERATORS -i 1 7 65536 > $TOPDIR/BBS/BBS-8G.u8 2> $TOPDIR/BBS/BBS.out < /dev/null &
+nohup time $GENERATORS -i 1 8 65536 > $TOPDIR/MS/MS-8G.u8 2> $TOPDIR/MS/MS.out < /dev/null &
+nohup time $GENERATORS -i 1 9 65536 > $TOPDIR/SHA1/SHA1-8G.u8 2> $TOPDIR/SHA1/SHA1.out < /dev/null &
+
+# ... now you wait
+#
+echo "$0: NOTICE: 9 generators launched in the background" 1>&2
+echo "$0: NOTICE: Some of these generators will take a very long time to write 8 Gbytes of data" 1>&2
+echo "$0: NOTICE: To monitor progress, try this command: tail -f $TOPDIR/*/*.out" 1>&2
+exit 0
