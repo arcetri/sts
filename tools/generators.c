@@ -109,7 +109,7 @@ static const char * const usage =
 	"\n"
 	"\tSee Appendix D of SP800-22rev1a-improved.pdf for descriptions of the generators.\n";
 
-static const char *const version = "3.2.0";	// our version
+static const char *const version = "3.2.1";	// our version
 static char *program = NULL;			// Program name (argv[0])
 static long int debuglevel = 0;			// -v lvl: defines the level of verbosity for debugging
 
