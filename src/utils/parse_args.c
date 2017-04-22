@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -814,6 +815,7 @@ parse_args(struct state *state, int argc, char **argv)
 	if (state->pvalues_dir != NULL) {
 		DIR *dir;
 		struct dirent *entry;
+		struct stat path_stat;
 
 		if ((dir = opendir(state->pvalues_dir)) != NULL) {
 
@@ -829,9 +831,16 @@ parse_args(struct state *state, int argc, char **argv)
 			while ((entry = readdir (dir)) != NULL) {
 
 				/*
-				 * Check the entries that are regular files
+				 * Take the full path of each entry
 				 */
-				if (entry->d_type == DT_REG) {
+				char *fullpath = malloc(strlen(state->pvalues_dir) + strlen(entry->d_name) + 2);
+				sprintf(fullpath, "%s/%s", state->pvalues_dir, entry->d_name);
+				stat(fullpath, &path_stat);
+
+				/*
+				 * Check if the each entry is a regular file
+				 */
+				if (S_ISREG(path_stat.st_mode)) {
 
 					int token_number = 0;
 					char **parsed_tokens = malloc(sizeof(*parsed_tokens) * 5);
@@ -872,6 +881,11 @@ parse_args(struct state *state, int argc, char **argv)
 					 */
 					free(to_free);
 				}
+
+				/*
+				 * Free another pointer which we don't need anymore
+				 */
+				free(fullpath);
 			}
 
 			/*

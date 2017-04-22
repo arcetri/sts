@@ -1974,7 +1974,7 @@ void write_p_val_to_file(struct state *state)
 	/*
 	 * Rename the work file (.work) to have its final filename (.pvalues)
 	 */
-	if (rename(work_filepath, final_filepath) <= 0) {
+	if (rename(work_filepath, final_filepath) < 0) {
 		errp(232, __func__, "error in renaming %s to %s", work_filepath, final_filepath);
 	}
 

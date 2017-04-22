@@ -1202,7 +1202,7 @@ destroy(struct state *state)
 	/*
 	 * Free global allocated storage
 	 */
-	if (state->workDir != NULL) {
+	if (state->workDir != NULL && state->workDirFlag == true) {
 		free(state->workDir);
 		state->workDir = NULL;
 	}
