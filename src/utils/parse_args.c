@@ -389,7 +389,7 @@ parse_args(struct state *state, int argc, char **argv)
 	long int num;		// Parsed parameter number
 	long int value;		// Parsed parameter integer value
 	double d_value;		// Parsed parameter floating point
-	bool success = false;	// true if str2longtint was successful
+	bool success = false;	// true if str2longint was successful
 	int test_cnt = 0;
 	long int i;
 
