@@ -69,6 +69,9 @@ After the run is completed a report will be generated in a file called `result.t
 
 __NB__: When `make legacy` is used, the compiled program to execute will be called `sts_legacy_fft` instead of `sts`.
 
+__NB__: When a data file of `-` (single dash) is used, test data is read from standard input (stdin).
+Job number (`-j jobnum`) based seeking into the data is disabled when test data is read from standard input.
+
 __NB__: For more information on the usage run `./sts -h`
 
 ### [Advanced] How to run in distributed mode
@@ -153,6 +156,10 @@ This argument simply is used to document in the output, the common filename used
 
 __NB__: The distributed mode of operation does not support generating the stats.txt and results.txt files with `-s`.
 
+__NB__: Instead of each host reading from /random/data, sts may read from standard input (stdin)
+by specifying `-` as a data file.  Because job number seeking is disabled when reading data from standard input,
+a different part of the test data must be fed into each invocation of sts.
+
 ## Project structure
 
 The STS version 3 comes with three folders:
@@ -191,6 +198,8 @@ Our major improvement starts from source code of the [original source code of ve
 - Improved the Makefile to use best practices and to be more portable
 - Improved the __program output__ and the contents of the file with the final results
 - Added some comments and fixes to the NIST's paper (available in the docs/SP800-22rev1a-improved.pdf)
+- Improved readability of the source code
+- Added the ability to read test data from standard input
 - Fixed the warnings reported by compilers and lint
 - Fixed memory leaks
 

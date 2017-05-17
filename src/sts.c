@@ -305,7 +305,7 @@
 
 
 // STS version
-const char *const version = "3.2.1";
+const char *const version = "3.2.2";
 
 // Program name
 char *program = "sts";

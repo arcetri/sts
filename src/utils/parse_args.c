@@ -91,6 +91,7 @@ static struct state const defaultstate = {
 	// randomDataArg & randomDataPath
 	false,				// no randdata arg was given
 	"/dev/null",			// default input file is /dev/null
+	false,				// not reading randdata from stdin by default
 
 	// dataFormatFlag & dataFormat
 	false,				// -F format was not given
@@ -341,6 +342,7 @@ static const char * const usage2 =
 "    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
 "    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
 "    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
+"                       Seeking is disabled if randdata is - and data for all jobs is read from beginning of standard input.\n"
 "\n"
 "    -m mode            b --> test pseudo-random data from from randdata (default mode)\n"
 "                       i --> test the given data, but not assess it, and instead save the p-values in a binary filename\n"
@@ -360,7 +362,8 @@ static const char * const usage2 =
 "\n"
 "    -h                 print this message and exit\n"
 "\n"
-"    randdata           path to the input file to test (required for -m b and -m i, optional for -A and -m a)\n";
+"    randdata           path to the input file to test (required for -m b and -m i, optional for -A and -m a)\n"
+"                       If randdata is -, data is read from the beginning standard input. No seek for -j jobnum is performed.\n";
 /* *INDENT-ON* */
 
 
@@ -625,7 +628,7 @@ parse_args(struct state *state, int argc, char **argv)
 			usage_err(1, __func__, "-f is no longer needed, instead put randdata as last argument");
 			break;
 
-		case 'j':	// -j jobnum (seek into randomData)
+		case 'j':	// -j jobnum (seek into randomData unless randdata is stdin)
 			state->jobnumFlag = true;
 			state->jobnum = str2longint(&success, optarg);
 			if (success == false) {
@@ -695,11 +698,14 @@ parse_args(struct state *state, int argc, char **argv)
 		}
 	}
 
-	// parse last argument mased on mode
+	// parse last argument based on mode
 	if (optind == argc - 1) {
 		state->randomDataPath = strdup(argv[argc-1]);
 		if (state->randomDataPath == NULL) {
 			errp(1, __func__, "strdup of %lu bytes for randdata arg", strlen(optarg));
+		}
+		if (strcmp(state->randomDataPath, "-") == 0) {
+			state->stdinData = true;
 		}
 		state->randomDataArg = true;
 	} else if (optind < argc - 1) {
@@ -720,10 +726,21 @@ parse_args(struct state *state, int argc, char **argv)
 		break;
 	}
 
+
+	// if reading random data from stdin, we cannot be interactive
+	if (state->stdinData == true) {
+		if (state->batchmode == false) {
+			usage_err(1, __func__, "-A not allowed when randdata is - (reading data from standard input)");
+		}
+		if (state->iterationFlag == false) {
+			usage_err(1, __func__, "-i bitstreams requited when randdata is - (reading data from standard input)");
+		}
+	}
+
 	/*
-	 * Ask how many iterations have to be performed unless batch mode (-b) is enabled or -i bitstreams was given
+	 * Ask how many iterations have to be performed unless batch mode (-b) is enabled or -i bitstreams was not given
 	 */
-	if (state->batchmode == false && state->iterationFlag == false) {
+	if (state->batchmode == false && state->iterationFlag == false && state->stdinData == false) {
 		// Ask question
 		printf("   How many bitstreams? ");
 		fflush(stdout);
@@ -1207,7 +1224,11 @@ print_option_summary(struct state *state, char *where)
 	} else {
 		dbg(DBG_MED, "\tno randdata arg given");
 	}
-	dbg(DBG_MED, "\t  randomDataPath: %s\n", state->randomDataPath);
+	if (state->stdinData == true) {
+		dbg(DBG_MED, "\t  randomDataPath is from standard input\n");
+	} else {
+		dbg(DBG_MED, "\t  randomDataPath: %s\n", state->randomDataPath);
+	}
 
 	return;
 }

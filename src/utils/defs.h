@@ -390,7 +390,8 @@ struct state {
 					//		(def: don't create)
 
 	bool randomDataArg;		// true randdata arg was given
-	char *randomDataPath;		// randdata: path to a random data file, or "/dev/null", or NULL (no file)
+	char *randomDataPath;		// randdata: path to a random data file, or "-" (stdin), or "/dev/null", or NULL (no file)
+	bool stdinData;			// true is reading randdata from standard input (stdin)
 
 	bool dataFormatFlag;		// true if -F format was given
 	enum format dataFormat;		// -F format: 'r': raw binary, 'a': ASCII '0'/'1' chars
@@ -400,7 +401,7 @@ struct state {
 	long int iterationsMissing;	// Number of iterations that need to be completed
 
 	bool jobnumFlag;		// true if -j jobnum was given
-	long int jobnum;		// -j jobnum: seek into randdata num*bitcount*iterations bits
+	long int jobnum;		// -j jobnum: seek into randdata num*bitcount*iterations bits unless reading from stdin
 	long int base_seek;		// Seek position for the input file indicating where we want to start testing it
 
 	char *pvalues_dir;		// Directory where to look for the .pvalues binary files

@@ -872,6 +872,21 @@ generatorOptions(struct state *state)
 	}
 
 	/*
+	 * special processing for reading randdata from stdin
+	 */
+	if (state->stdinData == true) {
+
+		// setup to read randdata from stdin
+		state->streamFile = stdin;
+		if (state->streamFile == NULL) {
+			err(221, __func__, "stdin is NULL");
+		}
+
+		// reading randdata from stdin, nothing more to do here
+		return;
+	}
+
+	/*
 	 * Verify the input file is readable
 	 */
 	if (checkReadPermissions(state->randomDataPath) == false) {
@@ -887,7 +902,7 @@ generatorOptions(struct state *state)
 	}
 
 	/*
-	 * Batch mode, nothing to do here
+	 * Batch mode, nothing more to do here
 	 */
 	if (state->batchmode == true) {
 		return;
@@ -1007,8 +1022,11 @@ chooseTests(struct state *state)
 		err(223, __func__, "state arg is NULL");
 	}
 
-	// If -t was used, tests are already chosen, just return
-	if (state->testVectorFlag == true) {
+	/*
+	 * If -t was used, tests are already chosen, just return
+	 * If reading from randata stdin, we cannot ask for tests so just return
+	 */
+	if (state->testVectorFlag == true || state->stdinData == true) {
 		return;
 	}
 
@@ -1122,6 +1140,13 @@ fixParameters(struct state *state)
 	 */
 	if (state == NULL) {
 		err(223, __func__, "state arg is NULL");
+	}
+
+	/*
+	 * If reading from randata stdin, we cannot ask for parameters so just return
+	 */
+	if (state->stdinData == true) {
+		return;
 	}
 
 	/*
@@ -1470,12 +1495,19 @@ handleFileBasedBitStreams(struct state *state)
 	}
 
 	/*
+	 * when reading randdata from stdin, we do not seek no matter what our jobnum is
+	 */
+	if (state->stdinData == true) {
+		state->base_seek = 0;
+	}
+
+	/*
 	 * Compute seek position into the input file according to the jobnum parameter given.
 	 *
 	 * The position where to seek depends on the data format. If the input is made of
 	 * ASCII 0 and 1 characters then we can seek by counting 1 position as 1 bit.
 	 */
-	if (state->dataFormat == FORMAT_ASCII_01) {
+	else if (state->dataFormat == FORMAT_ASCII_01) {
 		state->base_seek = state->jobnum * state->tp.n * state->tp.numOfBitStreams;
 	}
 
@@ -1644,9 +1676,11 @@ parseBitsASCIIInput(struct thread_state *thread_state)
 	}
 
 	/*
+	 * If not reading randdata from stdin,
 	 * Seek to the position of the first bit which has not been copied into the stream yet
 	 */
-	if (fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n, SEEK_SET) != 0) {
+	if (state->stdinData == false &&
+	    fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n, SEEK_SET) != 0) {
 		errp(226, __func__, "could not seek %ld further into file: %s",
 		     (thread_state->iteration_being_done * state->tp.n), state->randomDataPath);
 	}
@@ -1726,9 +1760,11 @@ parseBitsBinaryInput(struct thread_state *thread_state)
 	}
 
 	/*
+	 * If not reading randdata from stdin,
 	 * Seek to the position of the first bit which has not been copied into the stream yet
 	 */
-	if (fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n /
+	if (state->stdinData == false &&
+	    fseek(state->streamFile, state->base_seek + thread_state->iteration_being_done * state->tp.n /
 							BITS_N_BYTE, SEEK_SET) != 0) {
 
 		errp(226, __func__, "could not seek %ld further into file: %s",
