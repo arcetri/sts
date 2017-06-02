@@ -1691,6 +1691,7 @@ parseBitsASCIIInput(struct thread_state *thread_state)
 	num_0s = 0;
 	num_1s = 0;
 	bitsRead = 0;
+	clearerr(state->streamFile);
 	for (i = 0; i < state->tp.n; i++) {
 		io_ret = fscanf(state->streamFile, "%1d", &bit);
 		if (io_ret == EOF) {
@@ -1777,13 +1778,19 @@ parseBitsBinaryInput(struct thread_state *thread_state)
 	num_0s = 0;
 	num_1s = 0;
 	bitsRead = 0;
+	clearerr(state->streamFile);
 	do {
 		/*
 		 * Read the next binary octet
 		 */
 		io_ret = fgetc(state->streamFile);
-		if (io_ret < 0) {
-			errp(226, __func__, "read error in stream file: %s", state->randomDataPath);
+		if (ferror(state->streamFile)) {
+			errp(226, __func__, "read error while reading file: %s", state->randomDataPath);
+		} else if (feof(state->streamFile) || io_ret == EOF) {
+			err(226, __func__, "encounted EOF (end of file) while reading file: %s: %ld bits were read before EOF",
+			    state->randomDataPath, bitsRead);
+		} else if (io_ret < 0) {
+			errp(226, __func__, "unexpected fgetc return while reading file: %s", state->randomDataPath);
 		}
 		byte = (BYTE) io_ret;
 
