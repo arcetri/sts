@@ -297,7 +297,7 @@ static struct state const defaultstate = {
 static const char * const usage =
 "[-v level] [-A] [-t test1[,test2]..]\n"
 "             [-P num=value[,num=value]..] [-i iterations] [-I reportCycle] [-O]\n"
-"             [-w workDir] [-c] [-s] [-F format] [-j jobnum]\n"
+"             [-w workDir] [-c] [-s] [-F format] [-j jobnum] [-S bitcount]\n"
 "             [-m mode] [-T numOfThreads] [-d pvaluesdir] [-h] [randdata]\n"
 "\n"
 "    -v  debuglevel     debug level (def: 0 -> no debug messages)\n"
@@ -341,6 +341,8 @@ static const char * const usage2 =
 "    -c                 don't create any directories needed for creating files (def: do create)\n"
 "    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
 "    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
+"    -S bitcount        Length of a single bit stream (bitcount). \n"
+"                       This flag is te same as -P 9=bitcount (when this works)\n"
 "    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
 "                       Seeking is disabled if randdata is - and data for all jobs is read from beginning of standard input.\n"
 "\n"
@@ -423,7 +425,7 @@ parse_args(struct state *state, int argc, char **argv)
 	 */
 	opterr = 0;
 	brkt = NULL;
-	while ((option = getopt(argc, argv, "v:Abt:g:pP:i:I:Ow:csf:F:j:m:T:d:h")) != -1) {
+	while ((option = getopt(argc, argv, "v:Abt:g:pP:S:i:I:Ow:csf:F:j:m:T:d:h")) != -1) {
 		switch (option) {
 
 		case 'v':	// -v debuglevel
@@ -553,6 +555,9 @@ parse_args(struct state *state, int argc, char **argv)
 		case 'p':	// -p is now obsolete because batch is the default
 			usage_err(1, __func__, "-p is no longer needed");
 			break;
+                case 'S':      // -S just a workaround
+                        state->tp.n = str2longint(&success, optarg);
+                        break;
 
 		case 'i':	// -i iterations
 			state->iterationFlag = true;
