@@ -1057,10 +1057,10 @@ LinearComplexity_metrics(struct state *state)
 		    state->testNames[test_num], test_num, state->partitionCount[test_num]);
 	}
 	if (state->p_val[test_num]->count != (state->tp.numOfBitStreams * state->partitionCount[test_num])) {
-		err(106, __func__,
-		    "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
-		    state->testNames[test_num], test_num, state->p_val[test_num]->count,
-		    state->tp.numOfBitStreams * state->partitionCount[test_num]);
+		warn(__func__,
+		     "metrics driver interface for %s[%d] called with p_val length: %ld != bit streams: %ld",
+		     state->testNames[test_num], test_num, state->p_val[test_num]->count,
+		     state->tp.numOfBitStreams * state->partitionCount[test_num]);
 	}
 
 	/*
