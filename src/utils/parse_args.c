@@ -736,8 +736,9 @@ parse_args(struct state *state, int argc, char **argv)
 		if (state->batchmode == false) {
 			usage_err(1, __func__, "-A not allowed when randdata is - (reading data from standard input)");
 		}
-		if (state->iterationFlag == false) {
-			usage_err(1, __func__, "-i bitstreams requited when randdata is - (reading data from standard input)");
+		if (state->iterationFlag == false && state->runMode != MODE_ASSESS_ONLY) {
+			usage_err(1, __func__, "-i bitstreams or -m a requited when randdata is - "
+					       "(reading data from standard input)");
 		}
 	}
 
