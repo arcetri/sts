@@ -325,14 +325,13 @@ static const char * const usage =
 "       6: Linear Complexity Test - block length(M):		500\n"
 "       7: Number of bitcount runs (same as -i iterations):	1\n"
 "       8: Uniformity bins:                         		sqrt(iterations) or 10 (if -O)\n"
-"       9: Length of a single bit stream (bitcount):		1048576 (must be a multiple of 8)\n"
+"       9: Bits to process per iteration (same as -S bitcount):	1048576 (== 1024*1024)\n"
 "      10: Uniformity Cutoff Level:				0.0001\n"
 "      11: Alpha Confidence Level:				0.01\n"
 "      Warning: Change the above parameters only if you really know what you are doing!\n";
 static const char * const usage2 =
 "\n"
-"    -i iterations      number of iterations to do, i.e. number of bitstreams to test (if no -A, def: 1)\n"
-"                       this flag is the same as -P 7\n"
+"    -i iterations      number of iterations (number of bitstreams) to test (if no -A, def: 1) (same as -P 7=iterations)\n"
 "\n"
 "    -I reportCycle     report after completion of reportCycle iterations (def: 0: do not report)\n"
 "    -O                 try to mimic output format of legacy code (def: don't be output compatible)\n"
@@ -341,8 +340,7 @@ static const char * const usage2 =
 "    -c                 don't create any directories needed for creating files (def: do create)\n"
 "    -s                 create result.txt, data*.txt, and stats.txt (def: don't create)\n"
 "    -F format          randdata format: 'r': raw binary, 'a': ASCII '0'/'1' chars (def: 'r')\n"
-"    -S bitcount        Length of a single bit stream (bitcount). \n"
-"                       This flag is te same as -P 9=bitcount (when this works)\n"
+"    -S bitcount        Number of bits to process in a single iteration (def: 1048576 == 1024*1024) (same as -P 9=bitcount)\n"
 "    -j jobnum          seek into randdata, jobnum * bitcount * iterations bits (def: 0)\n"
 "                       Seeking is disabled if randdata is - and data for all jobs is read from beginning of standard input.\n"
 "\n"
@@ -497,11 +495,11 @@ parse_args(struct state *state, int argc, char **argv)
 				scan_cnt = sscanf(phrase, "%ld=", &num);
 				if (scan_cnt == EOF) {
 					usage_errp(1, __func__,
-						   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
-				} else if (scan_cnt != 2) {
+						   "-P num=value[,num=value].. end of string parsing num=..: %s", phrase);
+				} else if (scan_cnt != 1) {
 					usage_err(1, __func__,
 						  "-P num=value[,num=value].. "
-						  "failed to parse a num=value, expecting integer=integer: %s", phrase);
+						  "failed to parse num=value, expecting integer=value: %s", phrase);
 				}
 				if (num < MIN_PARAM || num > MAX_PARAM) {
 					usage_err(1, __func__,
@@ -518,15 +516,16 @@ parse_args(struct state *state, int argc, char **argv)
 					scan_cnt = sscanf(phrase, "%ld=%ld", &num, &value);
 					if (scan_cnt == EOF) {
 						usage_errp(1, __func__,
-							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
+							   "-P num=value[,num=value].. error parsing integer=integer: %s",
+							   phrase);
 					} else if (scan_cnt != 2) {
 						usage_err(1, __func__,
 							  "-P num=value[,num=value].. "
-							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
+							  "failed to parse num=value, expected integer=integer: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(1, __func__,
-							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
+							  "-P num=value[,num=value].. num: %lu must be in range [1-%d]", num,
 							  MAX_PARAM);
 					}
 					change_params(state, num, value, 0.0);
@@ -536,15 +535,15 @@ parse_args(struct state *state, int argc, char **argv)
 					scan_cnt = sscanf(phrase, "%ld=%lf", &num, &d_value);
 					if (scan_cnt == EOF) {
 						usage_errp(1, __func__,
-							   "-P num=value[,num=value].. error parsing a num=value: %s", phrase);
+							   "-P num=value[,num=value].. error parsing a num=float: %s", phrase);
 					} else if (scan_cnt != 2) {
 						usage_err(1, __func__,
 							  "-P num=value[,num=value].. "
-							  "failed to parse a num=value, expecting integer=integer: %s", phrase);
+							  "failed to parse a num=value, expecting integer=float: %s", phrase);
 					}
 					if (num < 0 || num > MAX_PARAM) {
 						usage_err(1, __func__,
-							  "-P num=value[,num=value].. num: %lu must be in the range [1-%d]", num,
+							  "-P num=value[,num=value].. num: %lu must within range [1-%d]", num,
 							  MAX_PARAM);
 					}
 					change_params(state, num, 0, d_value);
