@@ -2040,31 +2040,65 @@ void read_from_p_val_file(struct state *state)
 	if (state == NULL) {
 		err(232, __func__, "state arg was NULL");
 	}
+	dbg(DBG_LOW, "start of reading pvalue file(s) phase");
 
 	struct Node *current = state->filenames;
 	while (current != NULL) {
+		char *filename;		// current pvalues filename
+		FILE *p_val_file;	// open pvalues filename
+		size_t ret;		// fread return
 
 		/*
 		 * Open the file
 		 */
-		char *filename = current->filename;
-		FILE *p_val_file = fopen(filePathName(state->pvalues_dir, filename), "rb");
+		filename = current->filename;
+		if (filename == NULL) {
+		    err(232, __func__, "current pvalue filename is NULL");
+		}
+		dbg(DBG_MED, "parsing pvalue file: %s", filename);
+		p_val_file = fopen(filePathName(state->pvalues_dir, filename), "rb");
+		if (p_val_file == NULL) {
+		    warnp(__func__, "skipping pvalue file due to error in opening pvalue file: %s", filename);
+		    continue;
+		}
 
 		/*
 		 * Read the first test number
 		 */
-		fread(&test_num, sizeof(test_num), 1, p_val_file);
+		clearerr(p_val_file);
+		ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
+		if (ferror(p_val_file)) {
+			warnp(__func__, "skipping pvalue file due to initial read error of pvalue file: %s", filename);
+			fclose(p_val_file);
+			current = current->next;
+			continue;
+		}
 
 		/*
 		 * Read the content of the file
 		 */
-		while (!feof(p_val_file) && test_num <= NUMOFTESTS) {
+		while (!feof(p_val_file) && !ferror(p_val_file) && ret == 1 && test_num <= NUMOFTESTS) {
 
 			/*
 			 * Read number of p-values for the current testnum
 			 */
 			long int number_of_p_vals;
-			fread(&number_of_p_vals, sizeof(number_of_p_vals), 1, p_val_file);
+			ret = fread(&number_of_p_vals, sizeof(number_of_p_vals), 1, p_val_file);
+			if (feof(p_val_file)) {
+				warn(__func__, "skipping pvalue file due to EOF while reading number_of_p_vals in pvalue file: %s",
+						filename);
+				break;
+			}
+			if (ferror(p_val_file)) {
+				warnp(__func__, "skipping pvalue file due to read error of number_of_p_vals from pvalue file: %s",
+						filename);
+				break;
+			}
+			if (ret != 1) {
+				warn(__func__, "skipping pvalue file, unable to read number_of_p_vals from pvalue file: %s",
+						filename);
+				break;
+			}
 
 			/*
 			 * Read all the p-values for this test
@@ -2072,7 +2106,27 @@ void read_from_p_val_file(struct state *state)
 			for (p_val_index = 0; p_val_index < number_of_p_vals; p_val_index++) {
 
 				double p_val;
-				fread(&p_val, sizeof(p_val), 1, p_val_file);
+
+				/*
+				 * read pvalue
+				 */
+				clearerr(p_val_file);
+				ret = fread(&p_val, sizeof(p_val), 1, p_val_file);
+				if (feof(p_val_file)) {
+					warn(__func__, "EOF while reading pvalue[%ld] from file: %s",
+							p_val_index, filename);
+					break;
+				}
+				if (ferror(p_val_file)) {
+					warnp(__func__, "error while reading a pvalue[%d] from file: %s",
+							p_val_index, filename);
+					break;
+				}
+				if (ret != 1) {
+					warn(__func__, "unable to read a pvalue[%d] from file: %s",
+							p_val_index, filename);
+					break;
+				}
 
 				/*
 				 * Append each p-value read to the p-values of this test
@@ -2089,15 +2143,18 @@ void read_from_p_val_file(struct state *state)
 			/*
 			 * Read the next test number
 			 */
-			fread(&test_num, sizeof(test_num), 1, p_val_file);
+			clearerr(p_val_file);
+			ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
 		}
 
 		/*
 		 * Close the file that has been read
 		 */
 		fclose(p_val_file);
+		dbg(DBG_HIGH, "processed %ld pvalues from pvalue file: %s", test_num, filename);
 		current = current->next;
 	}
+	dbg(DBG_LOW, "end of reading pvalue file(s) phase\n");
 }
 
 
