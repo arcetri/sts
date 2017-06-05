@@ -2067,8 +2067,22 @@ void read_from_p_val_file(struct state *state)
 		 */
 		clearerr(p_val_file);
 		ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
+		if (feof(p_val_file)) {
+			warn(__func__, "skipping pvalue file, found EOF during initial read of test number from pvalue file: %s",
+			     filename);
+			fclose(p_val_file);
+			current = current->next;
+			continue;
+		}
 		if (ferror(p_val_file)) {
-			warnp(__func__, "skipping pvalue file due to initial read error of pvalue file: %s", filename);
+			warnp(__func__, "skipping pvalue, initial read error of test number from pvalue file: %s", filename);
+			fclose(p_val_file);
+			current = current->next;
+			continue;
+		}
+		if (ret != 1) {
+			warn(__func__, "skipping pvalue file, unable to do an initial read of test number from pvalue file: %s",
+			     filename);
 			fclose(p_val_file);
 			current = current->next;
 			continue;
@@ -2110,7 +2124,6 @@ void read_from_p_val_file(struct state *state)
 				/*
 				 * read pvalue
 				 */
-				clearerr(p_val_file);
 				ret = fread(&p_val, sizeof(p_val), 1, p_val_file);
 				if (feof(p_val_file)) {
 					warn(__func__, "EOF while reading pvalue[%ld] from file: %s",
@@ -2143,8 +2156,22 @@ void read_from_p_val_file(struct state *state)
 			/*
 			 * Read the next test number
 			 */
-			clearerr(p_val_file);
 			ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
+			if (feof(p_val_file)) {
+				warn(__func__, "skipping pvalue file due to EOF while reading next test number in pvalue file: %s",
+						filename);
+				break;
+			}
+			if (ferror(p_val_file)) {
+				warnp(__func__, "skipping pvalue file due to read error next test number from pvalue file: %s",
+						filename);
+				break;
+			}
+			if (ret != 1) {
+				warn(__func__, "skipping pvalue file, unable to read next test number from pvalue file: %s",
+						filename);
+				break;
+			}
 		}
 
 		/*
