@@ -1964,6 +1964,7 @@ void write_p_val_to_file(struct state *state)
 	 */
 	FILE *p_val_file;
 	p_val_file = fopen(work_filepath, "wb");
+	size_t ret;		// fwrite return
 
 	/*
 	 * Write the p-values of each test in the working file
@@ -1974,12 +1975,28 @@ void write_p_val_to_file(struct state *state)
 			/*
 			 * Write the number of the test
 			 */
-			fwrite(&i, sizeof(i), 1, p_val_file);
+			ret = fwrite(&i, sizeof(i), 1, p_val_file);
+			if (ferror(p_val_file)) {
+				warnp(__func__, "error while writing test number to p-value file: %s", filename);
+				break;
+			}
+			if (ret != 1) {
+				warn(__func__, "unable to write test number to p-value file: %s", filename);
+				break;
+			}
 
 			/*
 			 * Write the number of p-values for this test
 			 */
-			fwrite(&(state->p_val[i]->count), sizeof(state->p_val[i]->count), 1, p_val_file);
+			ret = fwrite(&(state->p_val[i]->count), sizeof(state->p_val[i]->count), 1, p_val_file);
+			if (ferror(p_val_file)) {
+				warnp(__func__, "error while writing test p-value count to p-value file: %s", filename);
+				break;
+			}
+			if (ret != 1) {
+				warn(__func__, "unable to write p-value count to p-value file: %s", filename);
+				break;
+			}
 
 			/*
 			 * Write the p-values
@@ -1998,7 +2015,15 @@ void write_p_val_to_file(struct state *state)
 					p_val = nonov->p_value;
 				}
 
-				fwrite(&p_val, sizeof(p_val), 1, p_val_file);
+				ret = fwrite(&p_val, sizeof(p_val), 1, p_val_file);
+				if (ferror(p_val_file)) {
+					warnp(__func__, "error while writing p-value[%ld] to p-value file: %s", j, filename);
+					break;
+				}
+				if (ret != 1) {
+					warn(__func__, "unable to write p-value[%ld] to p-value file: %s", j, filename);
+					break;
+				}
 			}
 		}
 	}
@@ -2032,7 +2057,8 @@ void write_p_val_to_file(struct state *state)
 
 void read_from_p_val_file(struct state *state)
 {
-	long int test_num, p_val_index;
+	long int test_num;		// test number for the pvalues that follow in the pvalue file
+	long int p_val_index;		// current pvalue number for a given test number in the pvalue file
 
 	/*
 	 * Check preconditions (firewall)
@@ -2053,37 +2079,13 @@ void read_from_p_val_file(struct state *state)
 		 */
 		filename = current->filename;
 		if (filename == NULL) {
-		    err(232, __func__, "current pvalue filename is NULL");
-		}
-		dbg(DBG_MED, "parsing pvalue file: %s", filename);
-		p_val_file = fopen(filePathName(state->pvalues_dir, filename), "rb");
-		if (p_val_file == NULL) {
-		    warnp(__func__, "skipping pvalue file due to error in opening pvalue file: %s", filename);
-		    continue;
+		    err(232, __func__, "current p-value filename is NULL");
 		}
 
-		/*
-		 * Read the first test number
-		 */
-		clearerr(p_val_file);
-		ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
-		if (feof(p_val_file)) {
-			warn(__func__, "skipping pvalue file, found EOF during initial read of test number from pvalue file: %s",
-			     filename);
-			fclose(p_val_file);
-			current = current->next;
-			continue;
-		}
-		if (ferror(p_val_file)) {
-			warnp(__func__, "skipping pvalue, initial read error of test number from pvalue file: %s", filename);
-			fclose(p_val_file);
-			current = current->next;
-			continue;
-		}
-		if (ret != 1) {
-			warn(__func__, "skipping pvalue file, unable to do an initial read of test number from pvalue file: %s",
-			     filename);
-			fclose(p_val_file);
+		dbg(DBG_MED, "parsing p-value file: %s", filename);
+		p_val_file = fopen(filePathName(state->pvalues_dir, filename), "rb");
+		if (p_val_file == NULL) {
+			warnp(__func__, "skipping p-value file due to error in opening p-value file: %s", filename);
 			current = current->next;
 			continue;
 		}
@@ -2091,26 +2093,46 @@ void read_from_p_val_file(struct state *state)
 		/*
 		 * Read the content of the file
 		 */
-		while (!feof(p_val_file) && !ferror(p_val_file) && ret == 1 && test_num <= NUMOFTESTS) {
+		do {
+
+			/*
+			 * Read the test number
+			 */
+			ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
+			if (ferror(p_val_file)) {
+				warnp(__func__, "skipping p-value, error while reading test number from p-value file: %s",
+				      filename);
+				break;
+			}
+			if (feof(p_val_file)) {
+				warn(__func__, "skipping p-value file, found EOF while reading test number from p-value file: %s",
+				     filename);
+				break;
+			}
+			if (ret != 1) {
+				warn(__func__, "skipping p-value file, unable to read test number from p-value file: %s",
+				     filename);
+				break;
+			}
 
 			/*
 			 * Read number of p-values for the current testnum
 			 */
-			long int number_of_p_vals;
+			long int number_of_p_vals;	// number of pvalues that follow in the pvalue file
 			ret = fread(&number_of_p_vals, sizeof(number_of_p_vals), 1, p_val_file);
-			if (feof(p_val_file)) {
-				warn(__func__, "skipping pvalue file due to EOF while reading number_of_p_vals in pvalue file: %s",
+			if (ferror(p_val_file)) {
+				warnp(__func__, "skipping p-value file, error while reading number_of_p_vals from p-value file: %s",
 						filename);
 				break;
 			}
-			if (ferror(p_val_file)) {
-				warnp(__func__, "skipping pvalue file due to read error of number_of_p_vals from pvalue file: %s",
+			if (feof(p_val_file)) {
+				warn(__func__, "skipping p-value file, found EOF while reading number of pvals in p-value file: %s",
 						filename);
 				break;
 			}
 			if (ret != 1) {
-				warn(__func__, "skipping pvalue file, unable to read number_of_p_vals from pvalue file: %s",
-						filename);
+				warn(__func__, "skipping p-value file, unable to read number_of_p_vals from p-value file: %s",
+				     filename);
 				break;
 			}
 
@@ -2118,31 +2140,27 @@ void read_from_p_val_file(struct state *state)
 			 * Read all the p-values for this test
 			 */
 			for (p_val_index = 0; p_val_index < number_of_p_vals; p_val_index++) {
-
-				double p_val;
+				double p_val;		// pvalue read from pvalue file
 
 				/*
-				 * read pvalue
+				 * Read one p-value
 				 */
 				ret = fread(&p_val, sizeof(p_val), 1, p_val_file);
-				if (feof(p_val_file)) {
-					warn(__func__, "EOF while reading pvalue[%ld] from file: %s",
-							p_val_index, filename);
+				if (ferror(p_val_file)) {
+					warnp(__func__, "error while reading a pvalue[%d] from file: %s", p_val_index, filename);
 					break;
 				}
-				if (ferror(p_val_file)) {
-					warnp(__func__, "error while reading a pvalue[%d] from file: %s",
-							p_val_index, filename);
+				if (feof(p_val_file)) {
+					warn(__func__, "EOF while reading pvalue[%ld] from file: %s", p_val_index, filename);
 					break;
 				}
 				if (ret != 1) {
-					warn(__func__, "unable to read a pvalue[%d] from file: %s",
-							p_val_index, filename);
+					warn(__func__, "unable to read a pvalue[%d] from file: %s", p_val_index, filename);
 					break;
 				}
 
 				/*
-				 * Append each p-value read to the p-values of this test
+				 * Append each read p-value to the p-values of this test
 				 */
 				if (test_num != TEST_NON_OVERLAPPING) {
 					append_value(state->p_val[test_num], &p_val);
@@ -2153,34 +2171,16 @@ void read_from_p_val_file(struct state *state)
 				}
 			}
 
-			/*
-			 * Read the next test number
-			 */
-			ret = fread(&test_num, sizeof(test_num), 1, p_val_file);
-			if (feof(p_val_file)) {
-				warn(__func__, "skipping pvalue file due to EOF while reading next test number in pvalue file: %s",
-						filename);
-				break;
-			}
-			if (ferror(p_val_file)) {
-				warnp(__func__, "skipping pvalue file due to read error next test number from pvalue file: %s",
-						filename);
-				break;
-			}
-			if (ret != 1) {
-				warn(__func__, "skipping pvalue file, unable to read next test number from pvalue file: %s",
-						filename);
-				break;
-			}
-		}
+		} while (!feof(p_val_file) && !ferror(p_val_file) && ret == 1 && test_num < NUMOFTESTS);
 
 		/*
 		 * Close the file that has been read
 		 */
 		fclose(p_val_file);
-		dbg(DBG_HIGH, "processed %ld pvalues from pvalue file: %s", test_num, filename);
+		dbg(DBG_HIGH, "processed all pvalues from pvalue file: %s", filename);
 		current = current->next;
 	}
+
 	dbg(DBG_LOW, "end of reading pvalue file(s) phase\n");
 }
 
