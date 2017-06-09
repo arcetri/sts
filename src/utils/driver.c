@@ -542,7 +542,11 @@ metrics(struct state *state)
 
 			// Process metrics of the test
 			if (testDriver[i].metrics != NULL) {
+				dbg(DBG_MED, "Start of assess metrics phase for test[%d]: %s", i,
+				    ((state->testNames[i] == NULL) ? "((NULL test name))" : state->testNames[i]));
 				testDriver[i].metrics(state);
+				dbg(DBG_MED, "End of assess metrics phase for test[%d]: %s", i,
+				    ((state->testNames[i] == NULL) ? "((NULL test name))" : state->testNames[i]));
 			}
 		}
 	}
