@@ -509,7 +509,11 @@ metrics(struct state *state)
 		if (io_ret <= 0) {
 			errp(53, __func__, "error in writing to finalRept");
 		}
-		io_ret = fprintf(state->finalRept, "   generator is: AlgorithmTesting\n");
+		if (state->randomDataPath == NULL) {
+			io_ret = fprintf(state->finalRept, "   generator is <((--UNKNOWN--))>\n");
+		} else {
+			io_ret = fprintf(state->finalRept, "   generator is <%s>\n", state->randomDataPath);
+		}
 		if (io_ret <= 0) {
 			errp(53, __func__, "error in writing to finalRept");
 		}

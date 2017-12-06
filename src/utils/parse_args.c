@@ -1092,6 +1092,9 @@ print_option_summary(struct state *state, char *where)
 	 */
 	if (state->batchmode == true) {
 		dbg(DBG_LOW, "Testing data from file: %s", state->randomDataPath);
+		if (strcmp(state->randomDataPath, "-") == 0) {
+		    dbg(DBG_LOW, "  test data will be read from standard input (stdin)");
+		}
 	} else {
 		dbg(DBG_LOW, "Will prompt user for generator to use");
 	}
@@ -1179,9 +1182,15 @@ print_option_summary(struct state *state, char *where)
 	dbg(DBG_MED, "\tjobnum: -j %ld", state->jobnum);
 	if (state->jobnumFlag == true) {
 		dbg(DBG_MED, "\t-j jobnum was set to %ld", state->jobnum);
-		dbg(DBG_MED, "\t  will skip %lld bytes of data before processing",
-		    (long long) state->jobnum * (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + BITS_N_BYTE -
-				    1 / BITS_N_BYTE));
+		if (strcmp(state->randomDataPath, "-") == 0) {
+			dbg(DBG_MED, "\t  reading from stdin so we will not skip %lld bytes of data",
+			    (long long) state->jobnum *
+			      (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + BITS_N_BYTE - 1 / BITS_N_BYTE));
+		} else {
+			dbg(DBG_MED, "\t  will skip %lld bytes of data before processing",
+			    (long long) state->jobnum *
+			      (((long long) state->tp.numOfBitStreams * (long long) state->tp.n) + BITS_N_BYTE - 1 / BITS_N_BYTE));
+		}
 	} else {
 		dbg(DBG_MED, "\tno -j jobnum was given");
 		dbg(DBG_MED, "\t  will start processing at the beginning of data");
