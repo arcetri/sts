@@ -301,9 +301,9 @@ NonOverlappingTemplateMatchings_init(struct state *state)
 	/*
 	 * Verify that the size of nonovTemplates is as expected
 	 */
-	if (state->nonovTemplates->count / 9 != numOfTemplates[m]) {
-		err(130, __func__, "nonovTemplates->count / 9: %ld != numOfTemplates[%ld]: %ld",
-		    state->nonovTemplates->count / 9, m, numOfTemplates[m]);
+	if (state->nonovTemplates->count / m != numOfTemplates[m]) {
+		err(130, __func__, "nonovTemplates->count / m: %ld / %ld: %ld != numOfTemplates[%ld]: %ld",
+		    state->nonovTemplates->count, m, state->nonovTemplates->count / m, numOfTemplates[m]);
 	}
 	dbg(DBG_HIGH, "Formed an array of %ld non-overlapping templates of %ld bytes each", numOfTemplates[m], m);
 
