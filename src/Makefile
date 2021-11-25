@@ -130,6 +130,18 @@ TARGETS= sts ../sts
 #
 all: ${TARGETS} ${TOOLS_SRC}
 
+# debug_make allows you to deterlime how HomeBrew (or lack) impacts compilation
+#
+debug_make:
+	@echo DEBUG: now running in src makefile debug:
+	@echo
+	@echo DEBUG: LIBS: ${LIBS}
+	@echo DEBUG: homebrew_fftw: ${homebrew_fftw}
+	@echo DEBUG: LOC_INC: ${LOC_INC}
+	@echo DEBUG: PASSDOWN_VARS: ${PASSDOWN_VARS}
+	@echo
+	@echo DEBUG: end of src makefile debug
+
 legacy: ${LEGACY_TARGETS}
 
 sts: ${OBJ}
