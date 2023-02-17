@@ -1,4 +1,4 @@
-#!/bin/make
+#!/usr/bin/env make
 #
 # sts - Stastical Test Suite
 
@@ -23,7 +23,7 @@
 #
 # Share and enjoy! :-)
 
-SHELL= /bin/bash
+SHELL= bash
 MAKE= make
 
 # HomeBrew on macOS overrides (or lack of override is not found)
