@@ -1,5 +1,7 @@
 # NIST Statistical Test Suite
 
+NOTE: The [Google Drive sts-data folder][generatordata] link has been changed as 2023 Mar 29 to allow public access.  Sorry about that!
+
 This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the
  evaluation of the randomness of bitstreams of data.
 
@@ -294,4 +296,4 @@ and set about the tasks of extending their code to situations they did not inten
    [site]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documentation_software.html>
    [paper]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documents/SP800-22rev1a.pdf>
    [fftw]: <http://www.fftw.org>
-   [generatordata]: https://drive.google.com/open?id=0B-W1rjDbzOiLSVNJWFpkeUE0b1k
+   [generatordata]: https://drive.google.com/drive/folders/0B-W1rjDbzOiLSVNJWFpkeUE0b1k?resourcekey=0-ogAKUlLH_EvkGEqA461tnQ&usp=sharing
