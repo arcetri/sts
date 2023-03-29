@@ -1,9 +1,12 @@
 # NIST Statistical Test Suite
 
-NOTE: The [Google Drive sts-data folder][generatordata] link has been changed as 2023 Mar 29 to allow public access.  Sorry about that!
+**NOTE: Recent changes to this README.md file on 2023 Mar 29**:
 
-This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the
- evaluation of the randomness of bitstreams of data.
+* The [Google Drive sts-data folder][generatordata] link has been changed to allow public access.
+* Added a "_p.s._" about LandRnd at the bottom.
+* Added link to the [improved SP800-22Rev1a paper][improved-paper].
+
+This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the evaluation of the randomness of bitstreams of data.
 
 ## Purpose
 
@@ -199,7 +202,7 @@ Our major improvement starts from source code of the [original source code of ve
 - Improved the __support for 64-bit processors__
 - Improved the Makefile to use best practices and to be more portable
 - Improved the __program output__ and the contents of the file with the final results
-- Added some comments and fixes to the NIST's paper (available in the docs/SP800-22rev1a-improved.pdf)
+- Added some comments and fixes to the NIST's paper: The [improved SP300-22 Rev 1a][improved-paper] is available.
 - Improved readability of the source code
 - Added the ability to read test data from standard input
 - Fixed the warnings reported by compilers and lint
@@ -264,13 +267,13 @@ The people who have so far contributed to this major improvement of the NIST STS
 - Riccardo Paccagnella ([ricpacca](https://github.com/ricpacca))
 - Tom Gilgan ([tgilgs](https://github.com/tgilgs))
 
-You can contact us using the following email address: *sts-contributors (at) external (dot) cisco (dot) com*
-
 By no means we believe we have fixed every last bug in this code. Moreover we do not doubt that we have introduced
 new bugs during our transformation. For any such new bugs, we apologize and welcome contributions that fix either old bugs
 or our newly introduced ones. Improvements to the documentation are also a very appreciated contribution.
 
 Please feel invited to contribute by creating a pull request to submit the code you would like to be included.
+
+You are very welcome to give us bug fixes and improvements in the form of a [GitHub Pull Request](https://github.com/arcetri/sts/pulls).
 
 ## License
 
@@ -284,7 +287,7 @@ characteristic. We would appreciate acknowledgment if the software is used.
 ## Special thanks
 
 Special thanks go to the original code developers. Without their efforts this modified code would not have been possible.
-The original NIST document, [SP800-22Rev1a][paper], was extremely valuable to us.
+The original NIST document, [original SP800-22Rev1a paper][original-paper], was extremely valuable to us.  Nevertheless we highly recommend using our [improved SP800-22Rev1a paper][improved-paper]!
 
 The above partial list of issues is presented to help explain why we extensively modified their original code.
 Our bug fixes are an expression of gratitude for their efforts.
@@ -292,8 +295,12 @@ Our bug fixes are an expression of gratitude for their efforts.
 We also thank the original authors for making their code freely available. We saw the value of their efforts
 and set about the tasks of extending their code to situations they did not intend.
 
+## LavaRnd p.s.
 
-   [site]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documentation_software.html>
-   [paper]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documents/SP800-22rev1a.pdf>
-   [fftw]: <http://www.fftw.org>
-   [generatordata]: https://drive.google.com/drive/folders/0B-W1rjDbzOiLSVNJWFpkeUE0b1k?resourcekey=0-ogAKUlLH_EvkGEqA461tnQ&usp=sharing
+For an interest application of STS, see the [Detailed Description of Test Results and Conclusions from LavaRnd](https://lavarand.com/what/nist-test.html).  It may be useful to note the _Ranking methodology_ and in particular definition of _proportional failures_ vs. _uniformity failures_.
+
+[site]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documentation_software.html>
+[original-paper]: <http://csrc.nist.gov/groups/ST/toolkit/rng/documents/SP800-22rev1a.pdf> (see the improved-paper link as well)
+[improved-paper]: <https://github.com/arcetri/sts/blob/master/docs/SP800-22rev1a-improved.pdf>
+[fftw]: <http://www.fftw.org>
+[generatordata]: https://drive.google.com/drive/folders/0B-W1rjDbzOiLSVNJWFpkeUE0b1k?resourcekey=0-ogAKUlLH_EvkGEqA461tnQ&usp=sharing
