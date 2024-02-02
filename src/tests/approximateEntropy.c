@@ -395,8 +395,10 @@ compute_phi(struct thread_state *thread_state, long int blocksize)
 	 */
 	sum = 0.0;
 	for (i = 0; i < powLen; i++) {
-		sum += (double) state->apen_C[thread_state->thread_id][i] *
-				log(state->apen_C[thread_state->thread_id][i] / (double) n);
+		if (state->apen_C[thread_state->thread_id][i]) {
+			sum += (double) state->apen_C[thread_state->thread_id][i] *
+					log(state->apen_C[thread_state->thread_id][i] / (double) n);
+		}
 	}
 
 	/*
