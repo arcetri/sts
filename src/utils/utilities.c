@@ -1843,8 +1843,6 @@ copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBi
 	long int count;
 	int bit;
 	BYTE mask;
-	long int zeros;
-	long int ones;
 	long int bitsNeeded;
 
 	/*
@@ -1860,18 +1858,15 @@ copyBitsToEpsilon(struct state *state, long int thread_id, BYTE *x, long int xBi
 	bitsNeeded = state->tp.n;
 
 	count = 0;
-	zeros = ones = 0;
 	for (i = 0; i < (xBitLength + BITS_N_BYTE - 1) / BITS_N_BYTE; i++) {
 		mask = 0x80;
 		for (j = 0; j < 8; j++) {
 			if (*(x + i) & mask) {
 				bit = 1;
 				(*num_1s)++;
-				ones++;
 			} else {
 				bit = 0;
 				(*num_0s)++;
-				zeros++;
 			}
 			mask >>= 1;
 			state->epsilon[thread_id][*bitsRead] = (BitSequence) bit;
