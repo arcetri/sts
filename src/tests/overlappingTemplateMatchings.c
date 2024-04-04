@@ -820,7 +820,7 @@ OverlappingTemplateMatchings_metric_print(struct state *state, long int sampleCo
 	 * Compute uniformity p-value
 	 */
 	chi2 = 0.0;
-	expCount = sampleCount / state->tp.uniformity_bins;
+	expCount = (double)sampleCount / state->tp.uniformity_bins;
 	if (expCount <= 0.0) {
 		// Not enough samples for uniformity check
 		uniformity = 0.0;
