@@ -202,7 +202,7 @@ Our major improvement starts from source code of the [original source code of ve
 - Improved the __support for 64-bit processors__
 - Improved the Makefile to use best practices and to be more portable
 - Improved the __program output__ and the contents of the file with the final results
-- Added some comments and fixes to the NIST's paper: The [improved SP300-22 Rev 1a][improved-paper] is available.
+- Added some comments and fixes to the NIST's paper: The [improved SP800-22 Rev 1a][improved-paper] is available.
 - Improved readability of the source code
 - Added the ability to read test data from standard input
 - Fixed the warnings reported by compilers and lint
