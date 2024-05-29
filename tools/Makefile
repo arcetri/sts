@@ -67,7 +67,7 @@ DESTBINDIR= /usr/local/bin
 #
 CSRC= generators.c mkapertemplate.c
 
-HSRC= 
+HSRC=
 
 SRCS= ${CSRC} ${HSRC}
 
@@ -76,7 +76,7 @@ OBJ= generators.o mkapertemplate.o
 # We only mention this code because it is referenced in the source code
 # comments and we want to be sure it is kept around.
 #
-TOOLS_SRC= pi_term.nb pi_term.txt 
+TOOLS_SRC= pi_term.nb pi_term.txt
 
 TARGETS= mkapertemplate generators
 
@@ -88,7 +88,7 @@ mkapertemplate: mkapertemplate.o
 	${CC} -o $@ ${CFLAGS} mkapertemplate.o
 
 generators: generators.o
-	${CC} -o $@ ${CFLAGS} -lm generators.o
+	${CC} -o $@ ${CFLAGS} generators.o ${LIBS}
 
 # object dependencies and rules
 #
