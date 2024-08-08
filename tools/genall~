@@ -45,7 +45,7 @@ time $GENERATORS -i 1 9 65536 > $TOPDIR/SHA1/SHA1-8G.u8 2> $TOPDIR/SHA1/SHA1.out
 }
 
 echo "RUNNING: GENERATORS executable: $GENERATORS" 
-nohup runGen &
+runGen &
 
 # ... now you wait
 #
