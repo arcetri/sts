@@ -3,7 +3,7 @@
 **NOTE: Recent changes to this README.md file on 2023 Mar 29**:
 
 * The [Google Drive sts-data folder][generatordata] link has been changed to allow public access.
-* Added a "_p.s._" about LavrRnd at the bottom.
+* Added a "_p.s._" about LavaRnd at the bottom.
 * Added link to the [improved SP800-22Rev1a paper][improved-paper].
 
 This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the evaluation of the randomness of bitstreams of data.
