@@ -1,10 +1,57 @@
 # NIST Statistical Test Suite
 
-**NOTE: Recent changes to this README.md file on 2023 Mar 29**:
+## TL;DR
+
+* **Step 0**: Generate raw binary data into a file, called say: randdata
+
+```
+    By "raw binary data" we mean that if your generator had
+    generated these binary bits:
+
+        1 0 0 1 0 1 1 0
+
+    you would write/output a single byte of data with the value:
+
+        0x96
+```
+
+* **Step 1**: Compile STS the code
+
+```sh
+    make clobber all
+
+    BTW: Feel free to install sts if you wish:
+
+    make install
+```
+
+* **Step 2**: Run the code
+
+```sh
+    sts randdata
+```
+
+
+* **Step 3**: Read the results:
+
+```sh
+    cat result.txt
+```
+
+* **Step 4**: Read about any test that may have failed in the PDF file:
+
+```
+    docs/SP800-22rev1a-improved.pdf
+```
+
+## UPDATES
+
+**NOTE: Recent changes to this README.md file on 2025 Jan 20**:
 
 * The [Google Drive sts-data folder][generatordata] link has been changed to allow public access.
 * Added a "_p.s._" about LavaRnd at the bottom.
 * Added link to the [improved SP800-22Rev1a paper][improved-paper].
+* Added a TL;DR section at the top.
 
 This project is a considerably improved version of the [NIST Statistical Test Suite][site] (**STS**), a collection of tests used in the evaluation of the randomness of bitstreams of data.
 
